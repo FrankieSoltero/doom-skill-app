@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "LearnLoop",
+    "slug": "learnloop",
+    "scheme": "learnloop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router", "expo-status-bar"]
+  }
+}
