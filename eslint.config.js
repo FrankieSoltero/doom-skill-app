@@ -61,8 +61,9 @@ module.exports = [
       '@typescript-eslint/no-non-null-assertion': 'error',
     },
   },
-  // Exception: TS-11 (import/no-default-export) off for app/** because Expo Router requires every
-  // route file to default-export its screen. Tests under __tests__ are not routes and stay covered.
+  // Exception #3 in docs/standards.md: TS-11 (import/no-default-export) off for app/** because
+  // Expo Router requires every route file to default-export its screen. Tests under __tests__ are
+  // not routes and stay covered.
   {
     files: ['app/**'],
     ignores: ['app/**/__tests__/**'],
@@ -74,8 +75,8 @@ module.exports = [
     files: ['*.config.js'],
     rules: { 'import/no-default-export': 'off' },
   },
-  // Exception: SS-1 (no-restricted-syntax, the color rule) off for src/theme/** because the
-  // theme is the one place color literals are defined.
+  // Exception #4 in docs/standards.md: SS-1 (no-restricted-syntax, the color rule) off for
+  // src/theme/** because the theme is the one place color literals are defined.
   {
     files: ['src/theme/**'],
     rules: { 'no-restricted-syntax': 'off' },
