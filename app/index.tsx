@@ -1,9 +1,21 @@
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { colors } from '../src/theme';
 
 export default function HomeScreen() {
   return (
-    <View testID="home-screen">
-      <Text>LearnLoop</Text>
+    <View testID="home-screen" style={styles.root}>
+      <Text style={styles.title}>LearnLoop</Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.paper,
+  },
+  title: {
+    color: colors.ink,
+  },
+});
