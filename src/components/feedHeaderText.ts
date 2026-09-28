@@ -32,17 +32,35 @@ export function segmentColor(cardType: Card['type']): string {
 }
 
 /**
- * Cards done at pager page `index` of a set of `cardCount` cards: the current card and every
- * card before it, and all of them on the Summary page (`index` equal to `cardCount`). An index
- * below 0 reads as the first card; one past the Summary page reads as the Summary page.
+ * The pager page as a whole number of 0 or more. A finite index is rounded, as the store rounds
+ * it, and one below 0 reads as 0. An index that is not finite (`NaN`, `Infinity`) reads as 0,
+ * so the first card shows as current.
  */
-export function doneCount(index: number, cardCount: number): number {
-  return Math.min(Math.max(index, 0) + 1, cardCount);
+function wholeIndex(index: number): number {
+  return Number.isFinite(index) ? Math.max(Math.round(index), 0) : 0;
 }
 
 /**
- * Each segment's fill at page `index`, one per card: the card's color for a done card, else
- * transparent (README.md:30).
+ * Cards done at pager page `index` of a set of `cardCount` cards, always a whole number from 0
+ * to `cardCount`: the current card and every card before it, and all of them on the Summary page
+ * (`index` equal to `cardCount`). An index past the Summary page reads as the Summary page. The
+ * spoken progress value and the filled segments both come from this number.
+ */
+export function doneCount(index: number, cardCount: number): number {
+  return Math.min(wholeIndex(index) + 1, cardCount);
+}
+
+/**
+ * The streak the chip shows: a whole number of 0 or more. A fraction is floored; a value that is
+ * not a finite number of 0 or more shows as 0.
+ */
+export function streakCount(streak: number): number {
+  return Number.isFinite(streak) && streak >= 0 ? Math.floor(streak) : 0;
+}
+
+/**
+ * Each segment's fill at page `index`, one per card: the card's color for the first
+ * `doneCount(index, cards.length)` cards, else transparent (README.md:30).
  */
 export function segmentFills(cards: readonly Card[], index: number): string[] {
   const done = doneCount(index, cards.length);

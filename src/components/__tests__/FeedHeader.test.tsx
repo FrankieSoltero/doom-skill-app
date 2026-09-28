@@ -11,11 +11,17 @@ const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 const SIX: Card[] = [concept, quiz, predict, exercise, review, checkpoint];
 const HIDDEN = { includeHiddenElements: true };
 
+/** The set's own `topic.streak`, kept apart from the `streak` prop the chip shows. */
+const TOPIC_STREAK = 3;
+
 type HeaderOptions = { cards?: Card[]; index?: number; streak?: number };
 
-/** Renders the header for Strudel day 4 of 14, set 1, with the given cards, index and streak. */
+/**
+ * Renders the header for Strudel day 4 of 14, set 1, with the given cards, index and streak
+ * prop. The set's `topic.streak` is always TOPIC_STREAK, so a test can tell the two apart.
+ */
 function renderHeader({ cards = SIX, index = 2, streak = 12 }: HeaderOptions = {}) {
-  const set = makeSet(streak, cards);
+  const set = makeSet(TOPIC_STREAK, cards);
   const strudel = { ...set, topic: { ...set.topic, day: 4, horizonDays: 14 } };
   render(<FeedHeader set={strudel} index={index} streak={streak} />);
 }
@@ -111,6 +117,27 @@ describe('FeedHeader streak chip', () => {
     });
   });
 
+  it('shows the streak prop, not the set topic streak', () => {
+    renderHeader({ streak: 12 });
+
+    const chip = screen.getByTestId('streak-chip');
+    expect(within(chip).getByText('12')).toBeOnTheScreen();
+    expect(within(chip).queryByText(String(TOPIC_STREAK))).toBeNull();
+    expect(chip.props).toMatchObject({ accessibilityLabel: '12 day streak' });
+  });
+
+  it.each([
+    { streak: -1, shown: '0' },
+    { streak: 2.7, shown: '2' },
+    { streak: Number.NaN, shown: '0' },
+  ])('shows a streak of $streak as $shown', ({ streak, shown }) => {
+    renderHeader({ streak });
+
+    const chip = screen.getByTestId('streak-chip');
+    expect(within(chip).getByText(shown)).toBeOnTheScreen();
+    expect(chip.props).toMatchObject({ accessibilityLabel: `${shown} day streak` });
+  });
+
   it('is one accessible element that speaks the streak', () => {
     renderHeader({ streak: 12 });
 
@@ -177,6 +204,9 @@ describe('FeedHeader progress accessibility', () => {
     { index: 2, cards: SIX, now: 3, label: '3 of 6 cards done' },
     { index: 6, cards: SIX, now: 6, label: '6 of 6 cards done' },
     { index: 0, cards: [checkpoint], now: 1, label: '1 of 1 cards done' },
+    { index: 1.5, cards: SIX, now: 3, label: '3 of 6 cards done' },
+    { index: 1.4, cards: SIX, now: 2, label: '2 of 6 cards done' },
+    { index: Number.NaN, cards: SIX, now: 1, label: '1 of 6 cards done' },
   ])('is one progress bar that speaks $label at index $index', ({ index, cards, now, label }) => {
     renderHeader({ cards, index });
 
@@ -185,6 +215,8 @@ describe('FeedHeader progress accessibility', () => {
       accessibilityLabel: label,
       accessibilityValue: { min: 0, max: cards.length, now },
     });
+    // The spoken value and the filled segments come from the same whole number.
+    expect(fills().filter((fill) => fill !== 'transparent')).toHaveLength(now);
   });
 
   it('draws no segments for a set with no cards, without throwing', () => {

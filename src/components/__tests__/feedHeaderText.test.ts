@@ -1,7 +1,7 @@
 import type { Card, FeedSet } from '../../data';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { cardTheme, colors } from '../../theme';
-import { doneCount, kickerText, segmentColor, segmentFills } from '../feedHeaderText';
+import { doneCount, kickerText, segmentColor, segmentFills, streakCount } from '../feedHeaderText';
 
 const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 
@@ -72,6 +72,41 @@ describe('doneCount', () => {
     { index: 0, count: 0, done: 0 },
   ])('counts $done done at index $index of $count cards', ({ index, count, done }) => {
     expect(doneCount(index, count)).toBe(done);
+  });
+});
+
+// An index that is not a whole number is rounded as the store rounds it; one that is not finite
+// reads as the first card. The filled segments always equal the done count.
+describe('doneCount and segmentFills for a surprising index', () => {
+  it.each([
+    { index: 1.4, count: 6, done: 2 },
+    { index: 1.5, count: 6, done: 3 },
+    { index: 2.5, count: 6, done: 4 },
+    { index: -0.4, count: 6, done: 1 },
+    { index: Number.NaN, count: 6, done: 1 },
+    { index: Number.POSITIVE_INFINITY, count: 6, done: 1 },
+    { index: Number.NEGATIVE_INFINITY, count: 6, done: 1 },
+    { index: 1.5, count: 0, done: 0 },
+    { index: Number.NaN, count: 0, done: 0 },
+  ])('counts $done done at index $index of $count cards', ({ index, count, done }) => {
+    const cards = SIX.slice(0, count);
+
+    expect(doneCount(index, count)).toBe(done);
+    expect(segmentFills(cards, index).filter((fill) => fill !== 'transparent')).toHaveLength(done);
+  });
+});
+
+describe('streakCount', () => {
+  it.each([
+    { streak: 12, shown: 12 },
+    { streak: 0, shown: 0 },
+    { streak: 2.7, shown: 2 },
+    { streak: -1, shown: 0 },
+    { streak: -0.5, shown: 0 },
+    { streak: Number.NaN, shown: 0 },
+    { streak: Number.POSITIVE_INFINITY, shown: 0 },
+  ])('shows a streak of $streak as $shown', ({ streak, shown }) => {
+    expect(streakCount(streak)).toBe(shown);
   });
 });
 

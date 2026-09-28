@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { copy } from '../copy';
 import type { FeedSet } from '../data';
 import { border, colors, fonts, hardShadow, type } from '../theme';
-import { doneCount, kickerText, segmentFills } from './feedHeaderText';
+import { doneCount, kickerText, segmentFills, streakCount } from './feedHeaderText';
 
 // Feed header values from docs/design/card-feed/README.md:27-30 (or, where it gives none, the
 // prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html) that the theme lacks.
@@ -40,7 +40,7 @@ type FeedHeaderProps = {
   set: FeedSet;
   /** The pager page: a card's position in `set.cards`, or the card count on the Summary page. */
   index: number;
-  /** Days in a row the learner has finished a set. */
+  /** Days in a row the learner has finished a set. Shown whole and never below 0. */
   streak: number;
 };
 
@@ -52,6 +52,7 @@ type FeedHeaderProps = {
 export function FeedHeader({ set, index, streak }: FeedHeaderProps) {
   const total = set.cards.length;
   const done = doneCount(index, total);
+  const days = streakCount(streak);
 
   return (
     <View testID="feed-header" style={styles.header}>
@@ -62,7 +63,7 @@ export function FeedHeader({ set, index, streak }: FeedHeaderProps) {
             {copy.today}
           </Text>
         </View>
-        <View testID="streak-chip" accessible accessibilityLabel={copy.streakLabel(streak)}>
+        <View testID="streak-chip" accessible accessibilityLabel={copy.streakLabel(days)}>
           <View testID="streak-chip-shadow" style={styles.chipShadow} />
           <View testID="streak-chip-face" style={styles.chipFace}>
             <Flame
@@ -73,7 +74,7 @@ export function FeedHeader({ set, index, streak }: FeedHeaderProps) {
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
             />
-            <Text style={styles.count}>{streak}</Text>
+            <Text style={styles.count}>{days}</Text>
           </View>
         </View>
       </View>
