@@ -249,7 +249,16 @@ module.exports = [
   // mechanics (docs/standards.md, scope paragraph), not an SS-9 exception. ios/ and android/ are
   // the native projects that `expo run:ios` and `expo prebuild` generate (docs/standards.md,
   // "Generated files"); ESLint does not read .gitignore, so only this entry keeps ESLint off them.
+  // src/api/schema.d.ts is the API types file that `pnpm gen:api` writes (same section).
   {
-    ignores: ['.expo/', 'dist/', 'expo-env.d.ts', 'src/strudel/generated/', 'ios/', 'android/'],
+    ignores: [
+      '.expo/',
+      'dist/',
+      'expo-env.d.ts',
+      'src/strudel/generated/',
+      'ios/',
+      'android/',
+      'src/api/schema.d.ts',
+    ],
   },
 ];
