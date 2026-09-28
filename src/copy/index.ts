@@ -27,7 +27,12 @@ export function deepFreeze<T extends object>(value: T): Readonly<T> {
 export const copy = deepFreeze({
   appName: 'LearnLoop',
   gotIt: 'Got it',
+  /** A button's label, and the feed pager's accessibility action that moves to the next card. */
   nextCard: 'Next card',
+  /** The feed pager's accessibility action that moves back one card. */
+  previousCard: 'Previous card',
+  /** The toast shown when a swipe tries to leave an unanswered card, README.md:43. */
+  answerToContinue: 'Answer this card to continue',
   /** Spoken label of an answer option shown as the correct answer. */
   optionCorrect: (label: string) => `${label}. Correct answer.`,
   /** Spoken label of an answer option the learner picked that is not correct. */

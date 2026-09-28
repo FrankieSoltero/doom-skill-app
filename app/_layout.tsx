@@ -5,6 +5,8 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { logWarning } from '../src/log';
 import { colors } from '../src/theme';
@@ -57,10 +59,16 @@ export default function RootLayout() {
     return null;
   }
 
+  // The gesture root sits as close to the app's root as possible, as Gesture Handler asks, so the
+  // feed pager's pan works on every screen.
   return (
-    <>
+    <GestureHandlerRootView style={styles.root}>
       <Stack screenOptions={STACK_OPTIONS} />
       <StatusBar style="dark" />
-    </>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

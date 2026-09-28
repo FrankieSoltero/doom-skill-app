@@ -29,6 +29,15 @@ describe('copy', () => {
     expect(copy.optionWrong('s("bd/4")')).toBe('s("bd/4"). Not correct.');
   });
 
+  it('asks for an answer when a swipe is gated, README.md:43', () => {
+    expect(copy.answerToContinue).toBe('Answer this card to continue');
+  });
+
+  it('labels the pager accessibility actions', () => {
+    expect(copy.nextCard).toBe('Next card');
+    expect(copy.previousCard).toBe('Previous card');
+  });
+
   it('titles the Today screen', () => {
     expect(copy.today).toBe('Today');
   });

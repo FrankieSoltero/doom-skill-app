@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, within } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { hideAsync, preventAutoHideAsync } from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { viewStyleOf } from '../../src/components/testing/styles';
 import { logError, logWarning } from '../../src/log';
 import { colors, fonts } from '../../src/theme';
 
@@ -157,6 +159,19 @@ describe('RootLayout stack', () => {
     render(<RootLayout />);
 
     expect(stackScreenOptions()).toMatchObject({ contentStyle: { backgroundColor: colors.paper } });
+  });
+});
+
+describe('RootLayout gesture root', () => {
+  it('wraps the routes and the status bar in a gesture root that fills the screen', () => {
+    fontState(true, null);
+
+    render(<RootLayout />);
+
+    const root = screen.UNSAFE_getByType(GestureHandlerRootView);
+    expect(viewStyleOf(root)).toStrictEqual({ flex: 1 });
+    expect(within(root).getByTestId('routes')).toBeOnTheScreen();
+    expect(within(root).getByTestId('status-bar')).toBeOnTheScreen();
   });
 });
 

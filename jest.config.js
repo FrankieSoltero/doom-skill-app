@@ -7,6 +7,11 @@ module.exports = {
     // Jest loads the package's CommonJS build. Metro is unaffected.
     '^lucide-react-native$': require.resolve('lucide-react-native'),
   },
+  // react-native-gesture-handler's documented Jest setup: it mocks the native module and the
+  // native buttons (docs.swmansion.com/react-native-gesture-handler/docs/guides/testing).
+  setupFiles: [require.resolve('react-native-gesture-handler/jestSetup.js')],
+  // The worklets mock and Reanimated's test setup; see the file.
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   // Enforced when coverage is collected: the `test` script passes --coverage. Coverage is not
   // on by default here, because Jest fails a run that loads no src/data file when a path
   // threshold is set ("Coverage data for ./src/data/ was not found"), which would break
