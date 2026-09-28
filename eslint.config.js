@@ -24,18 +24,39 @@ const CARD_TYPE_SYNTAX = [
   { selector: 'TSInterfaceDeclaration[id.name=/Card$/]', message: CARD_TYPE_MESSAGE },
 ];
 
-// SS-8: UI strings live in src/copy. A string literal given to a prop a person reads, bare or in
-// braces, is rejected; other props (testID, accessibilityRole, style) are not text and stay free.
-const TEXT_PROP_MESSAGE = 'UI strings live in src/copy. Use a copy key instead.';
-const TEXT_PROP = 'JSXAttribute[name.name=/^(label|title|placeholder|accessibilityLabel)$/]';
-const TEXT_PROP_SYNTAX = [
-  { selector: `${TEXT_PROP} > Literal`, message: TEXT_PROP_MESSAGE },
-  { selector: `${TEXT_PROP} > JSXExpressionContainer > Literal`, message: TEXT_PROP_MESSAGE },
-  {
-    selector: `${TEXT_PROP} > JSXExpressionContainer > TemplateLiteral`,
-    message: TEXT_PROP_MESSAGE,
-  },
+// SS-8: UI strings live in src/copy. These selectors reject text a person reads, written as a
+// string or template literal in the places below. Props that are not text (testID,
+// accessibilityRole, style) stay free, and an empty or blank string is not text. This is a syntax
+// check: a string held in a variable and then rendered, and `<Text children="..." />`, are not
+// detected.
+const UI_TEXT_MESSAGE = 'UI strings live in src/copy. Use a copy key instead.';
+// Props whose value is text a person reads. Add a prop name here.
+const TEXT_PROP_NAMES = '/^(label|title|placeholder|accessibilityLabel|accessibilityHint|alt)$/';
+// Keys whose value is text a person reads, inside an object given to a prop, such as Expo
+// Router's `options={{ title: ... }}`. Add a key name here.
+const TEXT_KEY_NAMES =
+  '/^(title|tabBarLabel|headerTitle|tabBarAccessibilityLabel|headerBackTitle|label|placeholder|accessibilityLabel|accessibilityHint)$/';
+const ALERT_CALL = 'CallExpression[callee.object.name="Alert"][callee.property.name="alert"]';
+// Where literal text is rejected. Each context ends in a combinator (descendant or `>`).
+const UI_TEXT_CONTEXTS = [
+  // Anywhere inside a text prop's value: `title="Hi"`, `title={ok ? 'Yes' : 'No'}`, `'Hi ' + name`.
+  `JSXAttribute[name.name=${TEXT_PROP_NAMES}] `,
+  // A text key inside any prop's value, also in an object a function returns.
+  `JSXAttribute Property[key.name=${TEXT_KEY_NAMES}] > `,
+  // A branch or operand of child text: `{ok ? 'Yes' : 'No'}`, `{ok && 'Yes'}`. Attribute values
+  // are not JSX children, so `testID={ok ? 'a' : 'b'}` stays free.
+  ':matches(JSXElement, JSXFragment) > JSXExpressionContainer > :matches(ConditionalExpression, LogicalExpression) > ',
+  // `Alert.alert(title, message, buttons)`: its string arguments and each button's `text`.
+  `${ALERT_CALL} > `,
+  `${ALERT_CALL} > ArrayExpression > ObjectExpression > Property[key.name="text"] > `,
 ];
+const UI_TEXT_SYNTAX = UI_TEXT_CONTEXTS.flatMap((context) => [
+  { selector: `${context}Literal[value=/\\S/]`, message: UI_TEXT_MESSAGE },
+  {
+    selector: `${context}TemplateLiteral:has(> TemplateElement[value.raw=/\\S/])`,
+    message: UI_TEXT_MESSAGE,
+  },
+]);
 
 // The folders that render UI. SS-8 applies here only; other code has no UI text.
 const UI_FILES = ['app/**', 'src/components/**', 'src/cards/**'];
@@ -113,10 +134,11 @@ module.exports = [
   },
   // SS-8: UI strings live in src/copy. `react/jsx-no-literals` rejects literal child text
   // (`<Text>Hello</Text>`, `<Text>{'Hello'}</Text>`); its message cannot name SS-8, so this
-  // comment and docs/standards.md map it. `ignoreProps` leaves props to the text-prop selectors,
+  // comment and docs/standards.md map it. `ignoreProps` leaves props to the UI-text selectors,
   // which carry the SS-8 message, so testID, accessibilityRole and style stay allowed.
-  // Exception #12 in docs/standards.md: both SS-8 checks are off under __tests__ because tests
-  // assert on literal UI text. Tests there keep the color and card-type selectors of the base.
+  // Exception #12 in docs/standards.md: both SS-8 checks are off in the __tests__ folders inside
+  // these three folders ({app,src/components,src/cards}/**/__tests__/**) because tests assert on
+  // literal UI text. Tests there keep the color and card-type selectors of the base.
   {
     files: UI_FILES,
     ignores: ['**/__tests__/**'],
@@ -125,7 +147,7 @@ module.exports = [
       'no-restricted-syntax': restrictSyntax(
         COLOR_LITERAL_SYNTAX,
         CARD_TYPE_SYNTAX,
-        TEXT_PROP_SYNTAX,
+        UI_TEXT_SYNTAX,
       ),
     },
   },
