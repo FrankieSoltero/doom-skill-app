@@ -77,7 +77,7 @@ module.exports = [
       'max-params': ['error', 4],
       // TS-11
       'import/no-default-export': 'error',
-      // TS-12
+      // TS-12, SS-10
       'no-console': 'error',
       // SS-1, SS-7
       'no-restricted-syntax': restrictSyntax(COLOR_LITERAL_SYNTAX, CARD_TYPE_SYNTAX),
@@ -125,6 +125,12 @@ module.exports = [
       'no-restricted-imports': 'off',
       'no-restricted-syntax': restrictSyntax(COLOR_LITERAL_SYNTAX),
     },
+  },
+  // Exception #11 in docs/standards.md: TS-12 (no-console) off for src/log.ts because it is the
+  // one home of app logging (SS-10). Every other file logs through it.
+  {
+    files: ['src/log.ts'],
+    rules: { 'no-console': 'off' },
   },
   {
     ignores: ['.expo/', 'dist/', 'expo-env.d.ts'],
