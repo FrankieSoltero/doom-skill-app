@@ -1,20 +1,17 @@
 // Test support: times a checkpoint rubric pattern on input built to provoke backtracking. Tests
 // over bundled rubrics import it; app code does not. It lives outside `__tests__/` because Jest
 // runs every file there as a suite.
-import { gradeCheckpoint } from '../checkpoint';
-
-/** As long as graded code can be: `gradeCheckpoint` grades only the first 5,000 characters. */
-const PROBE_LENGTH = 5000;
+import { gradeCheckpoint, MAX_CODE_LENGTH } from '../checkpoint';
 
 /**
- * Inputs built so a pattern that backtracks badly struggles: runs of an opening `<` with no
- * closing `>`, of one letter, of the two alternating, and of spaces.
+ * Inputs as long as graded code can be, built so a pattern that backtracks badly struggles: runs
+ * of an opening `<` with no closing `>`, of one letter, of the two alternating, and of spaces.
  */
 const BACKTRACKING_PROBES = [
-  '<'.repeat(PROBE_LENGTH),
-  'a'.repeat(PROBE_LENGTH),
-  '<a'.repeat(PROBE_LENGTH / 2),
-  ' '.repeat(PROBE_LENGTH),
+  '<'.repeat(MAX_CODE_LENGTH),
+  'a'.repeat(MAX_CODE_LENGTH),
+  '<a'.repeat(MAX_CODE_LENGTH).slice(0, MAX_CODE_LENGTH),
+  ' '.repeat(MAX_CODE_LENGTH),
 ];
 const TIMED_RUNS = 5;
 

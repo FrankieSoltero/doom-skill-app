@@ -1,5 +1,5 @@
 import { cardSource, type CheckpointCard } from '../../data';
-import { gradeCheckpoint } from '../checkpoint';
+import { gradeCheckpoint, MAX_CODE_LENGTH } from '../checkpoint';
 import { patternSpeedMs } from '../testing/patternSpeed';
 
 type Rubric = CheckpointCard['rubric'];
@@ -75,9 +75,17 @@ describe('gradeCheckpoint', () => {
     ]);
   });
 
-  it('grades only the first 5,000 characters', () => {
-    expect(gradeCheckpoint(`${'x'.repeat(4998)}bd`, card([kick])).passCount).toBe(1);
-    expect(gradeCheckpoint(`${'x'.repeat(4999)}bd`, card([kick])).passCount).toBe(0);
+  it('caps graded input at the 5,000 characters the brief sets', () => {
+    expect(MAX_CODE_LENGTH).toBe(5000);
+  });
+
+  it('grades only the first MAX_CODE_LENGTH characters', () => {
+    // `bd` ends exactly at the cap in the first case and straddles it in the second.
+    const endsAtCap = `${'x'.repeat(MAX_CODE_LENGTH - 2)}bd`;
+    const straddlesCap = `${'x'.repeat(MAX_CODE_LENGTH - 1)}bd`;
+
+    expect(gradeCheckpoint(endsAtCap, card([kick])).passCount).toBe(1);
+    expect(gradeCheckpoint(straddlesCap, card([kick])).passCount).toBe(0);
   });
 
   it('does not report every item as feedback when the threshold is out of reach', () => {

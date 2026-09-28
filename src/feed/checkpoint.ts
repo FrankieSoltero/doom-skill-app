@@ -8,7 +8,11 @@
 // matched with an engine that cannot backtrack.
 import type { CheckpointCard } from '../data';
 
-/** The outcome of grading code against a checkpoint rubric. `results` follow rubric order. */
+/**
+ * The outcome of grading code against a checkpoint rubric. `results` follow rubric order.
+ * `feedback` is `'fail'` whenever `passed` is false, which includes a card whose `passThreshold`
+ * is greater than its rubric size, even when every item passes.
+ */
 export type CheckpointGrade = {
   results: { label: string; passed: boolean }[];
   passCount: number;
@@ -17,7 +21,7 @@ export type CheckpointGrade = {
 };
 
 /** Only this many leading characters of the learner's code are graded. */
-const MAX_CODE_LENGTH = 5000;
+export const MAX_CODE_LENGTH = 5000;
 
 /** True when `pattern` matches `code`. A pattern that does not compile matches nothing. */
 function matches(pattern: string, code: string): boolean {
