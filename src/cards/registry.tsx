@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import type { Card } from '../data';
 import { ConceptCard } from './ConceptCard';
+import { ExerciseCard } from './ExerciseCard';
 import { PredictCard } from './PredictCard';
 import { QuizCard } from './QuizCard';
 import { ReviewCard } from './ReviewCard';
@@ -32,6 +33,9 @@ const renderers: { [Name in CardTypeName]?: Renderer<Name> } = {
   quiz: (card, { index, onNext }) => <QuizCard card={card} index={index} onNext={onNext} />,
   predict: (card, { index, onNext }) => <PredictCard card={card} index={index} onNext={onNext} />,
   review: (card, { index, onNext }) => <ReviewCard card={card} index={index} onNext={onNext} />,
+  exercise: (card, { index, active, onNext }) => (
+    <ExerciseCard card={card} index={index} active={active} onNext={onNext} />
+  ),
 };
 
 /** The renderer for `type`, typed so it accepts exactly the cards of that type. */
