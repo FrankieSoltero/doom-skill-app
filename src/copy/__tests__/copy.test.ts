@@ -134,6 +134,16 @@ describe('copy for cards', () => {
     expect(copy.cycleLabel(1)).toBe('Cycle 1');
     expect(copy.cycleLabel(12)).toBe('Cycle 12');
   });
+
+  it('words the verdicts of a quiz or predict answer, README.md:73', () => {
+    expect(copy.correct).toBe('Correct.');
+    expect(copy.notQuite).toBe('Not quite.');
+  });
+
+  it('writes an explanation led by its verdict in bold markers', () => {
+    expect(copy.verdict('Correct.', '*4 repeats a step.')).toBe('**Correct.** *4 repeats a step.');
+    expect(copy.verdict('Not quite.', 'Try again.')).toBe('**Not quite.** Try again.');
+  });
 });
 
 describe('deepFreeze', () => {

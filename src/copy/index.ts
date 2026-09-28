@@ -82,6 +82,15 @@ export const copy = deepFreeze({
   minutes: (n: number) => `~${String(n)} min`,
   /** The label of a concept card's cycle tile, README.md:56 ("CYCLE 1" by style). */
   cycleLabel: (n: number) => `Cycle ${String(n)}`,
+  /** The verdict that leads a quiz or predict explanation after a right pick, README.md:73. */
+  correct: 'Correct.',
+  /** The verdict that leads a quiz or predict explanation after a wrong pick, README.md:73. */
+  notQuite: 'Not quite.',
+  /**
+   * A quiz or predict explanation led by its verdict in bold, README.md:73. The result is
+   * bold-marked text (rule SS-11), drawn through `BoldText`.
+   */
+  verdict: (verdict: string, explanation: string) => `**${verdict}** ${explanation}`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',
