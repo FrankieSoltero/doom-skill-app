@@ -272,7 +272,10 @@ function fakeWindow() {
     listeners,
     sent,
     addEventListener: listen,
-    document: { addEventListener: listen },
+    document: { documentElement: {}, addEventListener: listen },
+    MutationObserver: class {
+      observe() {}
+    },
     fetch: async () => ({ ok: false }),
     ReactNativeWebView: { postMessage: (raw) => sent.push(JSON.parse(raw)) },
   };

@@ -221,14 +221,69 @@ export function createPlayer({ repl, audio, post, timers }) {
   return { handle, reportError, onLog, onNetworkFailure };
 }
 
+// Learner code runs in this page, and react-native-webview 13.16.1 shows `alert`, `confirm` and
+// `prompt` as native alerts over the app (RNCWebViewImpl.m), with page-controlled text; no prop
+// turns that off. The page replaces them, and `print`, before any learner code can run, with
+// functions that show nothing and return what a dismissed dialog returns. They are read-only and
+// non-configurable, so a snippet cannot assign them back. This stops accidental and casual use,
+// not a determined snippet: a frame it creates has a fresh `window` with the real dialogs.
+// removeFrames takes frames out as they are added, but a mutation observer runs after the
+// snippet's synchronous code, so a snippet that appends a frame and calls its window's `alert` in
+// one run still gets through. Accepted while all code is the owner's or bundled demo data; a
+// precondition to revisit before server-generated cards.
+const DIALOGS = {
+  alert: () => undefined,
+  confirm: () => false,
+  prompt: () => null,
+  print: () => undefined,
+};
+const FRAME_SELECTOR = 'iframe, frame, object, embed';
+const ELEMENT_NODE = 1;
+
 /**
- * Wires the page to the real window and Strudel: starts Strudel, posts ready once it has
- * initialized, then handles the app's messages. If Strudel fails to start, the page stays
- * silent and the app gives up waiting for ready.
+ * Replaces the window's dialogs with silent, non-writable, non-configurable stubs.
+ * @param {object} win
+ */
+export function silenceDialogs(win) {
+  for (const [name, value] of Object.entries(DIALOGS)) {
+    try {
+      Object.defineProperty(win, name, { value, writable: false, configurable: false });
+    } catch {
+      // The engine will not let this one be replaced. The page must still start and post ready,
+      // so it goes on; the device checklist covers each dialog.
+    }
+  }
+}
+
+/**
+ * Removes every frame added to the document from now on; the page has no use for frames.
+ * @param {{ documentElement: object }} doc
+ * @param {typeof MutationObserver} Observer
+ */
+export function removeFrames(doc, Observer) {
+  /** @param {Node} node */
+  const sweep = (node) => {
+    if (node.nodeType !== ELEMENT_NODE) return;
+    const element = /** @type {Element} */ (node);
+    if (element.matches(FRAME_SELECTOR)) element.remove();
+    else for (const frame of element.querySelectorAll(FRAME_SELECTOR)) frame.remove();
+  };
+  const observer = new Observer((records) => {
+    for (const record of records) record.addedNodes.forEach(sweep);
+  });
+  observer.observe(doc.documentElement, { childList: true, subtree: true });
+}
+
+/**
+ * Wires the page to the real window and Strudel: silences dialogs and frames first, then starts
+ * Strudel, posts ready once it has initialized, then handles the app's messages. If Strudel fails
+ * to start, the page stays silent and the app gives up waiting for ready.
  * @param {Window & Timers & { ReactNativeWebView?: { postMessage(raw: string): void } }} win
  * @param {Audio & { initStrudel(options: { onEvalError(error: unknown): void }): Promise<Repl> }} strudel
  */
 export async function startPage(win, strudel) {
+  silenceDialogs(win);
+  removeFrames(win.document, win.MutationObserver);
   const post = createPoster(win);
   /** @type {Player | undefined} */
   let player;
