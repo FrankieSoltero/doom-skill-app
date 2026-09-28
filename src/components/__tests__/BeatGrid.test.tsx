@@ -10,8 +10,9 @@ import { type Element, textStyleOf, viewStyleOf } from '../testing/styles';
 const DEMO_CODE = 'stack(\n  s("bd ~ sd ~"),\n  s("hh*4")\n)';
 const DEMO_ROWS = parseGrid(DEMO_CODE);
 
-// Values from README.md:97-101 and, where it is silent, the prototype
-// reference/LearnLoop Card Feed v2.dc.html:151-154 (body line height 1.55).
+// Values from README.md:98-100 and, where it is silent, the prototype
+// reference/LearnLoop Card Feed v2.dc.html:151-154. The line height is 10 times the body line
+// height, 1.55, from reference/_ds/industry-be146a4e-adb2-4c13-8c51-8590a0cfc099/styles.css:108.
 const LABEL_STYLE = { width: 26, fontFamily: fonts.mono, fontSize: 10, lineHeight: 15.5 };
 const ROW_STYLE = { flexDirection: 'row', alignItems: 'center', gap: 2 };
 const GRID_STYLE = { gap: 4, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 12 };
@@ -145,6 +146,7 @@ describe('BeatGrid rows', () => {
 
     expectLabels([name]);
     expect(label).toHaveProp('numberOfLines', 1);
+    expect(label).toHaveProp('ellipsizeMode', 'clip');
     expect(label && textStyleOf(label).width).toBe(26);
     expect(cellsOf(0)).toHaveLength(16);
   });
