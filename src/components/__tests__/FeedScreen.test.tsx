@@ -17,7 +17,7 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
-const { concept, quiz, predict, exercise } = cardsByType;
+const { concept, quiz, exercise, review } = cardsByType;
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -54,7 +54,7 @@ async function pressNext(index: number) {
 
 describe('FeedScreen pages', () => {
   it('skips a card type with no component: not a page, not a segment', async () => {
-    await renderFeed(scriptedSource(makeSet(12, [quiz, concept, predict])));
+    await renderFeed(scriptedSource(makeSet(12, [quiz, concept, review])));
     await layout(700);
 
     expect(screen.getAllByTestId('progress-segment')).toHaveLength(2);
@@ -65,7 +65,7 @@ describe('FeedScreen pages', () => {
     expect(screen.getByTestId('feed-page-2', HIDDEN)).toBeOnTheScreen();
     expect(screen.queryByTestId('feed-page-3', HIDDEN)).toBeNull();
     expect(jest.mocked(logWarning).mock.calls).toStrictEqual([
-      ['card_type_skipped', { type: 'predict' }],
+      ['card_type_skipped', { type: 'review' }],
     ]);
   });
 

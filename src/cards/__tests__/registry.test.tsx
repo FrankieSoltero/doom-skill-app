@@ -3,13 +3,14 @@ import { isValidElement } from 'react';
 
 import { cardsByType } from '../../feed/testing/sets';
 import { ConceptCard } from '../ConceptCard';
+import { PredictCard } from '../PredictCard';
 import { QuizCard } from '../QuizCard';
 import { canRenderCard, renderCard } from '../registry';
 
 const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 
 // The card types no task has registered yet. Each later task moves its type out of this list.
-const UNREGISTERED = [predict, exercise, review, checkpoint];
+const UNREGISTERED = [exercise, review, checkpoint];
 
 describe('renderCard', () => {
   it('renders a concept card with the card, its active flag and onNext', () => {
@@ -56,13 +57,34 @@ describe('renderCard', () => {
     expect(screen.getByRole('button', { name: 'Next card' })).toBeOnTheScreen();
   });
 
+  it('renders a predict card with the card, its index and onNext, and no active flag', () => {
+    const onNext = jest.fn<undefined, []>();
+
+    const element = renderCard(predict, { index: 5, active: false, onNext });
+
+    expect(isValidElement(element) && element.type).toBe(PredictCard);
+    expect(isValidElement<object>(element) && element.props).toStrictEqual({
+      card: predict,
+      index: 5,
+      onNext,
+    });
+  });
+
+  it('draws the predict card, with its code', () => {
+    render(<>{renderCard(predict, { index: 0, active: true, onNext: jest.fn() })}</>);
+
+    expect(screen.getByText(predict.title)).toBeOnTheScreen();
+    expect(screen.getByTestId('code-block-code')).toHaveTextContent(predict.code);
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeOnTheScreen();
+  });
+
   it.each(UNREGISTERED)('returns null for $type, which has no component yet', (card) => {
     expect(renderCard(card, { index: 0, active: true, onNext: jest.fn() })).toBeNull();
   });
 });
 
 describe('canRenderCard', () => {
-  it.each([concept, quiz])('accepts a $type card', (card) => {
+  it.each([concept, quiz, predict])('accepts a $type card', (card) => {
     expect(canRenderCard(card)).toBe(true);
   });
 
