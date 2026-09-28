@@ -2,10 +2,18 @@
  * The app's one logging module (SS-10 in docs/standards.md). ESLint's `no-console` rejects
  * `console.*` everywhere else, so every warning and error goes through here.
  *
- * What reaches the console is limited on purpose: an event name that matches EVENT_NAME, and
- * short strings, numbers and booleans. Never log card text, code the user typed, or anything that
- * identifies a person. The checks below run at run time too, because a caller can pass data from
- * outside that defeats the parameter types. The logger itself never throws.
+ * What reaches the console is limited on purpose, so text cannot reach the logs:
+ * - Event names: lowercase letters, digits and underscores, starting with a letter, at most 40
+ *   characters. Any other event is logged as `invalid_event`; the given text is never logged.
+ * - Context keys: identifiers such as `faces` or `cardIndex` (a lowercase letter, then letters,
+ *   digits and underscores), at most 40 characters. Any other key is dropped with its value.
+ * - Context values: strings (cut to 200 characters), numbers and booleans. Any other value is
+ *   dropped with its key. At most the first 10 valid entries are logged.
+ * - Errors: the name and the message, cut to 200 characters. Never the stack.
+ *
+ * Never log card text, code the user typed, or anything that identifies a person. The checks run
+ * at run time too, because a caller can pass data from outside that defeats the parameter types.
+ * The logger itself never throws.
  */
 
 type LogValue = string | number | boolean;
@@ -19,10 +27,19 @@ interface LoggedError {
 /** Longest string the logger writes, for context values and error messages alike. */
 const MAX_LOG_TEXT_LENGTH = 200;
 
+/** Longest event name or context key the logger writes. */
+const MAX_NAME_LENGTH = 40;
+
+/** Most context entries the logger writes; later valid entries are dropped. */
+const MAX_CONTEXT_ENTRIES = 10;
+
 /** Lowercase letters, digits and underscores, starting with a letter. */
 const EVENT_NAME = /^[a-z][a-z0-9_]*$/;
 
-/** Logged in place of an event name that does not match EVENT_NAME. */
+/** An identifier: a lowercase letter, then letters, digits and underscores. */
+const CONTEXT_KEY = /^[a-z][a-zA-Z0-9_]*$/;
+
+/** Logged in place of an event name that is not valid. */
 const INVALID_EVENT = 'invalid_event';
 
 /** The `name` logged for a thrown value that is not an Error. */
@@ -56,19 +73,26 @@ function isLogValue(value: unknown): value is LogValue {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
-function eventName(event: unknown): string {
-  return typeof event === 'string' && EVENT_NAME.test(event) ? event : INVALID_EVENT;
+/** Checks the length first, so a long string is never scanned by the pattern. */
+function isName(text: unknown, pattern: RegExp): text is string {
+  return typeof text === 'string' && text.length <= MAX_NAME_LENGTH && pattern.test(text);
 }
 
-/** Keeps strings (cut), numbers and booleans; drops everything else. */
+function isLogEntry(entry: [string, unknown]): entry is [string, LogValue] {
+  return isName(entry[0], CONTEXT_KEY) && isLogValue(entry[1]);
+}
+
+function eventName(event: unknown): string {
+  return isName(event, EVENT_NAME) ? event : INVALID_EVENT;
+}
+
+/** The first 10 entries with a valid key and a string (cut), number or boolean value. */
 function cleanContext(context: unknown): LogContext {
   if (typeof context !== 'object' || context === null || Array.isArray(context)) {
     return {};
   }
   try {
-    const kept = Object.entries(context).filter((entry): entry is [string, LogValue] =>
-      isLogValue(entry[1]),
-    );
+    const kept = Object.entries(context).filter(isLogEntry).slice(0, MAX_CONTEXT_ENTRIES);
     return Object.fromEntries(
       kept.map(([key, value]) => [key, typeof value === 'string' ? cut(value) : value]),
     );

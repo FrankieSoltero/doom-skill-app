@@ -7,6 +7,9 @@ function callUntyped(logger: typeof logWarning | typeof logError, ...args: unkno
 }
 
 const LONG_TEXT = 'a'.repeat(250);
+// Card text shaped to pass the name patterns: lowercase, underscores for spaces, over 40 long.
+const SENTENCE_EVENT = 'the_user_typed_this_sentence_into_the_card';
+const SENTENCE_KEY = 'The user typed their email me@example.com into the card';
 const CUT_TEXT = 'a'.repeat(200);
 
 let warn: jest.SpiedFunction<typeof console.warn>;
@@ -77,11 +80,11 @@ describe('logWarning', () => {
     expect(warn.mock.calls).toStrictEqual([['bad_context', {}]]);
   });
 
-  it('keeps a __proto__ key as an ordinary key', () => {
+  it('drops a __proto__ key and keeps the plain object prototype', () => {
     callUntyped(logWarning, 'odd_key', JSON.parse('{"__proto__": "x"}'));
 
     const logged: unknown = warn.mock.calls[0]?.[1];
-    expect(logged).toStrictEqual(Object.fromEntries([['__proto__', 'x']]));
+    expect(logged).toStrictEqual({});
     expect(Object.getPrototypeOf(logged)).toBe(Object.prototype);
   });
 
@@ -110,22 +113,32 @@ describe('logWarning', () => {
 });
 
 describe('event names', () => {
-  it.each(['a', 'fonts_failed', 'step2_done'])('logs the valid event %p as given', (event) => {
-    logWarning(event);
-
-    expect(warn.mock.calls).toStrictEqual([[event, {}]]);
-  });
-
-  it.each(['', 'Fonts_failed', 'fonts-failed', 'fonts failed', '2fonts', '_x', 'me@example.com'])(
-    'logs the invalid event %p as invalid_event and not the given text',
+  it.each(['a', 'fonts_failed', 'step2_done', 'e'.repeat(40)])(
+    'logs the valid event %p as given',
     (event) => {
-      logWarning(event, { n: 1 });
-      logError(event, new Error('x'));
+      logWarning(event);
 
-      expect(warn.mock.calls).toStrictEqual([['invalid_event', { n: 1 }]]);
-      expect(error.mock.calls).toStrictEqual([['invalid_event', { name: 'Error', message: 'x' }]]);
+      expect(warn.mock.calls).toStrictEqual([[event, {}]]);
     },
   );
+
+  it.each([
+    '',
+    'Fonts_failed',
+    'fonts-failed',
+    'fonts failed',
+    '2fonts',
+    '_x',
+    'me@example.com',
+    'e'.repeat(41),
+    SENTENCE_EVENT,
+  ])('logs the invalid event %p as invalid_event and not the given text', (event) => {
+    logWarning(event, { n: 1 });
+    logError(event, new Error('x'));
+
+    expect(warn.mock.calls).toStrictEqual([['invalid_event', { n: 1 }]]);
+    expect(error.mock.calls).toStrictEqual([['invalid_event', { name: 'Error', message: 'x' }]]);
+  });
 
   it('logs a non-string event as invalid_event without turning it into a string', () => {
     const event = {
@@ -137,6 +150,59 @@ describe('event names', () => {
     callUntyped(logWarning, event);
 
     expect(warn.mock.calls).toStrictEqual([['invalid_event', {}]]);
+  });
+});
+
+// Valid context entries in order: [`${prefix}0`, 0], [`${prefix}1`, 1], ...
+function numberedEntries(prefix: string, count: number): [string, number][] {
+  return Array.from({ length: count }, (_unused, index) => [`${prefix}${String(index)}`, index]);
+}
+
+describe('context keys', () => {
+  it.each(['a', 'faces', 'cardIndex', 'step_2', 'k'.repeat(40)])('keeps the key %p', (key) => {
+    logWarning('keys', { [key]: 1 });
+
+    expect(warn.mock.calls).toStrictEqual([['keys', { [key]: 1 }]]);
+  });
+
+  it.each(['', 'has space', 'has-dash', '2fast', 'Leading', '_under', 'k'.repeat(41)])(
+    'drops the key %p with its value',
+    (key) => {
+      logWarning('keys', { [key]: 'dropped value', kept: 1 });
+
+      expect(warn.mock.calls).toStrictEqual([['keys', { kept: 1 }]]);
+    },
+  );
+
+  it.each([SENTENCE_KEY, SENTENCE_EVENT])(
+    'drops the sentence key %p so its text appears nowhere in the call',
+    (key) => {
+      logWarning('keys', { [key]: true });
+
+      expect(warn.mock.calls).toStrictEqual([['keys', {}]]);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(key);
+    },
+  );
+
+  it('logs the first 10 valid entries of 11', () => {
+    const entries = numberedEntries('k', 11);
+
+    logWarning('many', Object.fromEntries(entries));
+
+    expect(warn.mock.calls).toStrictEqual([['many', Object.fromEntries(entries.slice(0, 10))]]);
+  });
+
+  it('does not count invalid keys or dropped values toward the 10', () => {
+    const valid = numberedEntries('v', 10);
+    const invalid = [
+      ['Bad', 1],
+      ['has space', 2],
+      ['card', { text: 'card content' }],
+    ];
+
+    callUntyped(logWarning, 'many', Object.fromEntries([...invalid, ...valid]));
+
+    expect(warn.mock.calls).toStrictEqual([['many', Object.fromEntries(valid)]]);
   });
 });
 
