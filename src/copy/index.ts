@@ -111,6 +111,34 @@ export const copy = deepFreeze({
     hits === 1 ? `${name}: 1 hit` : `${name}: ${String(hits)} hits`,
   /** Spoken label of the beat grid, README.md:97-102. `rows` are `gridRow` strings, in order. */
   gridLabel: (rows: string[]) => `Beat grid. ${rows.join('. ')}`,
+  /** The exercise card's play button, README.md:104. */
+  play: 'Play',
+  /** The exercise card's play button while playing, README.md:104. */
+  stop: 'Stop',
+  /** The exercise card's check button, README.md:105. */
+  check: 'Check',
+  /** The badge of an exercise that passes its check, README.md:107. */
+  specMet: 'Spec met',
+  /** The badge of an exercise that fails its check, README.md:108. */
+  notYet: 'Not yet',
+  /** Spoken label of the exercise card's code editor. */
+  codeEditor: 'Code editor',
+  /** The notice shown while the audio plays without its samples (no network). */
+  audioNeedsConnection: 'Audio needs a connection',
+  /** The notice shown when the audio player could not start or stopped working. */
+  audioUnavailable: 'Audio unavailable',
+  /** The label of the notice that shows an audio error. */
+  audioError: 'Audio error',
+  /** The audio error shown when the code is longer than the player accepts. */
+  codeTooLong: 'The code is too long to play',
+  /** The action that loads a fresh audio player after an error. */
+  resetAudio: 'Reset audio',
+  /**
+   * A badge as a screen reader hears it: its label, then its message when it has one. `message`
+   * is plain text; remove any bold markers first.
+   */
+  badgeSpoken: (label: string, message: string) =>
+    message === '' ? label : `${label}. ${message}`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',

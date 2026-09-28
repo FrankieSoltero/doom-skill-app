@@ -3,9 +3,9 @@ import type { ReactElement } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, View } from 'react-native';
 
 import { BoldText } from '../components/BoldText';
-import { boldSegments } from '../components/boldSegments';
 import { useCardTextColor } from '../components/cardTextColor';
 import { OptionButton, optionState } from '../components/OptionButton';
+import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import { type } from '../theme';
 
@@ -53,13 +53,6 @@ function rowsOf<Item>(items: readonly Item[], size: number): Item[][] {
   return Array.from({ length: Math.ceil(items.length / size) }, (_, row) =>
     items.slice(row * size, (row + 1) * size),
   );
-}
-
-/** What a screen reader hears for bold-marked `text`: the text with its markers removed. */
-function spokenText(text: string): string {
-  return boldSegments(text)
-    .map((segment) => segment.text)
-    .join('');
 }
 
 /**

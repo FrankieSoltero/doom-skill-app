@@ -184,6 +184,32 @@ describe('copy for the beat grid', () => {
   });
 });
 
+describe('copy for the exercise card', () => {
+  it('labels the buttons, the check results and the editor, README.md:103-108', () => {
+    expect(copy.play).toBe('Play');
+    expect(copy.stop).toBe('Stop');
+    expect(copy.check).toBe('Check');
+    expect(copy.specMet).toBe('Spec met');
+    expect(copy.notYet).toBe('Not yet');
+    expect(copy.codeEditor).toBe('Code editor');
+  });
+
+  it('words the audio notices and their Reset action', () => {
+    expect(copy.audioNeedsConnection).toBe('Audio needs a connection');
+    expect(copy.audioUnavailable).toBe('Audio unavailable');
+    expect(copy.audioError).toBe('Audio error');
+    expect(copy.codeTooLong).toBe('The code is too long to play');
+    expect(copy.resetAudio).toBe('Reset audio');
+  });
+
+  it('speaks a badge as its label, then its message', () => {
+    expect(copy.badgeSpoken('Spec met', 'The hi-hat plays eight times.')).toBe(
+      'Spec met. The hi-hat plays eight times.',
+    );
+    expect(copy.badgeSpoken('Audio unavailable', '')).toBe('Audio unavailable');
+  });
+});
+
 describe('deepFreeze', () => {
   it('freezes every nested object and leaves functions callable', () => {
     const shout = (text: string) => `${text}!`;

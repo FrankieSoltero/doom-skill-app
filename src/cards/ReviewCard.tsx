@@ -4,10 +4,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { announce } from '../components/announce';
 import { BoldText } from '../components/BoldText';
-import { boldSegments } from '../components/boldSegments';
 import { CardFrame } from '../components/CardFrame';
 import { useCardTextColor } from '../components/cardTextColor';
 import { CodeBlock } from '../components/CodeBlock';
+import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import type { ReviewCard as ReviewCardData } from '../data';
 import type { CardAnswer } from '../feed/answers';
@@ -60,13 +60,6 @@ type ReviewAnswer = Extract<CardAnswer, { kind: 'review' }>;
 /** The review answer in `answer`; null for no answer or an answer of another kind. */
 function reviewOf(answer: CardAnswer | undefined): ReviewAnswer | null {
   return answer?.kind === 'review' ? answer : null;
-}
-
-/** What a screen reader hears for bold-marked `text`: the text with its markers removed. */
-function spokenAnswer(text: string): string {
-  return boldSegments(text)
-    .map((segment) => segment.text)
-    .join('');
 }
 
 /**
@@ -138,7 +131,7 @@ export function ReviewCard({ card, index, onNext }: ReviewCardProps) {
 
   const onReveal = () => {
     setAnswer(index, { kind: 'review', revealed: true, rating: null });
-    announce(spokenAnswer(card.answer));
+    announce(spokenText(card.answer));
   };
 
   const onRate = (position: Rating) => {
