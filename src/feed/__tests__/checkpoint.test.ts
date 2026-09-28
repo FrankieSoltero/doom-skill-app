@@ -1,5 +1,6 @@
 import { cardSource, type CheckpointCard } from '../../data';
-import { gradeCheckpoint, patternSpeedMs } from '../checkpoint';
+import { gradeCheckpoint } from '../checkpoint';
+import { patternSpeedMs } from '../testing/patternSpeed';
 
 type Rubric = CheckpointCard['rubric'];
 
