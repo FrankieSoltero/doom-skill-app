@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { logWarning } from '../src/log';
+import { colors } from '../src/theme';
 
 /**
  * A splash-screen call that fails (no native splash screen, or it is already hidden) leaves
@@ -16,6 +17,12 @@ import { logWarning } from '../src/log';
 function ignoreSplashFailure(): void {
   // Nothing to recover.
 }
+
+/**
+ * The tab shell draws its own screens, so the stack shows no header. Its content ground is paper,
+ * so no white frame shows between the splash screen and the first screen.
+ */
+const STACK_OPTIONS = { headerShown: false, contentStyle: { backgroundColor: colors.paper } };
 
 // Once, at module scope, so it runs before the native splash screen can hide on its own.
 SplashScreen.preventAutoHideAsync().catch(ignoreSplashFailure);
@@ -52,7 +59,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack />
+      <Stack screenOptions={STACK_OPTIONS} />
       <StatusBar style="dark" />
     </>
   );

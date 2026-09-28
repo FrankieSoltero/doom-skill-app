@@ -32,4 +32,19 @@ export const copy = deepFreeze({
   optionCorrect: (label: string) => `${label}. Correct answer.`,
   /** Spoken label of an answer option the learner picked that is not correct. */
   optionWrong: (label: string) => `${label}. Not correct.`,
+  /** The Today screen's text until the feed replaces it. */
+  today: 'Today',
+  /** Tab bar labels, docs/design/card-feed/README.md:32. */
+  tabs: {
+    today: 'Today',
+    tree: 'Tree',
+    explore: 'Explore',
+    profile: 'Profile',
+  },
+  /** Titles of the placeholder tabs (spec section 10 approves a title only). */
+  placeholder: {
+    tree: 'Skill tree',
+    explore: 'Explore',
+    profile: 'Profile',
+  },
 } as const);

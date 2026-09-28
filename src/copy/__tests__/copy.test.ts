@@ -28,6 +28,35 @@ describe('copy', () => {
     expect(copy.optionCorrect('s("bd*4")')).toBe('s("bd*4"). Correct answer.');
     expect(copy.optionWrong('s("bd/4")')).toBe('s("bd/4"). Not correct.');
   });
+
+  it('titles the Today screen', () => {
+    expect(copy.today).toBe('Today');
+  });
+
+  it('labels the four tabs in the tab bar', () => {
+    expect(copy.tabs).toStrictEqual({
+      today: 'Today',
+      tree: 'Tree',
+      explore: 'Explore',
+      profile: 'Profile',
+    });
+  });
+
+  it('titles the three placeholder tabs', () => {
+    expect(copy.placeholder).toStrictEqual({
+      tree: 'Skill tree',
+      explore: 'Explore',
+      profile: 'Profile',
+    });
+  });
+
+  it('freezes the nested groups', () => {
+    // `Object.isFrozen` is true for any primitive, so first check that each group is an object.
+    expect(copy.tabs).toBeInstanceOf(Object);
+    expect(copy.placeholder).toBeInstanceOf(Object);
+    expect(Object.isFrozen(copy.tabs)).toBe(true);
+    expect(Object.isFrozen(copy.placeholder)).toBe(true);
+  });
 });
 
 describe('deepFreeze', () => {

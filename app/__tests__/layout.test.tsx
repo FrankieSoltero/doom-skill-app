@@ -1,9 +1,10 @@
 import { render, screen } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
+import { Stack } from 'expo-router';
 import { hideAsync, preventAutoHideAsync } from 'expo-splash-screen';
 
 import { logError, logWarning } from '../../src/log';
-import { fonts } from '../../src/theme';
+import { colors, fonts } from '../../src/theme';
 
 /** A rejected promise that reports whether anyone attached a rejection handler to it. */
 function trackedRejection(): { promise: Promise<never>; handled: () => boolean } {
@@ -33,7 +34,7 @@ jest.mock('../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }
 jest.mock('expo-router', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
   const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
-  return { Stack: () => createElement(Text, { testID: 'routes' }, 'routes') };
+  return { Stack: jest.fn(() => createElement(Text, { testID: 'routes' }, 'routes')) };
 });
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -53,6 +54,7 @@ function fontState(loaded: boolean, error: Error | null): void {
 }
 
 beforeEach(() => {
+  jest.mocked(Stack).mockClear();
   jest.mocked(useFonts).mockClear();
   jest.mocked(hideAsync).mockClear();
   jest.mocked(logWarning).mockClear();
@@ -131,6 +133,30 @@ describe('RootLayout font states', () => {
     render(<RootLayout />);
 
     expect(screen.getByTestId('status-bar')).toHaveTextContent('dark');
+  });
+});
+
+describe('RootLayout stack', () => {
+  /** The screen options the layout gave the stack on its last render. */
+  function stackScreenOptions(): unknown {
+    const [props] = jest.mocked(Stack).mock.lastCall ?? [];
+    return props?.screenOptions;
+  }
+
+  it('hides the navigation header, so the tabs draw their own shell', () => {
+    fontState(true, null);
+
+    render(<RootLayout />);
+
+    expect(stackScreenOptions()).toMatchObject({ headerShown: false });
+  });
+
+  it('draws the stack content on paper, so no white frame shows before the first screen', () => {
+    fontState(true, null);
+
+    render(<RootLayout />);
+
+    expect(stackScreenOptions()).toMatchObject({ contentStyle: { backgroundColor: colors.paper } });
   });
 });
 
