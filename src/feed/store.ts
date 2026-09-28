@@ -13,7 +13,11 @@ type FeedState = {
   totals: { cards: number; seconds: number };
   streak: number;
   streakCounted: boolean;
-  /** True once the current set has been added to the totals, so its Summary counts only once. */
+  /**
+   * True once the current set has been added to the totals, so its Summary counts only once.
+   * Every `startSet` clears it, even for the same set: the demo sets loop, and a repeated set is
+   * real work that adds to the totals again (the streak still rises only once).
+   */
   setCounted: boolean;
 };
 
@@ -40,10 +44,16 @@ export function pageCount(set: FeedSet): number {
   return set.cards.length + 1;
 }
 
-/** `index` limited to the pages of `set`; 0 when no set is started. */
-function clampIndex(set: FeedSet | null, index: number): number {
-  if (set === null) return 0;
-  return Math.min(Math.max(index, 0), pageCount(set) - 1);
+/**
+ * The page to store for a requested `index`: rounded to a whole page and limited to the pages of
+ * the set, 0 when no set is started. A value that is not finite (a pager can report `NaN` from a
+ * zero-width layout) keeps the current page, so a bad event does not send the learner back to
+ * the first card.
+ */
+function nextIndex(state: FeedState, index: number): number {
+  if (state.set === null) return 0;
+  if (!Number.isFinite(index)) return state.index;
+  return Math.min(Math.max(Math.round(index), 0), pageCount(state.set) - 1);
 }
 
 /** The state after a new set starts. The first set of the session brings its topic's streak. */
@@ -71,7 +81,7 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState) => ({
     setState((state) => started(state, set));
   },
   setIndex: (index) => {
-    setState((state) => ({ index: clampIndex(state.set, index) }));
+    setState((state) => ({ index: nextIndex(state, index) }));
   },
   setAnswer: (cardIndex, answer) => {
     setState((state) => ({ answers: { ...state.answers, [cardIndex]: answer } }));

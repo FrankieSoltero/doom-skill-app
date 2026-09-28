@@ -83,6 +83,39 @@ describe('setIndex', () => {
   });
 });
 
+describe('setIndex with a value that is not a whole page', () => {
+  it.each([Number.NaN, Infinity, -Infinity])('keeps the current page for %p', (bad) => {
+    store().startSet(firstSet);
+    store().setIndex(1);
+    store().setIndex(bad);
+
+    expect(store().index).toBe(1);
+  });
+
+  it.each([
+    [1.4, 1],
+    [1.5, 2],
+  ])('rounds %p to page %p', (fraction, page) => {
+    store().startSet(firstSet);
+    store().setIndex(fraction);
+
+    expect(store().index).toBe(page);
+  });
+
+  it('clamps a fraction that rounds past the Summary page', () => {
+    store().startSet(firstSet);
+    store().setIndex(2.5);
+
+    expect(store().index).toBe(2);
+  });
+
+  it('stays at 0 with no set', () => {
+    store().setIndex(Number.NaN);
+
+    expect(store().index).toBe(0);
+  });
+});
+
 describe('setAnswer', () => {
   it('stores an answer by card index and replaces it on a second call', () => {
     store().startSet(firstSet);
@@ -124,6 +157,23 @@ describe('reachSummary', () => {
     store().reachSummary();
 
     expect(store()).toMatchObject({ totals: { cards: 2, seconds: 50 }, streak: 4 });
+  });
+
+  it('counts the same set again after it is started again, without the streak', () => {
+    store().startSet(firstSet);
+    store().reachSummary();
+    store().startSet(firstSet);
+    store().reachSummary();
+
+    expect(store()).toMatchObject({ totals: { cards: 4, seconds: 100 }, streak: 4 });
+  });
+
+  it('counts the streak from a first topic streak of 0', () => {
+    store().startSet(makeSet(0, [concept]));
+    expect(store().streak).toBe(0);
+
+    store().reachSummary();
+    expect(store()).toMatchObject({ streak: 1, streakCounted: true });
   });
 
   it('does nothing with no set started', () => {

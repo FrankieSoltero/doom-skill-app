@@ -1,3 +1,5 @@
+import type { Card } from '../../data';
+import type { CardAnswer } from '../answers';
 import type { CheckpointGrade } from '../checkpoint';
 import { isAnswered } from '../gating';
 import { cardsByType } from '../testing/sets';
@@ -65,5 +67,18 @@ describe('isAnswered for checkpoint cards', () => {
   it('is not answered without an answer or with another kind', () => {
     expect(isAnswered(checkpoint, undefined)).toBe(false);
     expect(isAnswered(checkpoint, { kind: 'review', revealed: true, rating: 2 })).toBe(false);
+  });
+});
+
+// Each answer here would complete a card of its own kind, so only the kind check can reject it.
+const wrongKind: { card: Card; answer: CardAnswer }[] = [
+  { card: quiz, answer: { kind: 'exercise', code: 's("bd")', result: 'pass' } },
+  { card: predict, answer: { kind: 'checkpoint', code: '', status: 'done', grade: passedGrade } },
+  { card: review, answer: { kind: 'choice', picked: 0 } },
+];
+
+describe('isAnswered with an answer of the wrong kind', () => {
+  it.each(wrongKind)('is not answered on a $card.type card', ({ card, answer }) => {
+    expect(isAnswered(card, answer)).toBe(false);
   });
 });
