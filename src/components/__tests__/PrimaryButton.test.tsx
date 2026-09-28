@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { copy } from '../../copy';
-import { colors, hardShadow, type } from '../../theme';
+import { colors, type } from '../../theme';
+import { CardFrame } from '../CardFrame';
 import { PrimaryButton } from '../PrimaryButton';
 import { textStyleOf, viewStyleOf } from '../testing/styles';
 import type { Element } from '../testing/styles';
@@ -21,9 +22,20 @@ function renderButton(props: { variant?: Variant; disabled?: boolean } = {}) {
   return { onPress, button: screen.getByRole('button', { name: 'Got it' }) };
 }
 
-/** The button's shadow view, or null when it is not rendered. */
-function shadowOf(button: Element): Element | null {
-  return within(button).queryByTestId('primary-button-shadow');
+/**
+ * The button draws only its face and its corner marks: no hard shadow view (README.md:18 and 49
+ * give the primary button none).
+ */
+function expectNoShadow(button: Element) {
+  // Pressable also adds a PressabilityDebugView, which renders nothing outside its debug mode.
+  const drawn = button.children.filter(
+    (child) => typeof child !== 'string' && child.children.length,
+  );
+  expect(drawn).toHaveLength(2);
+  expect(button).toContainElement(screen.getByTestId('primary-button-face'));
+  expect(button).toContainElement(
+    screen.getByTestId('corner-marks', { includeHiddenElements: true }),
+  );
 }
 
 /** A touch at the origin, shaped like the responder events React Native sends. */
@@ -67,23 +79,13 @@ describe('PrimaryButton look', () => {
     expect(textStyleOf(screen.getByText('Got it')).color).toBe(colors.paper);
   });
 
-  it('is full width, 50 points tall and at least 44, with an ink hard shadow at rest', () => {
+  it('is full width, 50 points tall and at least 44, with no hard shadow at rest', () => {
     const { button } = renderButton();
-    const offset = hardShadow.small;
 
     expect(viewStyleOf(button)).toMatchObject({ alignSelf: 'stretch', height: 50 });
     expect(viewStyleOf(button).height).toBeGreaterThanOrEqual(44);
     expect(viewStyleOf(button).transform).toBeUndefined();
-    const shadow = shadowOf(button);
-    expect(shadow).not.toBeNull();
-    expect(shadow === null ? null : viewStyleOf(shadow)).toStrictEqual({
-      position: 'absolute',
-      top: offset,
-      left: offset,
-      right: -offset,
-      bottom: -offset,
-      backgroundColor: colors.ink,
-    });
+    expectNoShadow(button);
   });
 
   it('has four corner marks, hidden from accessibility', () => {
@@ -93,10 +95,27 @@ describe('PrimaryButton look', () => {
     expect(within(button).getAllByTestId('corner-mark', hidden)).toHaveLength(4);
     expect(within(button).queryAllByTestId('corner-mark')).toHaveLength(0);
   });
+
+  it('draws paper corner marks inside an exercise frame', () => {
+    render(
+      <CardFrame type="exercise" kicker="Exercise · REPL">
+        <PrimaryButton label={copy.nextCard} onPress={jest.fn()} variant="paper" />
+      </CardFrame>,
+    );
+    const button = screen.getByRole('button', { name: 'Next card' });
+    const lines = within(button).getAllByTestId('corner-mark-line', {
+      includeHiddenElements: true,
+    });
+
+    expect(lines).toHaveLength(8);
+    for (const line of lines) {
+      expect(viewStyleOf(line).backgroundColor).toBe(colors.paper);
+    }
+  });
 });
 
 describe('PrimaryButton behavior', () => {
-  it('moves 2 points right and down and drops its shadow while pressed', () => {
+  it('moves 1 point right and down while pressed, and back when released', () => {
     jest.useFakeTimers();
     const { onPress, button } = renderButton();
 
@@ -104,8 +123,8 @@ describe('PrimaryButton behavior', () => {
     // userEvent.press sends; fireEvent(button, 'pressIn') would only call an onPressIn prop.
     fireEvent(button, 'responderGrant', touchEvent());
 
-    expect(viewStyleOf(button).transform).toStrictEqual([{ translateX: 2 }, { translateY: 2 }]);
-    expect(shadowOf(button)).toBeNull();
+    expect(viewStyleOf(button).transform).toStrictEqual([{ translateX: 1 }, { translateY: 1 }]);
+    expectNoShadow(button);
 
     fireEvent(button, 'responderRelease', touchEvent());
     // Pressability holds pressOut until a press has lasted its 130 ms minimum.
@@ -114,7 +133,7 @@ describe('PrimaryButton behavior', () => {
     });
 
     expect(viewStyleOf(button).transform).toBeUndefined();
-    expect(shadowOf(button)).not.toBeNull();
+    expectNoShadow(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

@@ -4,6 +4,8 @@ import { Text } from 'react-native';
 import { border, cardTheme, colors, hardShadow, type } from '../../theme';
 import type { CardType } from '../../theme';
 import { CardFrame } from '../CardFrame';
+import { useCardTextColor } from '../cardTextColor';
+import { CornerMarks } from '../CornerMarks';
 import { textStyleOf, viewStyleOf } from '../testing/styles';
 import type { Element } from '../testing/styles';
 
@@ -35,6 +37,11 @@ function renderFrame(cardType: CardType = 'concept', meta: string | null = META)
       <Text>body</Text>
     </CardFrame>,
   );
+}
+
+/** Renders the text color the nearest frame supplies, so a test can read it. */
+function TextColorProbe() {
+  return <Text testID="text-color">{useCardTextColor()}</Text>;
 }
 
 /** The corner-mark layer and its marks, which are hidden from accessibility. */
@@ -110,25 +117,61 @@ describe('CardFrame corner marks', () => {
     expect(screen.queryAllByTestId('corner-mark')).toHaveLength(0);
   });
 
-  it('draws each corner mark as a 1pt vertical and a 1pt horizontal line in ink at 55%', () => {
-    renderFrame();
+  it.each([
+    { where: 'a concept frame', renderMarks: () => renderFrame('concept'), color: colors.ink },
+    { where: 'an exercise frame', renderMarks: () => renderFrame('exercise'), color: colors.paper },
+    { where: 'no frame', renderMarks: () => render(<CornerMarks />), color: colors.ink },
+  ])('draws each mark as two hairlines at 55% in the text color of $where', (row) => {
+    row.renderMarks();
     const { layer, marks } = cornerMarks();
     const lines = marks.flatMap((mark) =>
       within(mark)
         .getAllByTestId('corner-mark-line', { includeHiddenElements: true })
         .map((line) => viewStyleOf(line)),
     );
-    const vertical = { left: 5, top: 0, width: 1, height: 11, backgroundColor: colors.ink };
-    const horizontal = { top: 5, left: 0, width: 11, height: 1, backgroundColor: colors.ink };
+    const line = { position: 'absolute', backgroundColor: row.color };
+    const vertical = { ...line, left: 5, top: 0, width: border.hairline, height: 11 };
+    const horizontal = { ...line, top: 5, left: 0, width: 11, height: border.hairline };
 
     expect(viewStyleOf(layer)).toMatchObject({ opacity: 0.55 });
+    expect(lines).toStrictEqual(marks.flatMap(() => [vertical, horizontal]));
     expect(lines).toHaveLength(8);
-    lines.forEach((line, index) => {
-      expect(line).toMatchObject({
-        position: 'absolute',
-        ...(index % 2 === 0 ? vertical : horizontal),
-      });
-    });
+  });
+});
+
+describe('useCardTextColor', () => {
+  it.each(CARD_TYPES)(
+    'gives the %s frame text color from cardTheme to its children',
+    (cardType) => {
+      render(
+        <CardFrame type={cardType} kicker={KICKER}>
+          <TextColorProbe />
+        </CardFrame>,
+      );
+
+      expect(screen.getByTestId('text-color')).toHaveTextContent(cardTheme[cardType].fg);
+    },
+  );
+
+  it('gives ink outside any frame', () => {
+    render(<TextColorProbe />);
+
+    expect(screen.getByTestId('text-color')).toHaveTextContent(colors.ink);
+  });
+
+  it('gives the inner frame color inside a nested frame', () => {
+    render(
+      <CardFrame type="exercise" kicker={KICKER}>
+        <CardFrame type="concept" kicker={KICKER}>
+          <TextColorProbe />
+        </CardFrame>
+      </CardFrame>,
+    );
+
+    // The outer frame is paper and the inner one ink (the default), so neither "outermost wins"
+    // nor "first non-default wins" can pass.
+    expect(screen.getByTestId('text-color')).toHaveTextContent(cardTheme.concept.fg);
+    expect(cardTheme.exercise.fg).not.toBe(cardTheme.concept.fg);
   });
 });
 

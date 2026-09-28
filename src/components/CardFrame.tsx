@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { border, cardTheme, colors, hardShadow, space, type } from '../theme';
 import type { CardType } from '../theme';
+import { CardTextColorProvider } from './cardTextColor';
 import { CornerMarks } from './CornerMarks';
 
 /**
@@ -24,24 +25,30 @@ type CardFrameProps = {
 /**
  * The frame every card sits in (docs/design/card-feed/README.md:17-20, 46-47): a filled box with
  * a 1.5pt ink border, a hard offset shadow drawn as a sibling view behind it, "+" corner marks,
- * and the kicker row above the card's own content.
+ * and the kicker row above the card's own content. Everything inside it, the corner marks
+ * included, reads the card's text color (`cardTheme[type].fg`) through `useCardTextColor`.
  */
 export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
   const kickerStyle = [styles.kicker, { color: theme.kicker }];
 
   return (
-    <View testID="card-frame" style={styles.frame}>
-      <View testID="card-frame-shadow" style={[styles.shadow, { backgroundColor: theme.shadow }]} />
-      <View testID="card-frame-body" style={[styles.body, { backgroundColor: theme.bg }]}>
-        <View testID="card-kicker-row" style={styles.kickerRow}>
-          <Text style={kickerStyle}>{kicker}</Text>
-          {meta ? <Text style={kickerStyle}>{meta}</Text> : null}
+    <CardTextColorProvider color={theme.fg}>
+      <View testID="card-frame" style={styles.frame}>
+        <View
+          testID="card-frame-shadow"
+          style={[styles.shadow, { backgroundColor: theme.shadow }]}
+        />
+        <View testID="card-frame-body" style={[styles.body, { backgroundColor: theme.bg }]}>
+          <View testID="card-kicker-row" style={styles.kickerRow}>
+            <Text style={kickerStyle}>{kicker}</Text>
+            {meta ? <Text style={kickerStyle}>{meta}</Text> : null}
+          </View>
+          {children}
         </View>
-        {children}
+        <CornerMarks />
       </View>
-      <CornerMarks />
-    </View>
+    </CardTextColorProvider>
   );
 }
 
