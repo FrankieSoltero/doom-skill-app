@@ -30,6 +30,13 @@ export const STRUDEL_ERROR = {
 /** How long the page has to post `ready` after the hook mounts or resets. */
 const READY_TIMEOUT_MS = 5000;
 
+/**
+ * The shortest time between two page `step` messages that both update the state. A step that
+ * comes sooner is dropped (the next one carries the newer step), so a page that floods the bridge
+ * cannot re-render the card on every message. Steps are 125 ms apart at Strudel's default tempo.
+ */
+const STEP_GAP_MS = 16;
+
 interface PlayerState {
   status: 'starting' | 'ready' | 'unavailable';
   playing: boolean;
@@ -77,6 +84,10 @@ class Session {
   /** Which load of the page this is; `reset` moves it on, which replaces the WebView. */
   private page = 0;
   private webView: WebView | null = null;
+  /** Between mount and unmount. The actions do nothing outside it. */
+  private mounted = false;
+  /** When the last page `step` updated the state (`Date.now()`). */
+  private lastStepAt = -Infinity;
   private readyTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly clock = new StepClock((step) => {
     this.update({ step });
@@ -107,13 +118,36 @@ class Session {
     this.clock.stop();
   }
 
+  /** Stops playing, if it is, and every timer: the state a hidden or replaced player is in. */
+  private halt(): void {
+    if (this.state.playing) {
+      this.send({ type: 'stop' });
+    }
+    this.clearTimers();
+    this.update({ playing: false, step: null, needsNetwork: false });
+  }
+
+  /** Takes a page step unless it is the current one or comes within 16 ms of the last taken. */
+  private followStep(step: number): void {
+    const now = Date.now();
+    if (step === this.state.step || now - this.lastStepAt < STEP_GAP_MS) {
+      return;
+    }
+    this.lastStepAt = now;
+    this.update({ step });
+  }
+
+  /**
+   * A page message while ready. An error counts only while playing (from `play` on, before the
+   * first step included): one that arrives after `stop` is from a run the learner ended.
+   */
   private handle(message: FromPage): void {
     const listening = this.state.playing && !this.clock.running;
-    if (message.type === 'error') {
+    if (message.type === 'error' && this.state.playing) {
       this.clock.stop();
       this.update({ error: message.message, playing: false, step: null });
     } else if (message.type === 'step' && listening) {
-      this.update({ step: message.step });
+      this.followStep(message.step);
     } else if (message.type === 'needsNetwork' && listening) {
       this.update({ needsNetwork: true });
       this.clock.start();
@@ -125,18 +159,20 @@ class Session {
     this.webView = webView;
   };
 
-  /** Mounts the session; the returned function unmounts it. */
+  /**
+   * Mounts the session; the returned function unmounts it and leaves it stopped, so a card that
+   * is hidden and shown again (not unmounted) does not come back claiming to play.
+   */
   readonly mount = (): (() => void) => {
+    this.mounted = true;
     const unregister = registerPlayer(this.stopIfPlaying);
     if (this.state.status === 'starting') {
       this.waitForReady();
     }
     return () => {
       unregister();
-      if (this.state.playing) {
-        this.send({ type: 'stop' });
-      }
-      this.clearTimers();
+      this.halt();
+      this.mounted = false;
     };
   };
 
@@ -166,6 +202,9 @@ class Session {
   };
 
   readonly play = (code: string): void => {
+    if (!this.mounted) {
+      return;
+    }
     if (this.state.status === 'unavailable') {
       this.update({ error: STRUDEL_ERROR.playerUnavailable });
     } else if (this.state.status === 'ready' && code.length > MAX_CODE_LENGTH) {
@@ -175,11 +214,15 @@ class Session {
       this.clock.stop();
       this.send({ type: 'load', code });
       this.send({ type: 'play' });
+      this.lastStepAt = -Infinity;
       this.update({ playing: true, step: null, error: null, needsNetwork: false });
     }
   };
 
   readonly stop = (): void => {
+    if (!this.mounted) {
+      return;
+    }
     this.clock.stop();
     if (this.state.status === 'ready') {
       this.send({ type: 'stop' });
@@ -194,14 +237,16 @@ class Session {
   };
 
   readonly clearError = (): void => {
-    this.update({ error: null });
+    if (this.mounted) {
+      this.update({ error: null });
+    }
   };
 
   readonly reset = (): void => {
-    if (this.state.playing) {
-      this.send({ type: 'stop' });
+    if (!this.mounted) {
+      return;
     }
-    this.clearTimers();
+    this.halt();
     this.page += 1;
     this.update(INITIAL);
     this.waitForReady();
@@ -222,6 +267,8 @@ class Session {
  *   itself every `motion.beatStep` ms until the next play.
  * - `error`: a `STRUDEL_ERROR` key, or the page's error text (untrusted; plain text only).
  * - `reset()`: replaces the page with a fresh one and starts waiting for `ready` again.
+ * - After the hook unmounts, `play`, `stop`, `reset` and `clearError` do nothing. Unmounting (or
+ *   hiding the card, which runs the same cleanup) sends `stop` if playing and leaves it stopped.
  */
 export function useStrudel(): Strudel {
   const [{ state, page }, setView] = useState({ state: INITIAL, page: 0 });

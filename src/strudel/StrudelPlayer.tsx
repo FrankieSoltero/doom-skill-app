@@ -3,7 +3,7 @@
 // no navigation, no windows, no files, no cookies or storage, no link previews, no media capture.
 // It is 0 by 0, ignores touches, is hidden from assistive technology, and renders no text.
 import { useState, type ReactElement, type Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewProps } from 'react-native-webview';
 
 import { pageScript, type ToPage } from './bridge';
@@ -41,14 +41,15 @@ const ORIGIN_WHITELIST = ['*'];
  * frames anyway), and if iOS asked twice about the same load, the second answer would be no.
  * It never opens anything: nothing here calls `Linking`.
  *
- * On Android the first load of an HTML string does not reach this check, so there the first
- * request it sees comes from the page; only a top-frame `about:blank` would pass, which can only
- * blank the page.
+ * On Android the first load of an HTML string does not reach this check (a WebView does not ask
+ * about `loadDataWithBaseURL`), so every request it sees there comes from the page: on Android it
+ * refuses all of them.
  */
 function createNavigationGuard(): (request: NavigationRequest) => boolean {
   let decided = false;
   return (request) => {
-    const allowed = !decided && request.isTopFrame && request.url === PAGE_URL;
+    const allowed =
+      Platform.OS !== 'android' && !decided && request.isTopFrame && request.url === PAGE_URL;
     decided = true;
     return allowed;
   };

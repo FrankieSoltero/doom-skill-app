@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { createRef } from 'react';
-import { Linking, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Linking, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { WebView } from 'react-native-webview';
 import RNCWebViewModule from 'react-native-webview/lib/NativeRNCWebViewModule';
 import RealWebView from 'react-native-webview/lib/WebView';
@@ -175,6 +175,18 @@ describe('StrudelPlayer: navigation', () => {
     renderPlayer();
     expect(allow('about:blank')).toBe(true);
     expect(allow('about:blank')).toBe(false);
+  });
+
+  it('refuses every request on Android, where the first load of the page never reaches it', () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      renderPlayer();
+      expect(allow('about:blank')).toBe(false);
+      expect(allow('https://example.com')).toBe(false);
+    } finally {
+      jest.restoreAllMocks();
+    }
+    expect(Platform.OS).toBe('ios');
   });
 
   it('allows the first load again on a new page, and only that', () => {

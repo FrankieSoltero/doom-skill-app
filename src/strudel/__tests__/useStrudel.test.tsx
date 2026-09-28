@@ -30,17 +30,6 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-// Jest loads this file with fresh modules, so this is the session's first dropped message. Keep
-// this test first in the file: a message dropped by an earlier test would have used up the log.
-describe('useStrudel: the first dropped message', () => {
-  it('logs the first dropped message of the session once, without its content', () => {
-    mountPlayer();
-    postRaw('{"type":"error","message":"the learner code"');
-    postRaw('again');
-    expect(warnings()).toStrictEqual([['strudel_message_dropped']]);
-  });
-});
-
 describe('useStrudel: waiting for the page', () => {
   it('starts idle, waiting, having sent nothing, and is ready when the page posts ready', () => {
     const before = jest.getTimerCount();

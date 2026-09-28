@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "node scripts/build-strudel.mjs && expo start",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "node scripts/build-strudel.mjs && eslint . --max-warnings 0",
     "typecheck": "node scripts/build-strudel.mjs && tsc --noEmit",
     "test": "jest --ci --coverage && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/__tests__/*.test.mjs",
     "build:strudel": "node scripts/build-strudel.mjs",

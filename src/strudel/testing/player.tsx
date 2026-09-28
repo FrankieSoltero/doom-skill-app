@@ -14,7 +14,11 @@ interface HookResult {
 
 /** The hook, with its player rendered, still waiting for the page. */
 export function mountPlayer() {
-  const hook = renderHook(() => useStrudel());
+  let renders = 0;
+  const hook = renderHook(() => {
+    renders += 1;
+    return useStrudel();
+  });
   const view = render(hook.result.current.player);
   /** Renders the hook's current player in place of the old one, as a screen would. */
   const renderPlayer = () => {
@@ -25,6 +29,8 @@ export function mountPlayer() {
     unmountHook: hook.unmount,
     unmountPlayer: view.unmount,
     renderPlayer,
+    /** How many times the hook has rendered: one per state update it published. */
+    renders: () => renders,
   };
 }
 
