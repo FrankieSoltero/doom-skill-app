@@ -1,12 +1,12 @@
-// Must stay the first import. Importing expo-router/testing-library registers a mock of Reanimated
-// (its bare mock, which has no `useReducedMotion`, so the pager's track cannot mount), and jest-expo
-// hoists that registration above its own require. A module already loaded through the mock below
-// is cached, so loading Reanimated here first keeps the real module (prepared by jest.setup.js).
-import 'react-native-reanimated';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
-
-import { renderFeed, stubCard, stubText, TOP_INSET } from '../../src/components/testing/feed';
+import {
+  renderFeed,
+  renderWithInsets,
+  stubCard,
+  stubText,
+  TOP_INSET,
+} from '../../src/components/testing/feed';
 import { HIDDEN, layout, settle } from '../../src/components/testing/pager';
 import { viewStyleOf } from '../../src/components/testing/styles';
 import { useFeedStore } from '../../src/feed/store';
@@ -21,8 +21,6 @@ jest.mock('react-native-safe-area-context', () => {
   const mock = jest.requireActual<{ default: object }>('react-native-safe-area-context/jest/mock');
   return mock.default;
 });
-
-jest.mock('react-native-reanimated', () => jest.requireActual<object>('react-native-reanimated'));
 
 jest.mock('../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -83,11 +81,8 @@ describe('Today screen states', () => {
     source.reject(new Error('offline'));
     await settle();
 
-    const error = screen.getByTestId('error-screen');
-    expect(error).toHaveTextContent("Couldn't load your cards.Retry");
-    // The error screen pads for the insets itself, so the root does not pad again.
-    expect(viewStyleOf(error)).toMatchObject({ paddingTop: TOP_INSET });
-    expectRoot(0);
+    expect(screen.getByTestId('error-screen')).toHaveTextContent("Couldn't load your cards.Retry");
+    expectRoot(TOP_INSET);
     fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
     await settle();
 
@@ -104,15 +99,16 @@ describe('Today screen states', () => {
     const error = screen.getByTestId('error-screen');
     expect(error).toHaveTextContent('Nothing to learn yet.', { exact: true });
     expect(within(error).queryAllByRole('button', HIDDEN)).toHaveLength(0);
-    expect(screen.getByTestId('today-screen')).toBeOnTheScreen();
+    expectRoot(TOP_INSET);
   });
 });
 
 describe('Today route', () => {
   it('draws the header and the demo concept card from the app card source', async () => {
-    // The Today route alone; the tab shell around it is tabs.test.tsx's subject.
-    renderRouter({ '(tabs)/index': TodayScreen }, { initialUrl: '/' });
-    await settle();
+    // The route's screen itself, with the real `cardSource`. tabs.test.tsx renders it through
+    // the router; importing expo-router/testing-library here would swap Reanimated for its bare
+    // mock, which the pager cannot run on.
+    await renderWithInsets(<TodayScreen />);
     await layout(700);
 
     const header = screen.getByTestId('feed-header');

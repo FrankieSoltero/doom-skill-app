@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
+import { AccessibilityInfo } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors, type } from '../../theme';
@@ -12,7 +13,7 @@ jest.mock('react-native-safe-area-context', () => {
   return mock.default;
 });
 
-// Every side different, so a test can tell which inset pads which side.
+// Insets on every side, which the error screen must leave to the screen that hosts it.
 const INSETS = { top: 47, right: 5, bottom: 34, left: 7 };
 
 function renderInsets(element: ReactElement) {
@@ -20,19 +21,47 @@ function renderInsets(element: ReactElement) {
   render(<SafeAreaProvider initialMetrics={{ frame, insets: INSETS }}>{element}</SafeAreaProvider>);
 }
 
+// React Native's Jest preset makes this a `jest.fn` already; the tests clear it themselves. The
+// preset's platform is iOS.
+const announceForAccessibility = jest.mocked(AccessibilityInfo.announceForAccessibility);
+
+beforeEach(() => {
+  announceForAccessibility.mockClear();
+});
+
+describe('ErrorScreen announcement', () => {
+  it('announces its message once when it appears, and again only for a new message', () => {
+    // Rendered bare, so a re-render keeps the same tree (the screen reads no insets).
+    const view = render(<ErrorScreen message="Failed." />);
+    expect(announceForAccessibility.mock.calls).toStrictEqual([['Failed.']]);
+
+    view.rerender(<ErrorScreen message="Failed." actionLabel="Retry" onAction={jest.fn()} />);
+    expect(announceForAccessibility).toHaveBeenCalledTimes(1);
+
+    view.rerender(<ErrorScreen message="Nothing here." />);
+    expect(announceForAccessibility.mock.calls).toStrictEqual([['Failed.'], ['Nothing here.']]);
+  });
+
+  it('holds the message in a polite live region, for Android', () => {
+    renderInsets(<ErrorScreen message="Failed." />);
+
+    const region = screen.getByTestId('error-message');
+    expect(region.props).toHaveProperty('accessibilityLiveRegion', 'polite');
+    expect(region).toHaveTextContent('Failed.', { exact: true });
+  });
+});
+
 describe('ErrorScreen', () => {
-  it('centers the message on a paper ground padded by the safe-area insets', () => {
+  it('centers the message on a paper ground, with no inset padding of its own', () => {
     renderInsets(<ErrorScreen message="Nothing here." />);
 
-    expect(viewStyleOf(screen.getByTestId('error-screen'))).toMatchObject({
+    const style = viewStyleOf(screen.getByTestId('error-screen'));
+    expect(style).toMatchObject({
       flex: 1,
       justifyContent: 'center',
       backgroundColor: colors.paper,
-      paddingTop: INSETS.top,
-      paddingRight: INSETS.right,
-      paddingBottom: INSETS.bottom,
-      paddingLeft: INSETS.left,
     });
+    expect(Object.keys(style).filter((key) => key.startsWith('padding'))).toStrictEqual([]);
     expect(textStyleOf(screen.getByText('Nothing here.'))).toMatchObject({
       ...type.body,
       color: colors.ink,

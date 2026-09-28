@@ -72,13 +72,19 @@ function DrawnCard({ card, slot, drawCard }: DrawnCardProps) {
   return drawCard(card, slot);
 }
 
-/** One card's page: the card, or its fallback if it fails to render. */
+/**
+ * One card's page: the card, or its fallback if it fails to render. Its `onNext` is bound to this
+ * page: called while another page is current (a late timer), it does nothing.
+ */
 function CardPage({ card, index, session, drawCard }: CardPageProps) {
-  const slot = { index, active: index === session.index, onNext: session.next };
+  const onNext = () => {
+    session.nextFrom(index);
+  };
+  const slot = { index, active: index === session.index, onNext };
   const fallback = (
     <FailedCard
       card={card}
-      onNext={session.next}
+      onNext={onNext}
       onShown={() => {
         session.markFailed(index);
       }}
@@ -158,8 +164,8 @@ type FeedScreenProps = {
  * shows one without. Card types the registry cannot draw are left out of the set. The tab bar
  * belongs to the tab layout, not to this screen.
  *
- * The root pads for the top safe-area inset while it shows the loading line or the feed; an
- * error screen pads for every inset itself. The loading line is a `progressbar` rather than a
+ * The root pads for the top safe-area inset in every state; the tab bar below it covers the
+ * bottom. The loading line is a `progressbar` rather than a
  * live region: it is the screen's only content when the tab opens, so a screen reader lands on it
  * and hears "Loading…, progress", and its text never changes, which is all a live region would
  * announce (and iOS has no live regions).
@@ -171,10 +177,9 @@ export function FeedScreen({
 }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useFeedSession(source, canDraw);
-  const showsError = session.status === 'error' || session.status === 'empty';
 
   return (
-    <View testID="today-screen" style={[styles.root, { paddingTop: showsError ? 0 : insets.top }]}>
+    <View testID="today-screen" style={[styles.root, { paddingTop: insets.top }]}>
       <FeedBody session={session} drawCard={drawCard} />
     </View>
   );

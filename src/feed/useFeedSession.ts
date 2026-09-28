@@ -4,8 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import type { Card, CardSource, FeedSet } from '../data';
 import { logError, logWarning } from '../log';
-import type { CardAnswer } from './answers';
-import { isAnswered } from './gating';
+import { canAdvanceFrom, canGoTo, nextMove } from './feedGate';
 import { useFeedStore } from './store';
 
 /**
@@ -78,12 +77,19 @@ function useSetRequest(source: CardSource, canRender: CardFilter) {
   };
 }
 
+/** `ready` when the store already holds a set in progress, else `loading`. */
+function resumedStatus(): SessionStatus {
+  return useFeedStore.getState().set === null ? 'loading' : 'ready';
+}
+
 /**
  * The first set, asked for on mount (and again by `retry`), and the sets after it (`loadNextSet`).
- * `onSet` starts a loaded set.
+ * `onSet` starts a loaded set. A set the store already holds is resumed, not asked for again: a
+ * remount or a Fast Refresh re-runs the mount effect, and asking again would lose the set in
+ * progress (a source that has run out answers `null`; a looping one starts the next set).
  */
 function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: FeedSet) => void) {
-  const [status, setStatus] = useState<SessionStatus>('loading');
+  const [status, setStatus] = useState<SessionStatus>(resumedStatus);
   const [nextSetStatus, setNextSetStatus] = useState<NextSetStatus>('idle');
   const request = useSetRequest(source, canRender);
 
@@ -115,6 +121,9 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
   };
 
   const loadFirstSet = useEffectEvent(() => {
+    // A set in progress is resumed as it is (it was filtered when it started). Status is already
+    // `ready` then: it starts from the store (`resumedStatus`), and a Fast Refresh keeps it.
+    if (useFeedStore.getState().set !== null) return;
     void request(firstSet);
   });
   useEffect(() => {
@@ -131,21 +140,26 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
   };
 }
 
-/** Which set of pages is shown (a count of sets started), and which of its pages failed to render. */
+/**
+ * Which set of pages is shown (a count of sets started), and which of its pages failed to render.
+ * The failed pages are also kept in a ref, so a move reads them as they are when it happens.
+ */
 function usePageState() {
   const [pages, setPages] = useState({ round: 0, failed: NO_FAILED_PAGES });
+  const failedNow = useRef(NO_FAILED_PAGES);
 
   return {
     ...pages,
+    failedNow: () => failedNow.current,
     restart: () => {
+      failedNow.current = NO_FAILED_PAGES;
       setPages((current) => ({ round: current.round + 1, failed: NO_FAILED_PAGES }));
     },
     markFailed: (page: number) => {
-      setPages((current) =>
-        current.failed.has(page)
-          ? current
-          : { ...current, failed: new Set([...current.failed, page]) },
-      );
+      if (failedNow.current.has(page)) return;
+      const failed = new Set([...failedNow.current, page]);
+      failedNow.current = failed;
+      setPages((current) => ({ ...current, failed }));
     },
   };
 }
@@ -174,21 +188,6 @@ function useToast() {
   };
 }
 
-/**
- * True when the learner may move on from `index`: a card that is answered, or that failed to
- * render (so a broken card does not trap the learner). Never from the Summary page, the last one.
- */
-function canAdvanceFrom(
-  set: FeedSet | null,
-  index: number,
-  answers: Record<number, CardAnswer>,
-  failed: ReadonlySet<number>,
-): boolean {
-  const card = set?.cards[index];
-  if (card === undefined) return false;
-  return failed.has(index) || isAnswered(card, answers[index]);
-}
-
 /** Shows page `index`. Arriving on the Summary page adds the set to the day (the store counts it once). */
 function moveTo(index: number): void {
   const store = useFeedStore.getState();
@@ -198,15 +197,21 @@ function moveTo(index: number): void {
 }
 
 /**
- * The Today feed's session over `source`. The first set is asked for on mount. Each loaded set
+ * The Today feed's session over `source`. On mount it resumes the set the store holds, or asks
+ * `source` for the first set. Each loaded set
  * keeps only the cards `canRender` accepts (default: all), so the store, the header and the pager
  * all see the same cards; a set with none left counts as no set.
  *
  * - `status`: the first set's load. `retry` asks the source again after an error.
  * - `set`, `index`: the store's set and page. The last page is the Summary.
  * - `canAdvance`: the gate for moving on from the current page.
- * - `goTo(index)`: shows a page the pager already allowed. `next()`: moves one page on under the
- *   gate, or acts as `blocked()`. `blocked()`: shows the toast (`toastVisible`) for 1.4 s.
+ * - `goTo(index)`: shows a page: any page back, or the next one through an open gate; anything
+ *   else is ignored.
+ * - `nextFrom(page)`: what a card on `page` calls to move on. When `page` is the current card page
+ *   it moves one page on through an open gate, or acts as `blocked()`; otherwise (a page the
+ *   learner has left, or the Summary) it does nothing. `next()` is `nextFrom` the current page.
+ * - `blocked()`: shows the toast (`toastVisible`) for 1.4 s.
+ * - Every move reads the store when it is made, so answering and moving on in one handler works.
  * - `loadNextSet()`: loads and starts the next set; `nextSetStatus` reports it. It never rejects.
  * - `markFailed(index)`: a page's card failed to render; it then counts as answered.
  * - `setRound`: counts the sets started, from 1; it changes with each new set, so the screen can
@@ -222,19 +227,27 @@ export function useFeedSession(source: CardSource, canRender: CardFilter = accep
     useFeedStore.getState().startSet(loaded);
     pages.restart();
   });
-  const canAdvance = canAdvanceFrom(set, index, answers, pages.failed);
+  // Moves read the store and the failed pages when they happen, not as this render saw them: a
+  // card may answer and move on in one handler, or move on from a timer.
+  const nextFrom = (page: number) => {
+    const move = nextMove(useFeedStore.getState(), pages.failedNow(), page);
+    if (move === 'go') moveTo(page + 1);
+    if (move === 'blocked') toast.show();
+  };
 
   return {
     status: loads.status,
     set,
     index,
-    canAdvance,
+    canAdvance: canAdvanceFrom({ set, index, answers }, pages.failed),
     toastVisible: toast.visible,
-    goTo: moveTo,
-    next: () => {
-      if (canAdvance) moveTo(index + 1);
-      else toast.show();
+    goTo: (target: number) => {
+      if (canGoTo(useFeedStore.getState(), pages.failedNow(), target)) moveTo(target);
     },
+    next: () => {
+      nextFrom(useFeedStore.getState().index);
+    },
+    nextFrom,
     blocked: toast.show,
     retry: loads.retry,
     loadNextSet: loads.loadNextSet,

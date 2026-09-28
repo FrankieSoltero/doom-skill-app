@@ -3,44 +3,22 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { Card, CardSource } from '../../data';
 import { logError, logWarning } from '../../log';
 import { useFeedStore } from '../store';
+import { flush, renderSession, step } from '../testing/session';
 import { cardsByType, makeSet } from '../testing/sets';
 import { controlledSource, scriptedSource } from '../testing/sources';
 import { useFeedSession } from '../useFeedSession';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
-const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
+const { concept, quiz, predict } = cardsByType;
 
 // Two cards: a concept (always answered) and a quiz (answered once an option is picked).
 const firstSet = makeSet(3, [concept, quiz]);
 const secondSet = { ...makeSet(3, [quiz, concept, concept]), setNumber: 2 };
 
-// Captured before any test installs fake timers, so `flush` works under either kind.
-const realSetImmediate = setImmediate;
-
-/** Lets every pending promise settle, inside `act`. */
-async function flush(): Promise<void> {
-  await act(async () => {
-    await new Promise<void>((resolve) => {
-      realSetImmediate(resolve);
-    });
-  });
-}
-
-async function renderSession(source: CardSource, canRender?: (card: Card) => boolean) {
-  const view = renderHook(() => useFeedSession(source, canRender));
-  await flush();
-  return view;
-}
+const failure = new Error('offline');
 
 const store = () => useFeedStore.getState();
-
-/** Calls `action` with `args` inside `act`. */
-function step<Args extends unknown[]>(action: (...args: Args) => unknown, ...args: Args): void {
-  act(() => {
-    action(...args);
-  });
-}
 
 beforeEach(() => {
   useFeedStore.setState(useFeedStore.getInitialState(), true);
@@ -49,21 +27,14 @@ beforeEach(() => {
 });
 
 describe('useFeedSession: the first set', () => {
-  it('is loading, with no set, until the source answers', async () => {
+  it("is loading until the source answers, then ready on the set's first page", async () => {
     const source = controlledSource();
     const { result } = renderHook(() => useFeedSession(source));
-
     expect(result.current).toMatchObject({ status: 'loading', set: null, index: 0 });
     expect(source.getNextSet).toHaveBeenCalledTimes(1);
 
     source.resolve(firstSet);
     await flush();
-
-    expect(result.current.status).toBe('ready');
-  });
-
-  it('starts the loaded set: ready, on its first page, nothing pending', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
 
     expect(result.current).toMatchObject({
       status: 'ready',
@@ -74,30 +45,31 @@ describe('useFeedSession: the first set', () => {
       nextSetStatus: 'idle',
       setRound: 1,
     });
+    // With no filter every card is kept, and nothing is skipped.
     expect(store().set).toStrictEqual(firstSet);
+    expect(logWarning).not.toHaveBeenCalled();
   });
 
-  it('is empty when the first answer is null', async () => {
-    const { result } = await renderSession(scriptedSource(null));
+  it.each([
+    { answer: null, status: 'empty', logged: [] },
+    { answer: failure, status: 'error', logged: [['feed_load_failed', failure]] },
+  ])('is $status when the first answer is $answer', async ({ answer, status, logged }) => {
+    const { result } = await renderSession(scriptedSource(answer));
 
-    expect(result.current).toMatchObject({ status: 'empty', set: null });
+    expect(result.current).toMatchObject({ status, set: null });
+    expect(jest.mocked(logError).mock.calls).toStrictEqual(logged);
   });
 
-  it('fails when the source rejects, and logs the error', async () => {
-    const failure = new Error('offline');
-    const { result } = await renderSession(scriptedSource(failure));
-
-    expect(result.current.status).toBe('error');
-    expect(jest.mocked(logError).mock.calls).toStrictEqual([['feed_load_failed', failure]]);
-  });
-
-  it('retries: loading while the source is asked again, then ready', async () => {
+  it('retries once, however often it is called: loading meanwhile, then ready', async () => {
     const source = controlledSource();
-    const { result } = renderHook(() => useFeedSession(source));
-    source.reject(new Error('offline'));
+    const { result } = await renderSession(source);
+    source.reject(failure);
     await flush();
 
-    step(result.current.retry);
+    act(() => {
+      result.current.retry();
+      result.current.retry();
+    });
 
     expect(result.current.status).toBe('loading');
     expect(source.getNextSet).toHaveBeenCalledTimes(2);
@@ -106,62 +78,35 @@ describe('useFeedSession: the first set', () => {
     expect(result.current.status).toBe('ready');
   });
 
-  it('asks the source once when retry is called again while a load is in flight', async () => {
-    const source = controlledSource();
-    const { result } = renderHook(() => useFeedSession(source));
-    source.reject(new Error('offline'));
-    await flush();
+  it.each([
+    { outcome: 'an answer', answer: firstSet },
+    { outcome: 'a failure', answer: failure },
+  ])(
+    'ignores $outcome that arrives after unmount: no change, nothing logged',
+    async ({ answer }) => {
+      const source = scriptedSource(answer);
+      const { result, unmount } = renderHook(() => useFeedSession(source));
 
-    act(() => {
-      result.current.retry();
-      result.current.retry();
-    });
-    await flush();
+      // The source's answer is a settled promise, but the hook reads it only after this unmount.
+      unmount();
+      await flush();
 
-    expect(source.getNextSet).toHaveBeenCalledTimes(2);
-  });
-
-  it('ignores an answer that arrives after unmount', async () => {
-    const source = controlledSource();
-    const { result, unmount } = renderHook(() => useFeedSession(source));
-
-    unmount();
-    source.resolve(firstSet);
-    await flush();
-
-    expect(result.current.status).toBe('loading');
-    expect(store().set).toBeNull();
-  });
-
-  it('ignores a failure that arrives after unmount: no state change, nothing logged', async () => {
-    const source = controlledSource();
-    const { result, unmount } = renderHook(() => useFeedSession(source));
-
-    unmount();
-    source.reject(new Error('offline'));
-    await flush();
-
-    expect(result.current.status).toBe('loading');
-    expect(logError).not.toHaveBeenCalled();
-  });
+      expect(result.current.status).toBe('loading');
+      expect(store().set).toBeNull();
+      expect(logError).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('useFeedSession: cards the screen cannot render', () => {
   const conceptOnly = (card: Card) => card.type === 'concept';
 
-  it('keeps every card when no filter is given', async () => {
-    const all = makeSet(0, [concept, quiz, predict, exercise, review, checkpoint]);
-    const { result } = await renderSession(scriptedSource(all));
-
-    expect(result.current.set?.cards).toHaveLength(6);
-    expect(logWarning).not.toHaveBeenCalled();
-  });
-
   it('drops them before the set starts, and warns once per skipped type', async () => {
     const mixed = makeSet(3, [quiz, concept, quiz, predict, concept]);
     const { result } = await renderSession(scriptedSource(mixed), conceptOnly);
 
-    expect(result.current.set?.cards).toStrictEqual([concept, concept]);
+    // The hook's set is the store's, so the header, the pager and the totals see the same cards.
+    expect(result.current.set).toBe(store().set);
     expect(store().set?.cards).toStrictEqual([concept, concept]);
     expect(jest.mocked(logWarning).mock.calls).toStrictEqual([
       ['card_type_skipped', { type: 'quiz' }],
@@ -188,54 +133,31 @@ describe('useFeedSession: cards the screen cannot render', () => {
 });
 
 describe('useFeedSession: moving through the set', () => {
-  it('cannot advance past an unanswered card, can once it is answered, never from the Summary', async () => {
+  it('gates advancing and goTo, never from the Summary; going back always moves', async () => {
     const { result } = await renderSession(scriptedSource(firstSet));
 
+    // goTo takes one page on only through an open gate.
+    step(result.current.goTo, 2);
+    expect(result.current.index).toBe(0);
     step(result.current.goTo, 1);
     expect(result.current).toMatchObject({ index: 1, canAdvance: false });
+    step(result.current.goTo, 2);
+    expect(result.current.index).toBe(1);
 
     step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
     expect(result.current.canAdvance).toBe(true);
 
     step(result.current.goTo, 2);
     expect(result.current).toMatchObject({ index: 2, canAdvance: false });
-  });
 
-  it('counts a page marked failed as answered', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
-    step(result.current.goTo, 1);
-
-    act(() => {
-      result.current.markFailed(1);
-      result.current.markFailed(1);
-    });
-
-    expect(result.current.canAdvance).toBe(true);
-  });
-
-  it('next moves one page on from an answered card', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
-
-    step(result.current.next);
-
-    expect(result.current).toMatchObject({ index: 1, toastVisible: false });
-  });
-
-  it('next on an unanswered card stays and shows the toast', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
-    step(result.current.goTo, 1);
-
-    step(result.current.next);
-
-    expect(result.current).toMatchObject({ index: 1, toastVisible: true });
+    step(result.current.goTo, 0);
+    expect(result.current.index).toBe(0);
   });
 
   it('reaches the Summary once, by next or by goTo', async () => {
     const { result } = await renderSession(scriptedSource(firstSet));
-    act(() => {
-      result.current.goTo(1);
-      store().setAnswer(1, { kind: 'choice', picked: 0 });
-    });
+    step(result.current.goTo, 1);
+    step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
 
     step(result.current.next);
     expect(store()).toMatchObject({ index: 2, streak: 4, totals: { cards: 2, seconds: 50 } });
@@ -243,6 +165,84 @@ describe('useFeedSession: moving through the set', () => {
     step(result.current.goTo, 1);
     step(result.current.goTo, 2);
     expect(store()).toMatchObject({ streak: 4, totals: { cards: 2, seconds: 50 } });
+  });
+});
+
+describe('useFeedSession: the gate at the moment of the move', () => {
+  it('next right after setAnswer, in the same handler, moves on with no toast', async () => {
+    const { result } = await renderSession(scriptedSource(firstSet));
+    step(result.current.goTo, 1);
+
+    act(() => {
+      store().setAnswer(1, { kind: 'choice', picked: 0 });
+      result.current.next();
+    });
+
+    expect(result.current).toMatchObject({ index: 2, toastVisible: false });
+  });
+
+  it("nextFrom a page the learner has left does nothing, even that page's own late call", async () => {
+    const { result } = await renderSession(scriptedSource(firstSet));
+    step(result.current.goTo, 1);
+    step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
+    const lateNext = result.current.nextFrom;
+
+    step(result.current.goTo, 0);
+    step(lateNext, 1);
+
+    expect(result.current).toMatchObject({ index: 0, toastVisible: false });
+  });
+
+  it('nextFrom and next on the current card move on through the gate, or show the toast', async () => {
+    const { result } = await renderSession(scriptedSource(firstSet));
+
+    step(result.current.nextFrom, 0);
+    expect(result.current).toMatchObject({ index: 1, toastVisible: false });
+    step(result.current.next);
+    expect(result.current).toMatchObject({ index: 1, toastVisible: true });
+  });
+
+  it('next and nextFrom do nothing on the Summary page: no move, no toast', async () => {
+    const { result } = await renderSession(scriptedSource(makeSet(3, [concept])));
+    step(result.current.goTo, 1);
+
+    step(result.current.next);
+    step(result.current.nextFrom, 1);
+
+    expect(result.current).toMatchObject({ index: 1, toastVisible: false });
+  });
+});
+
+describe('useFeedSession: resuming a set in progress', () => {
+  it('is ready from its first render, and asks nothing, when the store holds a set', async () => {
+    store().startSet(firstSet);
+    const source = scriptedSource(secondSet);
+    const seen: string[] = [];
+
+    renderHook(() => {
+      const session = useFeedSession(source);
+      seen.push(session.status);
+      return session;
+    });
+    await flush();
+
+    expect(new Set(seen)).toStrictEqual(new Set(['ready']));
+    expect(source.getNextSet).not.toHaveBeenCalled();
+    expect(store().set).toStrictEqual(firstSet);
+  });
+
+  it('keeps the set, its page and its answers across an unmount and a fresh mount', async () => {
+    const source = scriptedSource(firstSet, secondSet);
+    const first = await renderSession(source);
+    step(first.result.current.goTo, 1);
+    step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
+    first.unmount();
+
+    const { result } = await renderSession(source);
+
+    expect(source.getNextSet).toHaveBeenCalledTimes(1);
+    expect(result.current).toMatchObject({ status: 'ready', set: firstSet, index: 1 });
+    expect(store().answers).toStrictEqual({ 1: { kind: 'choice', picked: 0 } });
   });
 });
 
@@ -261,10 +261,16 @@ describe('useFeedSession: the toast', () => {
     });
   };
 
-  it('shows for 1,400 ms', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
+  /** A session whose gate was just blocked. */
+  async function blockedSession() {
+    const view = await renderSession(scriptedSource(firstSet));
+    step(view.result.current.blocked);
+    return view;
+  }
 
-    step(result.current.blocked);
+  it('shows for 1,400 ms', async () => {
+    const { result } = await blockedSession();
+
     advance(1399);
     expect(result.current.toastVisible).toBe(true);
     advance(1);
@@ -272,8 +278,7 @@ describe('useFeedSession: the toast', () => {
   });
 
   it('restarts its 1,400 ms when blocked again while it shows', async () => {
-    const { result } = await renderSession(scriptedSource(firstSet));
-    step(result.current.blocked);
+    const { result } = await blockedSession();
     advance(1000);
 
     step(result.current.blocked);
@@ -299,31 +304,38 @@ describe('useFeedSession: the toast', () => {
 describe('useFeedSession: the next set', () => {
   async function onSummary(source: CardSource) {
     const view = await renderSession(source);
-    act(() => {
-      store().setAnswer(1, { kind: 'choice', picked: 0 });
-      view.result.current.goTo(2);
-    });
+    step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
+    step(view.result.current.goTo, 1);
+    step(view.result.current.goTo, 2);
     return view;
   }
 
-  it('is loading meanwhile, then starts the next set on its first page', async () => {
+  it('is loading meanwhile, asks once however often it is called, then starts the next set', async () => {
     const source = controlledSource();
-    const { result } = renderHook(() => useFeedSession(source));
+    const { result } = await renderSession(source);
     source.resolve(firstSet);
     await flush();
     act(() => {
       result.current.markFailed(0);
-      result.current.goTo(2);
+      result.current.markFailed(1);
+      result.current.markFailed(1);
     });
+    step(result.current.goTo, 1);
+    // A page that failed to render counts as answered, so the gate is open on the unanswered quiz.
+    expect(result.current.canAdvance).toBe(true);
+    step(result.current.goTo, 2);
+    expect(result.current.index).toBe(2);
 
     let loaded: Promise<void> = Promise.resolve();
     act(() => {
       loaded = result.current.loadNextSet();
+      void result.current.loadNextSet();
     });
     expect(result.current.nextSetStatus).toBe('loading');
     source.resolve(secondSet);
     await act(() => loaded);
 
+    expect(source.getNextSet).toHaveBeenCalledTimes(2);
     expect(result.current).toMatchObject({
       set: secondSet,
       index: 0,
@@ -343,7 +355,6 @@ describe('useFeedSession: the next set', () => {
   });
 
   it('keeps the set and its answers when the next set fails, and logs the error', async () => {
-    const failure = new Error('offline');
     const { result } = await onSummary(scriptedSource(firstSet, failure));
 
     await act(() => result.current.loadNextSet());
@@ -353,26 +364,9 @@ describe('useFeedSession: the next set', () => {
     expect(logError).toHaveBeenCalledWith('next_set_load_failed', failure);
   });
 
-  it('asks the source once when called again while a load is in flight', async () => {
-    const source = controlledSource();
-    const { result } = renderHook(() => useFeedSession(source));
-    source.resolve(firstSet);
-    await flush();
-
-    act(() => {
-      void result.current.loadNextSet();
-      void result.current.loadNextSet();
-    });
-    source.resolve(secondSet);
-    await flush();
-
-    expect(source.getNextSet).toHaveBeenCalledTimes(2);
-    expect(result.current.set).toStrictEqual(secondSet);
-  });
-
   it('ignores a next set that arrives after unmount', async () => {
     const source = controlledSource();
-    const { result, unmount } = renderHook(() => useFeedSession(source));
+    const { result, unmount } = await renderSession(source);
     source.resolve(firstSet);
     await flush();
     act(() => {

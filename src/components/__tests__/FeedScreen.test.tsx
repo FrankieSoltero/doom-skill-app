@@ -6,7 +6,7 @@ import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { scriptedSource } from '../../feed/testing/sources';
 import { logError, logWarning } from '../../log';
 import { cardTheme, colors } from '../../theme';
-import { renderFeed, stubCard, stubNext, stubText } from '../testing/feed';
+import { answeringCard, renderFeed, stubCard, stubNext, stubText } from '../testing/feed';
 import { advance, HIDDEN, layout, settle, swipe } from '../testing/pager';
 import { viewStyleOf } from '../testing/styles';
 
@@ -31,14 +31,17 @@ afterEach(() => {
 });
 
 /** Renders the feed over one set of `cards`, drawn by `drawCard`, and lays the pager out. */
-async function renderSet(cards: Card[], drawCard: typeof stubCard = stubCard) {
+async function renderSet(cards: Card[], drawCard: Parameters<typeof renderFeed>[1] = stubCard) {
   await renderFeed(scriptedSource(makeSet(12, cards)), drawCard);
   await layout(700);
 }
 
+/** What `Broken` throws. */
+const cardBroke = new Error('card broke');
+
 /** A card component that fails to render. */
 function Broken(): never {
-  throw new Error('card broke');
+  throw cardBroke;
 }
 
 const shownIndex = () => useFeedStore.getState().index;
@@ -140,6 +143,42 @@ describe('FeedScreen moves', () => {
   });
 });
 
+describe('FeedScreen next, bound to the page that calls it', () => {
+  it('a card that answers and calls onNext in one handler moves on, with no toast', async () => {
+    await renderSet([quiz, concept], answeringCard(0));
+
+    await pressNext(0);
+
+    expect(shownIndex()).toBe(1);
+    expect(screen.queryByTestId('toast')).toBeNull();
+  });
+
+  it('a card that answers, then calls onNext from a 550 ms timer, moves on', async () => {
+    await renderSet([quiz, concept], answeringCard(550));
+
+    await pressNext(0);
+    advance(549);
+    expect(shownIndex()).toBe(0);
+    advance(1);
+
+    expect(shownIndex()).toBe(1);
+    expect(screen.queryByTestId('toast')).toBeNull();
+  });
+
+  it('a late onNext from a page the learner left does nothing: no move, no toast', async () => {
+    await renderSet([concept, quiz, concept], answeringCard(550));
+    await swipe(-80);
+    expect(shownIndex()).toBe(1);
+
+    await pressNext(1);
+    await swipe(80);
+    advance(550);
+
+    expect(shownIndex()).toBe(0);
+    expect(screen.queryByTestId('toast')).toBeNull();
+  });
+});
+
 describe('FeedScreen card failure', () => {
   let consoleError: jest.SpiedFunction<typeof console.error>;
 
@@ -148,8 +187,16 @@ describe('FeedScreen card failure', () => {
     consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
+  // Only React's reports of the boundary catching `Broken`'s error may reach the console; any other
+  // error or warning fails the test.
   afterEach(() => {
+    const reports: unknown[][] = consoleError.mock.calls;
     consoleError.mockRestore();
+    expect(reports.length).toBeGreaterThan(0);
+    for (const report of reports) {
+      expect(report[1]).toBe(cardBroke);
+      expect(report[2]).toBe('The above error occurred in the <Broken> component.');
+    }
   });
 
   /** Draws every card as `stubCard`, except that the card at page 1 throws while rendering. */
@@ -164,7 +211,7 @@ describe('FeedScreen card failure', () => {
     expect(failed).toHaveTextContent("QuizThis card couldn't be shown.Next card");
     expect(screen.getByText(stubText('concept', 0, true))).toBeOnTheScreen();
     expect(screen.getByText(stubText('concept', 2, false), HIDDEN)).toBeOnTheScreen();
-    expect(logError).toHaveBeenCalledWith('render_failed', expect.any(Error), { boundary: 'card' });
+    expect(logError).toHaveBeenCalledWith('render_failed', cardBroke, { boundary: 'card' });
   });
 
   it("draws the fallback in the card's colors: a paper button on an exercise card", async () => {
