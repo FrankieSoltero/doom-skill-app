@@ -69,14 +69,28 @@ function restrictSyntax(...groups) {
   return ['error', ...groups.flat()];
 }
 
-// SS-6: card data comes through src/data (the CardSource). Only src/data may import the fixture
-// or the fixture source.
-const CARD_DATA_IMPORTS = [
-  {
-    regex: '(^|/)(fixtureSource|__fixtures__/cards\\.fixture\\.json)$',
-    message: 'Card data comes through src/data (CardSource). Import from src/data instead.',
-  },
-];
+// The selectors that catch the ways to load a module that `no-restricted-imports` does not check.
+// That rule checks import and export declarations and TypeScript's `import x = require()`; these
+// catch `require()`, `import()` and `import('...')` types whose module name matches `moduleRegex`
+// (a string, matched ignoring case, as `no-restricted-imports` does by default). A module name
+// built at run time or written as a template literal is not detected. The esquery regex literal
+// needs each `/` escaped.
+function moduleLoadSyntax(moduleRegex, message) {
+  const pattern = `/${moduleRegex.replaceAll('/', '\\/')}/iu`;
+  return [
+    `CallExpression[callee.name="require"] > Literal[value=${pattern}]`,
+    `ImportExpression[source.value=${pattern}]`,
+    `TSImportType[source.value=${pattern}]`,
+  ].map((selector) => ({ selector, message }));
+}
+
+// SS-6: card data comes through src/data (the CardSource). Only src/data may load the fixture
+// source or anything under src/data/__fixtures__/, in any import form.
+const CARD_DATA_MESSAGE =
+  'Card data comes through src/data (CardSource). Import from src/data instead.';
+const CARD_DATA_MODULE = '(^|/)(fixtureSource$|data/__fixtures__/)';
+const CARD_DATA_IMPORTS = [{ regex: CARD_DATA_MODULE, message: CARD_DATA_MESSAGE }];
+const CARD_DATA_LOAD_SYNTAX = moduleLoadSyntax(CARD_DATA_MODULE, CARD_DATA_MESSAGE);
 
 // SS-9: Strudel and the WebView live in src/strudel, and the build scripts in scripts/ bundle
 // Strudel. Only those two folders may load `react-native-webview` or a package in the `@strudel`
@@ -86,16 +100,7 @@ const CARD_DATA_IMPORTS = [
 const STRUDEL_MESSAGE = 'Strudel and the WebView live in src/strudel. Use useStrudel instead.';
 const STRUDEL_MODULE = '^(react-native-webview(/|$)|@strudel/)';
 const STRUDEL_IMPORTS = [{ regex: STRUDEL_MODULE, message: STRUDEL_MESSAGE }];
-// `no-restricted-imports` checks import and export declarations and TypeScript's
-// `import x = require()`. These selectors catch the other ways to load a module: `require()`,
-// `import()` and `import('...')` types. A module name built at run time or written as a template
-// literal is not detected. The esquery regex literal needs each `/` escaped.
-const STRUDEL_MODULE_SELECTOR = `/${STRUDEL_MODULE.replaceAll('/', '\\/')}/iu`;
-const STRUDEL_LOAD_SYNTAX = [
-  `CallExpression[callee.name="require"] > Literal[value=${STRUDEL_MODULE_SELECTOR}]`,
-  `ImportExpression[source.value=${STRUDEL_MODULE_SELECTOR}]`,
-  `TSImportType[source.value=${STRUDEL_MODULE_SELECTOR}]`,
-].map((selector) => ({ selector, message: STRUDEL_MESSAGE }));
+const STRUDEL_LOAD_SYNTAX = moduleLoadSyntax(STRUDEL_MODULE, STRUDEL_MESSAGE);
 
 // `no-restricted-imports` options from pattern groups. Like `no-restricted-syntax`, it is one rule
 // with one option object per file: a later config object that sets it replaces every group for the
@@ -138,9 +143,10 @@ module.exports = [
       'import/no-default-export': 'error',
       // TS-12, SS-10
       'no-console': 'error',
-      // SS-1, SS-7, SS-9 (the UI folders add SS-8 below)
+      // SS-1, SS-6, SS-7, SS-9 (the UI folders add SS-8 below)
       'no-restricted-syntax': restrictSyntax(
         COLOR_LITERAL_SYNTAX,
+        CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
         STRUDEL_LOAD_SYNTAX,
       ),
@@ -164,7 +170,8 @@ module.exports = [
   // which carry the SS-8 message, so testID, accessibilityRole and style stay allowed.
   // Exception #12 in docs/standards.md: both SS-8 checks are off in the __tests__ folders inside
   // these three folders ({app,src/components,src/cards}/**/__tests__/**) because tests assert on
-  // literal UI text. Tests there keep the color, card-type and Strudel selectors of the base.
+  // literal UI text. Tests there keep the color, card-data, card-type and Strudel selectors of the
+  // base.
   {
     files: UI_FILES,
     ignores: ['**/__tests__/**'],
@@ -172,6 +179,7 @@ module.exports = [
       'react/jsx-no-literals': ['error', { noStrings: true, ignoreProps: true }],
       'no-restricted-syntax': restrictSyntax(
         COLOR_LITERAL_SYNTAX,
+        CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
         STRUDEL_LOAD_SYNTAX,
         UI_TEXT_SYNTAX,
@@ -197,12 +205,18 @@ module.exports = [
   // selector groups stay on.
   {
     files: ['src/theme/**'],
-    rules: { 'no-restricted-syntax': restrictSyntax(CARD_TYPE_SYNTAX, STRUDEL_LOAD_SYNTAX) },
+    rules: {
+      'no-restricted-syntax': restrictSyntax(
+        CARD_DATA_LOAD_SYNTAX,
+        CARD_TYPE_SYNTAX,
+        STRUDEL_LOAD_SYNTAX,
+      ),
+    },
   },
   // Exceptions #9 and #10 in docs/standards.md: SS-6 (no-restricted-imports, the card-data
-  // patterns) and SS-7 (no-restricted-syntax, the card-type selectors) off for src/data/** because
-  // it is the one place card data is read and card types are declared. The other groups, SS-9
-  // included, stay on.
+  // patterns, and no-restricted-syntax, the card-data selectors) and SS-7 (no-restricted-syntax,
+  // the card-type selectors) off for src/data/** because it is the one place card data is read
+  // and card types are declared. The other groups, SS-9 included, stay on.
   {
     files: ['src/data/**'],
     rules: {
@@ -218,7 +232,11 @@ module.exports = [
     files: ['src/strudel/**', 'scripts/**'],
     rules: {
       'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS),
-      'no-restricted-syntax': restrictSyntax(COLOR_LITERAL_SYNTAX, CARD_TYPE_SYNTAX),
+      'no-restricted-syntax': restrictSyntax(
+        COLOR_LITERAL_SYNTAX,
+        CARD_DATA_LOAD_SYNTAX,
+        CARD_TYPE_SYNTAX,
+      ),
     },
   },
   // Exception #11 in docs/standards.md: TS-12 (no-console) off for src/log.ts because it is the
