@@ -1,5 +1,5 @@
-// The session across sets: the round the store counts, the status once a set is held, and moves
-// that come from a card of an earlier set. Kept apart from useFeedSession.test.tsx, which is at
+// The session across sets: the round the store counts, the status once a set is held, moves
+// that come from a card of an earlier set, and a set that arrives after unmount. Kept apart from useFeedSession.test.tsx, which is at
 // the file size limit.
 import { act } from '@testing-library/react-native';
 
@@ -126,5 +126,43 @@ describe('useFeedSession: failed pages belong to their set', () => {
     step(result.current.nextFrom, 0, result.current.setRound);
 
     expect(result.current).toMatchObject({ index: 0, toastVisible: true });
+  });
+});
+
+describe('useFeedSession: a set that arrives after unmount', () => {
+  it('starts a first set; a fresh mount resumes it with no second request', async () => {
+    const arrived = { ...makeSet(3, [concept, quiz]), setNumber: 7 };
+    const source = controlledSource();
+    const first = await renderSession(source);
+
+    first.unmount();
+    source.resolve(arrived);
+    await flush();
+
+    expect(first.result.current.status).toBe('loading');
+    expect(store().set).toStrictEqual(arrived);
+    const { result } = await renderSession(source);
+    expect(source.getNextSet).toHaveBeenCalledTimes(1);
+    expect(result.current).toMatchObject({ status: 'ready', index: 0, setRound: 1 });
+    expect(result.current.set?.setNumber).toBe(7);
+  });
+
+  it('starts a next set, so the source skips no set', async () => {
+    const source = controlledSource();
+    const first = await renderSession(source);
+    source.resolve(makeSet(3, [concept]));
+    await flush();
+    act(() => {
+      void first.result.current.loadNextSet();
+    });
+
+    first.unmount();
+    source.resolve(secondSet(quiz));
+    await flush();
+
+    expect(store()).toMatchObject({ set: secondSet(quiz), index: 0, round: 2 });
+    const { result } = await renderSession(source);
+    expect(source.getNextSet).toHaveBeenCalledTimes(2);
+    expect(result.current).toMatchObject({ status: 'ready', set: secondSet(quiz), setRound: 2 });
   });
 });

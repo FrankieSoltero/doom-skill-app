@@ -78,24 +78,18 @@ describe('useFeedSession: the first set', () => {
     expect(result.current.status).toBe('ready');
   });
 
-  it.each([
-    { outcome: 'an answer', answer: firstSet },
-    { outcome: 'a failure', answer: failure },
-  ])(
-    'ignores $outcome that arrives after unmount: no change, nothing logged',
-    async ({ answer }) => {
-      const source = scriptedSource(answer);
-      const { result, unmount } = renderHook(() => useFeedSession(source));
+  it('ignores a failure that arrives after unmount: no change, nothing logged', async () => {
+    const source = scriptedSource(failure);
+    const { result, unmount } = renderHook(() => useFeedSession(source));
 
-      // The source's answer is a settled promise, but the hook reads it only after this unmount.
-      unmount();
-      await flush();
+    // The source's answer is a settled promise, but the hook reads it only after this unmount.
+    unmount();
+    await flush();
 
-      expect(result.current.status).toBe('loading');
-      expect(store().set).toBeNull();
-      expect(logError).not.toHaveBeenCalled();
-    },
-  );
+    expect(result.current.status).toBe('loading');
+    expect(store().set).toBeNull();
+    expect(logError).not.toHaveBeenCalled();
+  });
 });
 
 describe('useFeedSession: cards the screen cannot render', () => {
@@ -362,21 +356,5 @@ describe('useFeedSession: the next set', () => {
     expect(result.current).toMatchObject({ set: firstSet, index: 2, nextSetStatus: 'error' });
     expect(store().answers).toStrictEqual({ 1: { kind: 'choice', picked: 0 } });
     expect(logError).toHaveBeenCalledWith('next_set_load_failed', failure);
-  });
-
-  it('ignores a next set that arrives after unmount', async () => {
-    const source = controlledSource();
-    const { result, unmount } = await renderSession(source);
-    source.resolve(firstSet);
-    await flush();
-    act(() => {
-      void result.current.loadNextSet();
-    });
-
-    unmount();
-    source.resolve(secondSet);
-    await flush();
-
-    expect(store().set).toStrictEqual(firstSet);
   });
 });

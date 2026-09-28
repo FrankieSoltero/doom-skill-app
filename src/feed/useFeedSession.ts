@@ -40,7 +40,7 @@ function renderablePart(set: FeedSet, canRender: CardFilter): FeedSet | null {
   return cards.length > 0 ? { ...set, cards } : null;
 }
 
-/** What one kind of load does as it starts, and with the source's answer. */
+/** What one kind of load does to the hook's own state as it starts, and with the source's answer. */
 type LoadHandlers = {
   start: () => void;
   /** A set with at least one card the screen can render, or `null` for "nothing to show". */
@@ -50,9 +50,12 @@ type LoadHandlers = {
 
 /**
  * A function that asks `source` for a set, one request at a time: a call while one is in flight
- * does nothing. An answer that arrives after the component unmounted is dropped unseen.
+ * does nothing. A set that arrives is passed to `onSet` (which starts it in the global store)
+ * even after the component unmounted: the source has already moved past it, so dropping it would
+ * skip a set. Only the handlers, which update the hook's own state, are skipped after unmount; a
+ * failure then is dropped unseen.
  */
-function useSetRequest(source: CardSource, canRender: CardFilter) {
+function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: FeedSet) => void) {
   const alive = useRef(false);
   const busy = useRef(false);
 
@@ -68,8 +71,10 @@ function useSetRequest(source: CardSource, canRender: CardFilter) {
     busy.current = true;
     handlers.start();
     try {
-      const set = await source.getNextSet();
-      if (alive.current) handlers.loaded(set === null ? null : renderablePart(set, canRender));
+      const answer = await source.getNextSet();
+      const set = answer === null ? null : renderablePart(answer, canRender);
+      if (set !== null) onSet(set);
+      if (alive.current) handlers.loaded(set);
     } catch (error) {
       if (alive.current) handlers.failed(error);
     } finally {
@@ -92,14 +97,13 @@ function resumedStatus(): SessionStatus {
 function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: FeedSet) => void) {
   const [status, setStatus] = useState<SessionStatus>(resumedStatus);
   const [nextSetStatus, setNextSetStatus] = useState<NextSetStatus>('idle');
-  const request = useSetRequest(source, canRender);
+  const request = useSetRequest(source, canRender, onSet);
 
   const firstSet: LoadHandlers = {
     start: () => {
       setStatus('loading');
     },
     loaded: (set) => {
-      if (set !== null) onSet(set);
       setStatus(set === null ? 'empty' : 'ready');
     },
     failed: (error) => {
@@ -112,7 +116,6 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
       setNextSetStatus('loading');
     },
     loaded: (set) => {
-      if (set !== null) onSet(set);
       setNextSetStatus(set === null ? 'none' : 'idle');
     },
     failed: (error) => {

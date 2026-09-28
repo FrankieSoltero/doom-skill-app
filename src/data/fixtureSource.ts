@@ -42,19 +42,22 @@ function parseFeedSet(raw: unknown): FeedSet {
  * A new source over the demo sets, with its own position. It serves sets 1, 2, 3 and 4, then set
  * 1's cards again, without end, and never resolves to `null`. The set number counts up from 1
  * without limit, so the fifth call serves set 1's cards as set 5. Each set is validated as it is
- * served, and parsing builds new objects, so no two calls share a reference.
+ * served, and parsing builds new objects, so no two calls share a reference. The position moves
+ * on only when a set parses, so a retry after a `FeedLoadError` asks for the same set again.
  */
 export function createFixtureSource(): CardSource {
   let nextSetNumber = 1;
   return {
     getNextSet() {
-      const setNumber = nextSetNumber;
-      nextSetNumber += 1;
-      const demo = DEMO_SETS[(setNumber - 1) % DEMO_SETS.length];
-      // Parsing inside `then` turns a validation throw into a rejected promise.
-      return Promise.resolve().then(() =>
-        parseFeedSet({ ...demo, topic: fixture.topic, setNumber }),
-      );
+      // Inside `then`, so a validation throw becomes a rejected promise, and calls made together
+      // read and move the position one after another.
+      return Promise.resolve().then(() => {
+        const setNumber = nextSetNumber;
+        const demo = DEMO_SETS[(setNumber - 1) % DEMO_SETS.length];
+        const set = parseFeedSet({ ...demo, topic: fixture.topic, setNumber });
+        nextSetNumber = setNumber + 1;
+        return set;
+      });
     },
   };
 }

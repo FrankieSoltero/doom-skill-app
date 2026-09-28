@@ -126,6 +126,34 @@ describe('createFixtureSource', () => {
   });
 });
 
+describe('createFixtureSource position', () => {
+  it('serves the same set on a retry after a failed parse, then goes on', async () => {
+    const good = fixture.cards[1];
+    const cards: unknown[] = fixture.cards.map((card, at) =>
+      at === 1 ? { ...card, correct: '1' } : card,
+    );
+    const { source, FeedLoadError } = sourceOver({ ...fixture, cards });
+    await expect(source.getNextSet()).rejects.toBeInstanceOf(FeedLoadError);
+
+    // The source reads the fixture's cards array in place, so repairing it fixes the next parse.
+    cards[1] = good;
+
+    await expect(source.getNextSet()).resolves.toMatchObject({
+      setNumber: 1,
+      cards: fixture.cards,
+    });
+    await expect(source.getNextSet()).resolves.toMatchObject({ setNumber: 2 });
+  });
+
+  it('numbers calls made together one after another', async () => {
+    const source = createFixtureSource();
+
+    const sets = await Promise.all([source.getNextSet(), source.getNextSet()]);
+
+    expect(sets.map((set) => set?.setNumber)).toEqual([1, 2]);
+  });
+});
+
 // The source takes only `cards` and `summary` from an extra set; the rest is its own.
 describe('createFixtureSource over an extra set with stray keys', () => {
   it('serves an extra set with the counted number and shared topic, whatever keys it carries', async () => {
