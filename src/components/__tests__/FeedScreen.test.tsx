@@ -54,11 +54,16 @@ describe('FeedScreen pages', () => {
     await renderFeed(scriptedSource(makeSet(12, [quiz, concept, predict])));
     await layout(700);
 
-    expect(screen.getAllByTestId('progress-segment')).toHaveLength(1);
-    expect(screen.getByTestId('feed-page-0')).toHaveTextContent(concept.title, { exact: false });
-    expect(screen.getByTestId('feed-page-1', HIDDEN)).toBeOnTheScreen();
-    expect(screen.queryByTestId('feed-page-2', HIDDEN)).toBeNull();
-    expect(logWarning).toHaveBeenCalledWith('card_type_skipped', { type: 'quiz' });
+    expect(screen.getAllByTestId('progress-segment')).toHaveLength(2);
+    expect(screen.getByTestId('feed-page-0')).toHaveTextContent(quiz.title, { exact: false });
+    expect(screen.getByTestId('feed-page-1', HIDDEN)).toHaveTextContent(concept.title, {
+      exact: false,
+    });
+    expect(screen.getByTestId('feed-page-2', HIDDEN)).toBeOnTheScreen();
+    expect(screen.queryByTestId('feed-page-3', HIDDEN)).toBeNull();
+    expect(jest.mocked(logWarning).mock.calls).toStrictEqual([
+      ['card_type_skipped', { type: 'predict' }],
+    ]);
   });
 
   it('ends with the Summary page, a placeholder with no text', async () => {

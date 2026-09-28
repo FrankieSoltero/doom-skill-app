@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import type { Card } from '../data';
 import { ConceptCard } from './ConceptCard';
+import { QuizCard } from './QuizCard';
 
 /** What the screen gives every card: its page, whether it is on screen, and how to move on. */
 type CardSlot = {
@@ -26,6 +27,7 @@ const renderers: { [Name in CardTypeName]?: Renderer<Name> } = {
   concept: (card, { active, onNext }) => (
     <ConceptCard card={card} active={active} onNext={onNext} />
   ),
+  quiz: (card, { index, onNext }) => <QuizCard card={card} index={index} onNext={onNext} />,
 };
 
 /** The renderer for `type`, typed so it accepts exactly the cards of that type. */
