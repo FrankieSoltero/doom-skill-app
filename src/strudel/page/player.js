@@ -1,23 +1,25 @@
 // The page inside the hidden WebView that plays the learner's Strudel code. scripts/build-strudel.mjs
 // bundles this file with @strudel/web into the page (index.html); the tests in
 // scripts/__tests__/player.test.mjs import it directly, with fakes for everything it talks to.
-// It runs in WKWebView (iOS 17 and later), so it uses nothing newer than Safari 17 has.
+// It runs in WKWebView on the app's minimum iOS, 16.4; the build lowers its syntax to Safari 16.4.
 //
 // Message contract (Task 25 types it in src/strudel/bridge.ts). Each message is a JSON string.
 //   App to page: {type:'load', code}, {type:'play'}, {type:'stop'}
 //   Page to app: {type:'ready'}, {type:'error', message}, {type:'step', step}, {type:'needsNetwork'}
+
+import { createTicker } from './steps.js';
 
 /**
  * @typedef {{ type: 'load', code: string } | { type: 'play' } | { type: 'stop' }} ToPage
  * @typedef {{ type: 'ready' } | { type: 'error', message: string } | { type: 'step', step: number }
  *   | { type: 'needsNetwork' }} FromPage
  * @typedef {(message: FromPage) => void} Post
- * @typedef {{ now(): number, cps: number }} Scheduler
+ * @typedef {import('./steps.js').Scheduler} Scheduler
+ * @typedef {import('./steps.js').Timers} Timers
  * @typedef {{ evaluate(code: string, autoplay: boolean): Promise<unknown>,
  *   start(): Promise<void> | void, stop(): void, scheduler: Scheduler }} Repl
- * @typedef {{ initAudio(): Promise<void>, samples(map: string): Promise<unknown> }} Audio
- * @typedef {{ setInterval(fn: () => void, ms: number): unknown,
- *   clearInterval(id: unknown): void }} Timers
+ * @typedef {{ initAudio(): Promise<void>, samples(map: string): Promise<unknown>,
+ *   getAudioContext(): { resume(): Promise<void> } }} Audio
  * @typedef {{ handle(raw: unknown): Promise<void>, reportError(error: unknown): void,
  *   onLog(detail: { message?: unknown } | undefined): void, onNetworkFailure(): void }} Player
  */
@@ -27,15 +29,6 @@ export const MAX_CODE_LENGTH = 5000;
 const MAX_ERROR_LENGTH = 500;
 /** An error message never repeats the learner's code once it is at least this long. */
 const MIN_REDACTED_CODE_LENGTH = 8;
-const STEPS_PER_CYCLE = 16;
-const STEP_EPSILON = 1e-9;
-/** How often the page reads the scheduler's clock while playing, in milliseconds. */
-const STEP_POLL_MS = 25;
-/**
- * @strudel/web 1.3.0's scheduler (the Cyclist) reports a cycle position 0.05 s ahead of what is
- * heard: its clock ticks every 0.05 s and each sound is scheduled 0.1 s after its tick.
- */
-const SCHEDULER_LEAD_SECONDS = 0.05;
 /** The sample map loaded on the first play. Every URL in it is on raw.githubusercontent.com. */
 export const SAMPLE_MAP = 'github:tidalcycles/dirt-samples';
 /** How @strudel/web 1.3.0 logs an error thrown while the scheduler queries the pattern. */
@@ -87,20 +80,6 @@ export function errorText(error, code) {
 }
 
 /**
- * The 16th step being heard, 0 to 15, from the scheduler's cycle position; null before the
- * first sound.
- * @param {number} cycle
- * @param {number} cps cycles per second
- * @returns {number | null}
- */
-export function stepOf(cycle, cps) {
-  const heard = cycle - SCHEDULER_LEAD_SECONDS * cps;
-  if (!(heard >= -STEP_EPSILON)) return null;
-  // The epsilon keeps a position that floating point puts just below a step boundary on that step.
-  return Math.floor(((heard + STEP_EPSILON) % 1) * STEPS_PER_CYCLE);
-}
-
-/**
  * Wraps fetch to call onFailure when a request fails or is refused. Every request this page
  * makes loads samples, so a failure means the samples are unavailable.
  * @param {typeof fetch} fetchImpl
@@ -121,42 +100,19 @@ export function watchFetch(fetchImpl, onFailure) {
 }
 
 /**
- * Posts the step being heard while playing, once per step.
- * @param {{ scheduler: Scheduler, post: Post, timers: Timers }} options
- */
-function createTicker({ scheduler, post, timers }) {
-  /** @type {unknown} */
-  let id;
-  /** @type {number | null} */
-  let last = null;
-  const tick = () => {
-    const step = stepOf(scheduler.now(), scheduler.cps);
-    if (step === null || step === last) return;
-    last = step;
-    post({ type: 'step', step });
-  };
-  const stop = () => {
-    if (id !== undefined) timers.clearInterval(id);
-    id = undefined;
-    last = null;
-  };
-  const start = () => {
-    stop();
-    id = timers.setInterval(tick, STEP_POLL_MS);
-  };
-  return { start, stop };
-}
-
-/**
- * Starts Web Audio and loads the sample map, each until it succeeds once: @strudel/web's
- * initAudio adds its AudioWorklet modules again on every call. A sample map that fails to load
- * calls onNetworkFailure, and playback goes on without samples.
+ * Starts Web Audio and loads the sample map. It resumes the audio context on every play, which
+ * the app sends from the learner's tap: @strudel/web 1.3.0's initAudio never does, because its
+ * `!r instanceof OfflineAudioContext && await r.resume()` reads as `(!r) instanceof ...`, which is
+ * always false (dist/index.mjs line 8320). initAudio and the sample map run until each succeeds
+ * once: initAudio adds its AudioWorklet modules again on every call. A sample map that fails to
+ * load calls onNetworkFailure, and playback goes on without samples.
  * @param {Audio} audio
  * @param {() => void} onNetworkFailure
  */
 function createAudioPreparer(audio, onNetworkFailure) {
   const done = { audio: false, samples: false };
   return async () => {
+    await audio.getAudioContext().resume();
     if (!done.audio) {
       await audio.initAudio();
       done.audio = true;

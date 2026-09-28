@@ -12,7 +12,6 @@ import {
   errorText,
   parseMessage,
   startPage,
-  stepOf,
   watchFetch,
 } from '../../src/strudel/page/player.js';
 
@@ -51,12 +50,19 @@ function fakeTimers() {
   return timers;
 }
 
-function setup({ samples = async () => {} } = {}) {
+// `resume` records itself in the REPL's calls, so a test can check it comes before `start`.
+function setup({ samples = async () => {}, resume = async () => {} } = {}) {
   const posted = [];
-  const audio = { starts: 0, initAudio: async () => void (audio.starts += 1), samples };
   const timers = fakeTimers();
   let player;
   const repl = fakeRepl((error) => player.reportError(error));
+  const context = { resume: () => (repl.calls.push(['resume']), resume()) };
+  const audio = {
+    starts: 0,
+    initAudio: async () => void (audio.starts += 1),
+    getAudioContext: () => context,
+    samples,
+  };
   player = createPlayer({ repl, audio, post: (message) => posted.push(message), timers });
   return { player, repl, audio, timers, posted };
 }
@@ -124,20 +130,11 @@ test('errorText cuts the message to 500 characters and never echoes the whole co
   assert.equal(errorText(new Error('sound s not found'), 's'), 'sound s not found');
 });
 
-test('stepOf maps the heard cycle position to a 16th step, 0 to 15', () => {
-  // The scheduler runs 0.05 s ahead of what is heard; at 0.5 cycles per second that is 0.025.
-  assert.equal(stepOf(0.025, 0.5), 0);
-  assert.equal(stepOf(0.025 + 1 / 16, 0.5), 1);
-  assert.equal(stepOf(0.024, 0.5), null);
-  assert.equal(stepOf(3.025 + 15.9 / 16, 0.5), 15);
-  assert.equal(stepOf(Number.NaN, 0.5), null);
-});
-
 test('Page: play after a load starts playback and posts each 16th step', async () => {
   const { player, repl, timers, posted } = setup();
   await player.handle(load('s("bd")'));
   await player.handle(PLAY);
-  assert.deepEqual(repl.calls.slice(1), [['stop'], ['start']]);
+  assert.deepEqual(repl.calls.slice(1), [['resume'], ['stop'], ['start']]);
   const steps = [];
   for (let cycle = 0.025; cycle < 1.025; cycle += 1 / 64) {
     repl.scheduler.cycle = cycle;
@@ -193,6 +190,36 @@ test('Page: samples unavailable posts needsNetwork once per play and still plays
   assert.deepEqual(maps, [SAMPLE_MAP, SAMPLE_MAP]);
   assert.deepEqual(posted, [{ type: 'needsNetwork' }, { type: 'needsNetwork' }]);
   assert.equal(repl.calls.filter(([name]) => name === 'start').length, 2);
+});
+
+test('Page: samples unavailable when the sample map load only rejects', async () => {
+  const { player, repl, posted } = setup({
+    samples: async () => Promise.reject(new Error('error loading "strudel.json"')),
+  });
+  await player.handle(load('s("bd")'));
+  await player.handle(PLAY);
+  assert.deepEqual(posted, [{ type: 'needsNetwork' }]);
+  assert.deepEqual(repl.calls.at(-1), ['start']);
+});
+
+test('Page: play resumes the audio context on every play, before playback starts', async () => {
+  const { player, repl } = setup();
+  await player.handle(load('s("bd")'));
+  await player.handle(PLAY);
+  await player.handle(PLAY);
+  const names = repl.calls.map(([name]) => name);
+  assert.deepEqual(names, ['evaluate', 'resume', 'stop', 'start', 'resume', 'stop', 'start']);
+});
+
+test('Page: a rejected resume posts one error and nothing plays', async () => {
+  const { player, repl, timers, posted } = setup({
+    resume: async () => Promise.reject(new Error('The operation is not allowed')),
+  });
+  await player.handle(load('s("bd")'));
+  await assert.doesNotReject(player.handle(PLAY));
+  assert.deepEqual(posted, [{ type: 'error', message: 'The operation is not allowed' }]);
+  assert.ok(!repl.calls.some(([name]) => name === 'start'));
+  assert.equal(timers.tick, undefined);
 });
 
 test('audio starts and the sample map loads once, after they succeed', async () => {

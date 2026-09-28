@@ -16,12 +16,16 @@
       - script-src data: @strudel/web 1.3.0 loads its AudioWorklet modules from data: URLs.
       - connect-src: the one host the page fetches from. raw.githubusercontent.com serves the
         sample map the page loads (github:tidalcycles/dirt-samples) and every sample in it.
-      Media, workers, images, styles, fonts and frames fall to default-src 'none'. The sample
-      files are fetched and decoded by Web Audio, which media-src does not govern.
+      - worker-src 'none': the page starts no worker. Without it, workers would fall back to
+        script-src and could start from data: URLs. AudioWorklet modules are governed by
+        script-src, not worker-src (CSP Level 3, "Get the effective directive for request":
+        the "audioworklet" destination maps to script-src-elem).
+      Media, images, styles, fonts and frames fall to default-src 'none'. The sample files are
+      fetched and decoded by Web Audio, which media-src does not govern.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; connect-src https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; connect-src https://raw.githubusercontent.com; worker-src 'none'; base-uri 'none'; form-action 'none'"
     />
   </head>
   <body>

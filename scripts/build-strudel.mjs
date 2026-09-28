@@ -5,8 +5,9 @@
 // are for the owner's own devices only (docs/standards.md, REPO-7).
 //
 // Options, for tests: --out <file> writes elsewhere; --resolve-from <dir> resolves esbuild and
-// @strudel/web from that folder; --postinstall exits 0 with one line when neither is installed
-// (an install without devDependencies), so that install does not fail.
+// @strudel/web from that folder; --entry <file> bundles that file instead of the page;
+// --postinstall exits 0 with one line when neither package is installed (an install without
+// devDependencies), so that install does not fail.
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
@@ -14,17 +15,27 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import vm from 'node:vm';
 
 const PACKAGE_DIR = dirname(import.meta.dirname);
 const PAGE_DIR = join(PACKAGE_DIR, 'src', 'strudel', 'page');
 const DEFAULT_OUT = join(PACKAGE_DIR, 'src', 'strudel', 'generated', 'strudelHtml.ts');
 const PLACEHOLDER = '/* STRUDEL_BUNDLE */';
 const COMMAND = 'pnpm --filter mobile run build:strudel';
+// The oldest browser the page must parse in: WKWebView on the app's minimum iOS. app.json sets no
+// ios.deploymentTarget, so it is Expo SDK 57's default, iOS 16.4 (the template Podfile's
+// `platform :ios, ... || '16.4'`, and ExpoModulesCore.podspec's `:ios => '16.4'`), above React
+// Native 0.86's own minimum of 15.1. iOS 16.4 ships Safari 16.4.
+const TARGET = 'safari16.4';
+// In a script element, `<!--` followed by `<script` switches the HTML parser into a state where
+// `</script>` no longer ends the element. Rewriting either sequence would change what a regular
+// expression or String.raw in the bundle means, so a bundle that contains one is refused.
+const UNEMBEDDABLE = /<!--|<script/i;
 
 // The entry esbuild bundles: Strudel's functions handed to the page's bootstrap.
-const ENTRY = `import { initAudio, initStrudel, samples } from '@strudel/web';
+const ENTRY = `import { getAudioContext, initAudio, initStrudel, samples } from '@strudel/web';
 import { startPage } from ${JSON.stringify(join(PAGE_DIR, 'player.js'))};
-void startPage(window, { initAudio, initStrudel, samples });
+void startPage(window, { getAudioContext, initAudio, initStrudel, samples });
 `;
 
 /** Thrown for a failure with its own message, printed as is. */
@@ -36,13 +47,26 @@ function say(line) {
 }
 
 /**
- * Makes the bundle safe inside a script element: `</script` would end the element early, and
- * `<!--` changes how the HTML parser reads the rest of it. `<\/` and `<\!` mean the same in a
- * JavaScript string, template or regular expression, which is the only place they can occur.
+ * Makes the bundle safe inside a script element. `</script` would end the element early, so it
+ * becomes `<\/script`, which means the same in a JavaScript string, template or regular
+ * expression (in a `u` or `v` regular expression too); only String.raw would see the backslash.
+ * A bundle with `<!--` or `<script` is refused, and the result must parse as a classic script:
+ * `new vm.Script` compiles it without running it.
  * @param {string} js
  */
-function escapeScript(js) {
-  return js.replace(/<\/(script)/gi, '<\\/$1').replaceAll('<!--', '<\\!--');
+function embeddable(js) {
+  if (UNEMBEDDABLE.test(js)) {
+    throw new BuildError(
+      'the bundle contains a sequence that cannot be embedded in a script element',
+    );
+  }
+  const escaped = js.replace(/<\/(script)/gi, '<\\/$1');
+  try {
+    new vm.Script(escaped);
+  } catch (error) {
+    throw new BuildError(`the bundled script does not parse: ${describe(error)}`);
+  }
+  return escaped;
 }
 
 /**
@@ -53,7 +77,7 @@ function escapeScript(js) {
 export function renderHtml(template, js) {
   const parts = template.split(PLACEHOLDER);
   if (parts.length !== 2) throw new BuildError(`the template needs one ${PLACEHOLDER}`);
-  return parts.join(escapeScript(js));
+  return parts.join(embeddable(js));
 }
 
 /**
@@ -75,15 +99,19 @@ export const STRUDEL_HTML: string = ${literal};
 `;
 }
 
+const NOT_FOUND_CODES = new Set(['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND']);
+
 /**
- * The path `find` returns, or undefined when the module is not installed.
+ * The path `find` returns, or undefined when the module is not installed. Any other error, such
+ * as a corrupt package.json, is thrown, so it fails the build instead of passing for a skip.
  * @param {() => string} find
  */
 function tryResolve(find) {
   try {
     return find();
-  } catch {
-    return undefined;
+  } catch (error) {
+    if (NOT_FOUND_CODES.has(error?.code)) return undefined;
+    throw error;
   }
 }
 
@@ -114,26 +142,31 @@ function resolveTools({ resolveFrom, postinstall }) {
  * inputs give the same bytes. The script starts with @strudel/web's license notice, and any
  * license comment in the sources stays in the bundle, as the library's license requires.
  * @param {string} esbuildPath
- * @param {string} resolveFrom
+ * @param {{ resolveFrom: string, entry: string | undefined }} options
  * @param {{ version: string, license: string, homepage: string }} pkg @strudel/web's package.json
  */
-async function bundle(esbuildPath, resolveFrom, pkg) {
+async function bundle(esbuildPath, { resolveFrom, entry }, pkg) {
   const { default: esbuild } = await import(pathToFileURL(esbuildPath).href);
   const home = pkg.homepage.split('#')[0];
+  const input = entry
+    ? { entryPoints: [entry] }
+    : {
+        stdin: {
+          contents: ENTRY,
+          resolveDir: resolveFrom,
+          sourcefile: 'strudel-page.js',
+          loader: 'js',
+        },
+      };
   const result = await esbuild.build({
     banner: { js: `/*! @strudel/web ${pkg.version} | ${pkg.license} | ${home} */` },
-    stdin: {
-      contents: ENTRY,
-      resolveDir: resolveFrom,
-      sourcefile: 'strudel-page.js',
-      loader: 'js',
-    },
+    ...input,
     absWorkingDir: PACKAGE_DIR,
     bundle: true,
     write: false,
     format: 'iife',
     platform: 'browser',
-    target: ['safari17'],
+    target: [TARGET],
     minify: true,
     charset: 'ascii',
     legalComments: 'inline',
@@ -163,10 +196,16 @@ function parseOptions(argv) {
     options: {
       out: { type: 'string', default: DEFAULT_OUT },
       'resolve-from': { type: 'string', default: PACKAGE_DIR },
+      entry: { type: 'string' },
       postinstall: { type: 'boolean', default: false },
     },
   });
-  return { out: values.out, resolveFrom: values['resolve-from'], postinstall: values.postinstall };
+  return {
+    out: values.out,
+    resolveFrom: values['resolve-from'],
+    entry: values.entry,
+    postinstall: values.postinstall,
+  };
 }
 
 /** Runs the build. Returns the exit code. */
@@ -179,7 +218,7 @@ async function main(argv) {
     if (tools === null) return 0;
     const pkg = JSON.parse(await readFile(tools.strudel, 'utf8'));
     step = 'bundle';
-    const js = await bundle(tools.esbuild, options.resolveFrom, pkg);
+    const js = await bundle(tools.esbuild, options, pkg);
     step = 'render';
     const html = renderHtml(await readFile(join(PAGE_DIR, 'index.html'), 'utf8'), js);
     step = 'write';

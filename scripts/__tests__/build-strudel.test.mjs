@@ -3,7 +3,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
@@ -18,8 +26,11 @@ const SCRIPT = join(MOBILE, 'scripts', 'build-strudel.mjs');
 const TEMPLATE = readFileSync(join(MOBILE, 'src', 'strudel', 'page', 'index.html'), 'utf8');
 const POLICY =
   "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; " +
-  "connect-src https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'";
+  "connect-src https://raw.githubusercontent.com; worker-src 'none'; base-uri 'none'; " +
+  "form-action 'none'";
 const NOT_FOUND = 'build-strudel: @strudel/web not found; run pnpm install\n';
+const NOT_EMBEDDABLE =
+  'build-strudel: the bundle contains a sequence that cannot be embedded in a script element\n';
 const NOT_BUILT =
   'build-strudel: Strudel bundle not built: esbuild and @strudel/web are not installed\n';
 
@@ -61,6 +72,7 @@ test('Build: writes the module with both exports, silently', async () => {
   assert.match(STRUDEL_HTML, /initStrudel/);
   const notice = '/*! @strudel/web 1.3.0 | AGPL-3.0-or-later | https://codeberg.org/uzu/strudel */';
   assert.ok(scriptBody(STRUDEL_HTML).trimStart().startsWith(notice));
+  assert.doesNotThrow(() => new vm.Script(scriptBody(STRUDEL_HTML)), 'the real bundle parses');
 });
 
 test('No network in the page: the policy is exact and nothing loads from a URL', async () => {
@@ -86,12 +98,11 @@ test('Repeatable: two builds are byte-identical', () => {
 });
 
 test('the bundle cannot break out of the script element or the string', async () => {
-  const values = ['`', '${x}', '\\', '</script>', '</SCRIPT >', '<!--', ' ', ' '];
+  const values = ['`', '${x}', '\\', '</script>', '</SCRIPT >', ' ', ' '];
   const bundle = `globalThis.values = ${JSON.stringify(values)};
 globalThis.tpl = \`\${'a'}</script>\\\`\`; // </script> in a comment`;
   const html = renderHtml(TEMPLATE, bundle);
   assert.equal(html.match(/<\/script/gi)?.length, 1);
-  assert.ok(!scriptBody(html).includes('<!--'));
   const sandbox = {};
   vm.runInNewContext(scriptBody(html), sandbox);
   // Spread into this realm's Array: deepEqual compares prototypes, and the sandbox has its own.
@@ -101,6 +112,46 @@ globalThis.tpl = \`\${'a'}</script>\\\`\`; // </script> in a comment`;
   assert.ok(!source.includes('\u2028'), 'U+2028 is escaped in the module source');
   const { STRUDEL_HTML } = await importModule(source);
   assert.equal(STRUDEL_HTML, html);
+});
+
+test('a bundle with <!-- or <script is refused, not rewritten', () => {
+  for (const text of ['<!--', '<script', '<SCRIPT type="x">']) {
+    assert.throws(() => renderHtml(TEMPLATE, `globalThis.x = ${JSON.stringify(text)};`), {
+      message: NOT_EMBEDDABLE.slice('build-strudel: '.length, -1),
+    });
+  }
+});
+
+test('a bundle that does not parse is refused', () => {
+  assert.throws(() => renderHtml(TEMPLATE, 'globalThis.x = ;'), {
+    message: /^the bundled script does not parse: [^\n]+$/,
+  });
+});
+
+test('Build failure: an unembeddable bundle fails the build and writes nothing', () => {
+  for (const [name, text] of [
+    ['comment', '<!--'],
+    ['script', '<script'],
+  ]) {
+    const entry = join(work, `${name}-entry.js`);
+    writeFileSync(entry, `globalThis.x = ${JSON.stringify(text)};\n`);
+    const out = join(work, `${name}-out`, 'strudelHtml.ts');
+    const result = run('--out', out, '--entry', entry);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, NOT_EMBEDDABLE);
+    assert.ok(!readdirSync(work).includes(`${name}-out`));
+  }
+});
+
+test('Build failure: a resolution error other than not-found is not a quiet skip', () => {
+  const corrupt = join(work, 'corrupt');
+  mkdirSync(join(corrupt, 'node_modules', 'esbuild'), { recursive: true });
+  writeFileSync(join(corrupt, 'node_modules', 'esbuild', 'package.json'), '{ "main": ');
+  const out = join(work, 'corrupt-out', 'strudelHtml.ts');
+  const result = run('--postinstall', '--out', out, '--resolve-from', corrupt);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /^build-strudel: resolve failed: Invalid package config [^\n]+\n$/);
+  assert.ok(!readdirSync(work).includes('corrupt-out'));
 });
 
 test('Build failure: @strudel/web cannot be resolved', () => {
