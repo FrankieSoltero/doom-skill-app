@@ -25,10 +25,20 @@ export const STRUDEL_ERROR = {
   codeTooLong: 'code_too_long',
   /** `play` was called while the player is unavailable; nothing was sent. */
   playerUnavailable: 'player_unavailable',
+  /** The page answered a play with no `step`, `needsNetwork` or `error` within 10 seconds. */
+  pageSilent: 'page_silent',
 } as const;
 
 /** How long the page has to post `ready` after the hook mounts or resets. */
 const READY_TIMEOUT_MS = 5000;
+
+/**
+ * How long the page has to answer a play with a `step`, `needsNetwork` or `error` message: the
+ * page waits up to 3 seconds for the audio to resume and 5 for the samples (page/audio.js), then
+ * posts a step within a tick of starting; the rest is margin. Learner code can leave the page
+ * silent (`while (true) {}`, `document.open()`), and the card would show Stop forever.
+ */
+const PLAY_LIMIT_MS = 10_000;
 
 /**
  * The shortest time between two page `step` messages that both update the state. A step that
@@ -92,6 +102,8 @@ class Session {
    */
   private lastStepAt = -Infinity;
   private readyTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Runs from a play until the page's first answer to it; see `PLAY_LIMIT_MS`. */
+  private playTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly clock = new StepClock((step) => {
     this.update({ step });
   });
@@ -118,7 +130,24 @@ class Session {
 
   private clearTimers(): void {
     clearTimeout(this.readyTimer);
+    clearTimeout(this.playTimer);
     this.clock.stop();
+  }
+
+  /** Starts waiting for the page to answer a play, in place of any earlier wait. */
+  private awaitAnswer(): void {
+    clearTimeout(this.playTimer);
+    this.playTimer = setTimeout(() => {
+      this.pageSilent();
+    }, PLAY_LIMIT_MS);
+  }
+
+  /** The page did not answer a play: stop, as far as the page still listens, and fail. */
+  private pageSilent(): void {
+    this.send({ type: 'stop' });
+    this.clock.stop();
+    this.update({ playing: false, step: null, error: STRUDEL_ERROR.pageSilent });
+    logWarning('strudel_page_silent');
   }
 
   /** Stops playing, if it is, and every timer: the state a hidden or replaced player is in. */
@@ -145,6 +174,9 @@ class Session {
    * first step included): one that arrives after `stop` is from a run the learner ended.
    */
   private handle(message: FromPage): void {
+    if (message.type !== 'ready') {
+      clearTimeout(this.playTimer);
+    }
     const listening = this.state.playing && !this.clock.running;
     if (message.type === 'error' && this.state.playing) {
       this.clock.stop();
@@ -219,6 +251,7 @@ class Session {
       this.send({ type: 'play' });
       this.lastStepAt = -Infinity;
       this.update({ playing: true, step: null, error: null, needsNetwork: false });
+      this.awaitAnswer();
     }
   };
 
@@ -227,6 +260,7 @@ class Session {
       return;
     }
     this.clock.stop();
+    clearTimeout(this.playTimer);
     if (this.state.status === 'ready') {
       this.send({ type: 'stop' });
     }
@@ -269,6 +303,8 @@ class Session {
  * - `needsNetwork`: the samples could not load. Playing goes on, and the hook counts the steps
  *   itself every `motion.beatStep` ms until the next play.
  * - `error`: a `STRUDEL_ERROR` key, or the page's error text (untrusted; plain text only).
+ * - A play the page does not answer (no `step`, `needsNetwork` or `error`) within 10 seconds
+ *   stops, and `error` becomes `STRUDEL_ERROR.pageSilent`; `reset()` loads a fresh page.
  * - `reset()`: replaces the page with a fresh one and starts waiting for `ready` again.
  * - After the hook unmounts, `play`, `stop`, `reset` and `clearError` do nothing. Unmounting (or
  *   hiding the card, which runs the same cleanup) sends `stop` if playing and leaves it stopped.

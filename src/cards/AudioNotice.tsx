@@ -39,8 +39,20 @@ function errorText(error: string): string {
   return Array.from(oneLine).slice(0, PAGE_TEXT_LIMIT).join('');
 }
 
-/** The one notice to show, by precedence: an error, then unavailable, then no connection. */
+/** The notice of a player that cannot play until it is reset. */
+const UNAVAILABLE: Notice = {
+  tone: 'error',
+  label: copy.audioUnavailable,
+  message: '',
+  resettable: true,
+};
+
+/**
+ * The one notice to show, by precedence: an error, then unavailable, then no connection. A page
+ * that stopped answering is an error the card shows as unavailable.
+ */
 function noticeOf(audio: AudioStatus): Notice | null {
+  if (audio.error === STRUDEL_ERROR.pageSilent) return UNAVAILABLE;
   if (audio.error !== null) {
     return {
       tone: 'error',
@@ -49,9 +61,7 @@ function noticeOf(audio: AudioStatus): Notice | null {
       resettable: true,
     };
   }
-  if (audio.status === 'unavailable') {
-    return { tone: 'error', label: copy.audioUnavailable, message: '', resettable: true };
-  }
+  if (audio.status === 'unavailable') return UNAVAILABLE;
   if (audio.needsNetwork && audio.playing) {
     return { tone: 'warn', label: copy.audioNeedsConnection, message: '', resettable: false };
   }

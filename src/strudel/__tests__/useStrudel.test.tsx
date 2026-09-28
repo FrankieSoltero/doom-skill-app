@@ -143,8 +143,12 @@ describe('useStrudel: play and stop', () => {
     expect(result.current.error).toBe('e'.repeat(500));
   });
 
-  it('exports the two error keys the app itself reports', () => {
-    expect(Object.values(STRUDEL_ERROR)).toStrictEqual(['code_too_long', 'player_unavailable']);
+  it('exports the three error keys the app itself reports', () => {
+    expect(Object.values(STRUDEL_ERROR)).toStrictEqual([
+      'code_too_long',
+      'player_unavailable',
+      'page_silent',
+    ]);
   });
 });
 

@@ -80,6 +80,16 @@ describe('AudioNotice: which notice', () => {
     expect(resetButton()).toBeOnTheScreen();
   });
 
+  it('says audio is unavailable, with a Reset action, for a page that stopped answering', () => {
+    renderNotice({ error: STRUDEL_ERROR.pageSilent });
+
+    expect(screen.getAllByTestId('result-badge')).toHaveLength(1);
+    expect(label()).toHaveTextContent('Audio unavailable', { exact: true });
+    expect(screen.queryByTestId('result-badge-message')).toBeNull();
+    expect(fillOf()).toBe(colors.coral);
+    expect(resetButton()).toBeOnTheScreen();
+  });
+
   it('shows unavailable over no connection', () => {
     renderNotice({ status: 'unavailable', needsNetwork: true, playing: true });
 
