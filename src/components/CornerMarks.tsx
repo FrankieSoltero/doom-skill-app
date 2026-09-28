@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import type { ViewStyle } from 'react-native';
 
-import { border } from '../theme';
+import { border, colors } from '../theme';
 import { useCardTextColor } from './cardTextColor';
 
 // Registration marks, docs/design/card-feed/README.md:19. The theme holds none of these values.
@@ -22,17 +22,33 @@ const CORNERS: readonly { name: string; position: ViewStyle }[] = [
 ];
 
 /**
+ * Whose color the marks take. `ink`: always ink, as README.md:19 draws every mark; the card frame
+ * uses it, because its marks sit centred on the frame's corners, half over the paper page, so on
+ * the ink-ground exercise and summary cards marks in the card text color (paper) could not be
+ * seen. `cardText`: the card text color from `useCardTextColor`, the default, used by controls
+ * inside a card.
+ */
+type Tone = 'ink' | 'cardText';
+
+type CornerMarksProps = {
+  /** Defaults to `cardText`. */
+  tone?: Tone;
+};
+
+/**
  * Four "+" registration marks, one centred on each corner of the parent, which must be
  * positioned. The marks ignore touches and are hidden from assistive technology.
  *
- * Departure from docs/design/card-feed/README.md:19, which draws the marks in ink everywhere: they
- * take the card text color from `useCardTextColor`, so they show as paper on the ink-ground
- * exercise and summary cards, and stay ink on light cards and outside any frame. To restore the
- * README, use `colors.ink` in place of `color` below.
+ * The card frame's marks are ink on every card, as docs/design/card-feed/README.md:19 says.
+ * Marks on a control inside a card (a button) take the card text color instead, a departure from
+ * README.md:19, which draws them in ink everywhere: a control's marks sit over the card's own
+ * ground, so on the ink-ground exercise and summary cards they show as paper, and on light cards
+ * and outside any frame they stay ink. To restore the README for controls too, draw every mark
+ * in `colors.ink`.
  */
-export function CornerMarks() {
-  const color = useCardTextColor();
-  const lineColor = { backgroundColor: color };
+export function CornerMarks({ tone = 'cardText' }: CornerMarksProps) {
+  const cardTextColor = useCardTextColor();
+  const lineColor = { backgroundColor: tone === 'ink' ? colors.ink : cardTextColor };
 
   return (
     <View

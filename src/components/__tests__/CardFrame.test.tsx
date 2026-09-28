@@ -4,7 +4,7 @@ import { Text } from 'react-native';
 import { border, cardTheme, colors, hardShadow, type } from '../../theme';
 import type { CardType } from '../../theme';
 import { CardFrame } from '../CardFrame';
-import { useCardTextColor } from '../cardTextColor';
+import { CardTextColorProvider, useCardTextColor } from '../cardTextColor';
 import { CornerMarks } from '../CornerMarks';
 import { textStyleOf, viewStyleOf } from '../testing/styles';
 import type { Element } from '../testing/styles';
@@ -101,27 +101,65 @@ describe('CardFrame colors and shadow', () => {
 });
 
 describe('CardFrame corner marks', () => {
-  it('draws four 11 by 11 corner marks centred on the corners, hidden from touch and a11y', () => {
-    renderFrame();
-    const { layer, marks } = cornerMarks();
+  it.each<CardType>(['concept', 'exercise', 'summary'])(
+    'draws four 11 by 11 marks centred on the %s frame corners, hidden from touch and a11y',
+    (cardType) => {
+      renderFrame(cardType);
+      const { layer, marks } = cornerMarks();
 
-    expect(marks.map((mark) => viewStyleOf(mark))).toStrictEqual(
-      CORNERS.map((corner) => ({ ...MARK_SIZE, ...corner })),
-    );
-    expectSiblings(layer, screen.getByTestId('card-frame-body'));
-    expect(layer.props).toMatchObject({
-      pointerEvents: 'none',
-      accessibilityElementsHidden: true,
-      importantForAccessibility: 'no-hide-descendants',
-    });
-    expect(screen.queryAllByTestId('corner-mark')).toHaveLength(0);
-  });
+      expect(marks.map((mark) => viewStyleOf(mark))).toStrictEqual(
+        CORNERS.map((corner) => ({ ...MARK_SIZE, ...corner })),
+      );
+      expectSiblings(layer, screen.getByTestId('card-frame-body'));
+      expect(layer.props).toMatchObject({
+        pointerEvents: 'none',
+        accessibilityElementsHidden: true,
+        importantForAccessibility: 'no-hide-descendants',
+      });
+      expect(screen.queryAllByTestId('corner-mark')).toHaveLength(0);
+    },
+  );
 
+  // The frame's own marks are ink on every card, README.md:19, including the ink-ground exercise
+  // and summary cards, where they sit half over the paper page. Marks drawn with the default tone,
+  // as controls draw them, follow the card text color.
   it.each([
-    { where: 'a concept frame', renderMarks: () => renderFrame('concept'), color: colors.ink },
-    { where: 'an exercise frame', renderMarks: () => renderFrame('exercise'), color: colors.paper },
-    { where: 'no frame', renderMarks: () => render(<CornerMarks />), color: colors.ink },
-  ])('draws each mark as two hairlines at 55% in the text color of $where', (row) => {
+    {
+      where: 'a concept frame',
+      renderMarks: () => renderFrame('concept'),
+      color: colors.ink,
+      colorName: 'ink',
+    },
+    {
+      where: 'an exercise frame',
+      renderMarks: () => renderFrame('exercise'),
+      color: colors.ink,
+      colorName: 'ink',
+    },
+    {
+      where: 'a summary frame',
+      renderMarks: () => renderFrame('summary'),
+      color: colors.ink,
+      colorName: 'ink',
+    },
+    {
+      where: 'default tone, no frame',
+      renderMarks: () => render(<CornerMarks />),
+      color: colors.ink,
+      colorName: 'ink',
+    },
+    {
+      where: 'default tone, paper text',
+      renderMarks: () =>
+        render(
+          <CardTextColorProvider color={cardTheme.exercise.fg}>
+            <CornerMarks />
+          </CardTextColorProvider>,
+        ),
+      color: colors.paper,
+      colorName: 'paper',
+    },
+  ])('draws each mark as two hairlines at 55% in $colorName for $where', (row) => {
     row.renderMarks();
     const { layer, marks } = cornerMarks();
     const lines = marks.flatMap((mark) =>

@@ -96,22 +96,36 @@ describe('PrimaryButton look', () => {
     expect(within(button).queryAllByTestId('corner-mark')).toHaveLength(0);
   });
 
-  it('draws paper corner marks inside an exercise frame', () => {
-    render(
-      <CardFrame type="exercise" kicker="Exercise · REPL">
-        <PrimaryButton label={copy.nextCard} onPress={jest.fn()} variant="paper" />
-      </CardFrame>,
-    );
-    const button = screen.getByRole('button', { name: 'Next card' });
-    const lines = within(button).getAllByTestId('corner-mark-line', {
-      includeHiddenElements: true,
-    });
+  // A control's marks follow the card text color, unlike the frame's own marks, which are ink on
+  // every card: on the ink-ground exercise and summary cards they sit over the ink and show paper.
+  it.each([
+    { cardType: 'concept', color: colors.ink, colorName: 'ink' },
+    { cardType: 'exercise', color: colors.paper, colorName: 'paper' },
+    { cardType: 'summary', color: colors.paper, colorName: 'paper' },
+  ] as const)(
+    'draws its corner marks in $colorName inside the $cardType frame',
+    ({ cardType, color }) => {
+      render(
+        <CardFrame type={cardType} kicker="Kicker">
+          <PrimaryButton label={copy.nextCard} onPress={jest.fn()} />
+        </CardFrame>,
+      );
+      const button = screen.getByRole('button', { name: 'Next card' });
+      const hidden = { includeHiddenElements: true };
+      const layer = within(button).getByTestId('corner-marks', hidden);
+      const lines = within(button).getAllByTestId('corner-mark-line', hidden);
 
-    expect(lines).toHaveLength(8);
-    for (const line of lines) {
-      expect(viewStyleOf(line).backgroundColor).toBe(colors.paper);
-    }
-  });
+      expect(layer.props).toMatchObject({
+        pointerEvents: 'none',
+        accessibilityElementsHidden: true,
+      });
+      expect(viewStyleOf(layer)).toMatchObject({ opacity: 0.55 });
+      expect(lines).toHaveLength(8);
+      for (const line of lines) {
+        expect(viewStyleOf(line).backgroundColor).toBe(color);
+      }
+    },
+  );
 });
 
 describe('PrimaryButton behavior', () => {

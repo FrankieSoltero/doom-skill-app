@@ -25,8 +25,9 @@ type CardFrameProps = {
 /**
  * The frame every card sits in (docs/design/card-feed/README.md:17-20, 46-47): a filled box with
  * a 1.5pt ink border, a hard offset shadow drawn as a sibling view behind it, "+" corner marks,
- * and the kicker row above the card's own content. Everything inside it, the corner marks
- * included, reads the card's text color (`cardTheme[type].fg`) through `useCardTextColor`.
+ * and the kicker row above the card's own content. Everything inside it reads the card's text
+ * color (`cardTheme[type].fg`) through `useCardTextColor`. The frame's own corner marks do not:
+ * they are ink on every card, README.md:19.
  */
 export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
@@ -46,7 +47,7 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
           </View>
           {children}
         </View>
-        <CornerMarks />
+        <CornerMarks tone="ink" />
       </View>
     </CardTextColorProvider>
   );
