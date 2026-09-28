@@ -2,10 +2,10 @@
 // functions, no rendering.
 //
 // Rubric patterns come from card data as strings and are compiled with `new RegExp`. They are
-// trusted here because the repo authors them in the bundled fixtures, and a test times each one
-// with `testing/patternSpeed.ts` to prove it is fast. The length cap below limits input size; it
-// does not bound backtracking time. Before rubric patterns arrive from a server, they must be
-// vetted there or matched with an engine that cannot backtrack.
+// trusted here because the repo authors them in the bundled fixtures, and a test times each one on
+// input built to provoke backtracking. The length cap below limits input size; it does not bound
+// backtracking time. Before rubric patterns arrive from a server, they must be vetted there or
+// matched with an engine that cannot backtrack.
 import type { CheckpointCard } from '../data';
 
 /** The outcome of grading code against a checkpoint rubric. `results` follow rubric order. */
