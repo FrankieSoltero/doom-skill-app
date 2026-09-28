@@ -7,5 +7,6 @@ module.exports = {
   // running a single unrelated test file.
   coverageThreshold: {
     './src/data/': { branches: 90, functions: 90, lines: 90, statements: 90 },
+    './src/feed/': { branches: 90, functions: 90, lines: 90, statements: 90 },
   },
 };
