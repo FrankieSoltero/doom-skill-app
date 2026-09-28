@@ -6,7 +6,6 @@ import { test } from 'node:test';
 
 import {
   MAX_CODE_LENGTH,
-  SAMPLE_MAP,
   createPlayer,
   createPoster,
   errorText,
@@ -14,6 +13,7 @@ import {
   startPage,
   watchFetch,
 } from '../../src/strudel/page/player.js';
+import { SAMPLE_MAP } from '../../src/strudel/page/audio.js';
 
 const load = (code) => JSON.stringify({ type: 'load', code });
 const PLAY = JSON.stringify({ type: 'play' });
@@ -40,7 +40,8 @@ function fakeRepl(onEvalError) {
 }
 
 function fakeTimers() {
-  const timers = { tick: undefined, cleared: 0 };
+  // The audio start's time limit: resume settles at once in these tests, so it never fires.
+  const timers = { tick: undefined, cleared: 0, setTimeout: () => 9, clearTimeout: () => {} };
   timers.setInterval = (fn) => ((timers.tick = fn), 7);
   timers.clearInterval = (id) => {
     assert.equal(id, 7);

@@ -74,10 +74,11 @@ class FakeObserver {
 }
 
 test('frames added anywhere in the document are removed', () => {
-  const root = {};
-  removeFrames({ documentElement: root }, FakeObserver);
+  // The document itself, not its root element: document.open() replaces the root element.
+  const doc = { documentElement: {} };
+  removeFrames(doc, FakeObserver);
   const observer = FakeObserver.last;
-  assert.equal(observer.target, root);
+  assert.equal(observer.target, doc);
   assert.deepEqual(observer.options, { childList: true, subtree: true });
   const iframe = element('iframe');
   const nested = element('iframe');

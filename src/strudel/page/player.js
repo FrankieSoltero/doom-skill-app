@@ -7,6 +7,7 @@
 //   App to page: {type:'load', code}, {type:'play'}, {type:'stop'}
 //   Page to app: {type:'ready'}, {type:'error', message}, {type:'step', step}, {type:'needsNetwork'}
 
+import { createAudioPreparer } from './audio.js';
 import { createTicker } from './steps.js';
 
 /**
@@ -15,11 +16,10 @@ import { createTicker } from './steps.js';
  *   | { type: 'needsNetwork' }} FromPage
  * @typedef {(message: FromPage) => void} Post
  * @typedef {import('./steps.js').Scheduler} Scheduler
- * @typedef {import('./steps.js').Timers} Timers
+ * @typedef {import('./steps.js').Timers & import('./audio.js').Timeouts} Timers
  * @typedef {{ evaluate(code: string, autoplay: boolean): Promise<unknown>,
  *   start(): Promise<void> | void, stop(): void, scheduler: Scheduler }} Repl
- * @typedef {{ initAudio(): Promise<void>, samples(map: string): Promise<unknown>,
- *   getAudioContext(): { resume(): Promise<void> } }} Audio
+ * @typedef {import('./audio.js').Audio} Audio
  * @typedef {{ handle(raw: unknown): Promise<void>, reportError(error: unknown): void,
  *   onLog(detail: { message?: unknown } | undefined): void, onNetworkFailure(): void }} Player
  */
@@ -29,8 +29,6 @@ export const MAX_CODE_LENGTH = 5000;
 const MAX_ERROR_LENGTH = 500;
 /** An error message never repeats the learner's code once it is at least this long. */
 const MIN_REDACTED_CODE_LENGTH = 8;
-/** The sample map loaded on the first play. Every URL in it is on raw.githubusercontent.com. */
-export const SAMPLE_MAP = 'github:tidalcycles/dirt-samples';
 /** How @strudel/web 1.3.0 logs an error thrown while the scheduler queries the pattern. */
 const SCHEDULER_ERROR_PREFIX = '[cyclist] error: ';
 
@@ -100,34 +98,6 @@ export function watchFetch(fetchImpl, onFailure) {
 }
 
 /**
- * Starts Web Audio and loads the sample map. It resumes the audio context on every play, which
- * the app sends from the learner's tap: @strudel/web 1.3.0's initAudio never does, because its
- * `!r instanceof OfflineAudioContext && await r.resume()` reads as `(!r) instanceof ...`, which is
- * always false (dist/index.mjs line 8320). initAudio and the sample map run until each succeeds
- * once: initAudio adds its AudioWorklet modules again on every call. A sample map that fails to
- * load calls onNetworkFailure, and playback goes on without samples.
- * @param {Audio} audio
- * @param {() => void} onNetworkFailure
- */
-function createAudioPreparer(audio, onNetworkFailure) {
-  const done = { audio: false, samples: false };
-  return async () => {
-    await audio.getAudioContext().resume();
-    if (!done.audio) {
-      await audio.initAudio();
-      done.audio = true;
-    }
-    if (done.samples) return;
-    try {
-      await audio.samples(SAMPLE_MAP);
-      done.samples = true;
-    } catch {
-      onNetworkFailure();
-    }
-  };
-}
-
-/**
  * The page's message handling.
  * @param {{ repl: Repl, audio: Audio, post: Post, timers: Timers }} options
  * @returns {Player}
@@ -151,9 +121,11 @@ export function createPlayer({ repl, audio, post, timers }) {
     state.net = true;
     post({ type: 'needsNetwork' });
   };
+  const audioStart = createAudioPreparer({ audio, onNetworkFailure, timers });
   const stop = () => {
     state.run += 1;
     state.playing = false;
+    audioStart.cancel();
     ticker.stop();
     repl.stop();
   };
@@ -186,20 +158,19 @@ export function createPlayer({ repl, audio, post, timers }) {
     });
   };
 
-  const prepareAudio = createAudioPreparer(audio, () => onNetworkFailure());
   const play = async () => {
     const run = (state.run += 1);
     if (!(await state.loaded) || run !== state.run) return;
     state.net = false;
     try {
-      await prepareAudio();
-      if (run !== state.run) return;
+      if (!(await audioStart.prepare()) || run !== state.run) return;
       repl.stop();
       await repl.start();
       ticker.start();
       state.playing = true;
     } catch (error) {
-      reportError(error);
+      // A play that a stop, a newer play or a failed load has replaced reports nothing.
+      if (run === state.run) reportError(error);
     }
   };
 
@@ -229,8 +200,10 @@ export function createPlayer({ repl, audio, post, timers }) {
 // not a determined snippet: a frame it creates has a fresh `window` with the real dialogs.
 // removeFrames takes frames out as they are added, but a mutation observer runs after the
 // snippet's synchronous code, so a snippet that appends a frame and calls its window's `alert` in
-// one run still gets through. Accepted while all code is the owner's or bundled demo data; a
-// precondition to revisit before server-generated cards.
+// one run still gets through. `document.open()` from learner code also removes the page's
+// `message` listener: the player then stops answering, and the app's readiness and playing state
+// go stale until the card calls `reset()`. Accepted while all code is the owner's or bundled demo
+// data; a precondition to revisit before server-generated cards.
 const DIALOGS = {
   alert: () => undefined,
   confirm: () => false,
@@ -256,8 +229,9 @@ export function silenceDialogs(win) {
 }
 
 /**
- * Removes every frame added to the document from now on; the page has no use for frames.
- * @param {{ documentElement: object }} doc
+ * Removes every frame added to the document from now on; the page has no use for frames. It
+ * observes the document itself, not its root element, which `document.open()` replaces.
+ * @param {Node} doc
  * @param {typeof MutationObserver} Observer
  */
 export function removeFrames(doc, Observer) {
@@ -271,7 +245,7 @@ export function removeFrames(doc, Observer) {
   const observer = new Observer((records) => {
     for (const record of records) record.addedNodes.forEach(sweep);
   });
-  observer.observe(doc.documentElement, { childList: true, subtree: true });
+  observer.observe(doc, { childList: true, subtree: true });
 }
 
 /**

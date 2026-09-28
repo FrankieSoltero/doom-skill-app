@@ -1,6 +1,6 @@
 // The step the learner hears, for the page's beat grid: the arithmetic from Strudel's clock and
 // the ticker that posts it. player.js uses it; scripts/build-strudel.mjs bundles both into the
-// page, and scripts/__tests__/player.test.mjs tests them under Node.
+// page, and scripts/__tests__/steps.test.mjs tests them under Node.
 
 /**
  * @typedef {{ now(): number, cps: number }} Scheduler
