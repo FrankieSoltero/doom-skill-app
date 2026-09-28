@@ -50,13 +50,23 @@ function masteryColor(position: number): string {
   return step === 1 ? colors.coral : colors.yellow;
 }
 
-/** "Mastery moved" and one row per moved node; nothing when no node moved. */
+/**
+ * The most mastery rows the Summary draws: the design shows three (README.md:151), and the card's
+ * height budget (`__tests__/SummaryCard.height.test.ts`) counts this many, so more would push the
+ * buttons off the card.
+ */
+export const MAX_MASTERY_ROWS = 3;
+
+/**
+ * "Mastery moved" and one row for each of the first `MAX_MASTERY_ROWS` moved nodes; the rest are
+ * dropped without a word. Nothing when no node moved.
+ */
 function MasteryList({ moved }: { moved: Summary['moved'] }) {
   if (moved.length === 0) return null;
   return (
     <View style={styles.mastery}>
       <Text style={styles.masteryHeading}>{copy.masteryMoved}</Text>
-      {moved.map(([name, from, to], position) => (
+      {moved.slice(0, MAX_MASTERY_ROWS).map(([name, from, to], position) => (
         <MasteryRow key={position} name={name} from={from} to={to} color={masteryColor(position)} />
       ))}
     </View>

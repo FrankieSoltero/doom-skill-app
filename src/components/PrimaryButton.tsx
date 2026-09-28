@@ -6,7 +6,7 @@ import { CornerMarks } from './CornerMarks';
 
 // Primary button values from docs/design/card-feed/README.md that the theme does not hold.
 /** Height, README.md:49. Above the 44pt minimum touch target. */
-const BUTTON_HEIGHT = 50;
+export const BUTTON_HEIGHT = 50;
 /**
  * How far the button moves right and down while pressed. README.md:18 says "1-2px" and gives no
  * number for the button; the prototype's primary buttons use `translate(1px,1px)`

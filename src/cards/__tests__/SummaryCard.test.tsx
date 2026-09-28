@@ -89,6 +89,16 @@ describe('SummaryCard content', () => {
     expect(screen.getByText('topic progress, -2')).toBeOnTheScreen();
   });
 
+  it('ends with tomorrow and the reminder, the node in bold', () => {
+    renderSummary();
+
+    const footer = screen.getByText('Tomorrow: Euclidean rhythms · reminder at 8:30 pm');
+    expect(textStyleOf(footer)).toMatchObject({ ...type.small, color: colors.neutral[400] });
+    expect(within(footer).getByTestId('bold-span')).toHaveTextContent('Euclidean rhythms');
+  });
+});
+
+describe('SummaryCard mastery rows', () => {
   it('lists each moved node with its change and a bar at its new value: violet, coral, yellow', () => {
     renderSummary();
 
@@ -107,21 +117,40 @@ describe('SummaryCard content', () => {
     ]);
   });
 
-  it('reuses the colors in order past the third node', () => {
-    const four: FeedSet['summary']['moved'] = [
+  it('draws at most three rows: the first three of five, in order, colored in order', () => {
+    const five: FeedSet['summary']['moved'] = [
       ['A', 0, 0.1],
       ['B', 0, 0.2],
       ['C', 0, 0.3],
       ['D', 0, 0.4],
+      ['E', 0, 0.5],
     ];
-    renderSummary('idle', summarySet(four));
+    renderSummary('idle', summarySet(five));
+
+    const names = screen
+      .getAllByRole('progressbar')
+      .map((bar) => String(bar.props.accessibilityLabel));
+    expect(names).toStrictEqual(['A mastery', 'B mastery', 'C mastery']);
+    expect(screen.queryByText('D')).toBeNull();
+    expect(screen.queryByText('E')).toBeNull();
     const fills = screen.getAllByTestId('mastery-fill', HIDDEN).map(viewStyleOf);
     expect(fills.map((fill) => fill.backgroundColor)).toStrictEqual([
       colors.violet,
       colors.coral,
       colors.yellow,
-      colors.violet,
     ]);
+  });
+
+  it('draws every row of a shorter list: two for two', () => {
+    renderSummary(
+      'idle',
+      summarySet([
+        ['A', 0, 0.1],
+        ['B', 0, 0.2],
+      ]),
+    );
+
+    expect(screen.getAllByTestId('mastery-bar')).toHaveLength(2);
   });
 
   it('shows no mastery list when no node moved', () => {
@@ -129,14 +158,6 @@ describe('SummaryCard content', () => {
 
     expect(screen.queryByText('Mastery moved')).toBeNull();
     expect(screen.queryAllByTestId('mastery-bar', HIDDEN)).toHaveLength(0);
-  });
-
-  it('ends with tomorrow and the reminder, the node in bold', () => {
-    renderSummary();
-
-    const footer = screen.getByText('Tomorrow: Euclidean rhythms · reminder at 8:30 pm');
-    expect(textStyleOf(footer)).toMatchObject({ ...type.small, color: colors.neutral[400] });
-    expect(within(footer).getByTestId('bold-span')).toHaveTextContent('Euclidean rhythms');
   });
 });
 

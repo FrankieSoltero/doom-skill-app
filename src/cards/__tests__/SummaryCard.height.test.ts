@@ -5,12 +5,14 @@ import { render, screen } from '@testing-library/react-native';
 import { createElement } from 'react';
 
 import { BAR_HEIGHT, ROW_GAP } from '../../components/MasteryRow';
-import { BUTTON_HEIGHT } from '../../components/OutlineButton';
+import { BUTTON_HEIGHT as OUTLINE_HEIGHT } from '../../components/OutlineButton';
+import { BUTTON_HEIGHT as PRIMARY_HEIGHT } from '../../components/PrimaryButton';
 import { TILE_PADDING_Y } from '../../components/StatTile';
+import type { FeedSet } from '../../data';
 import type { NextSetStatus } from '../../feed/useFeedSession';
 import { space, type } from '../../theme';
 import { ACTIONS_GAP } from '../SummaryActions';
-import { MASTERY_GAP, SummaryCard, TITLE_LINES } from '../SummaryCard';
+import { MASTERY_GAP, MAX_MASTERY_ROWS, SummaryCard, TITLE_LINES } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
 
 /**
@@ -25,15 +27,16 @@ const CONTENT_BOX = 543.5;
  * are 1000 and 200 per 1000 units, so a line is 1.2 times the font size.
  */
 const NATURAL_LINE = 1.2;
-/** Every demo set moves three nodes; the design shows three. */
-const MASTERY_ROWS = 3;
 /** The card body's children: kicker row, title, tiles, mastery list, spacer, footer, actions. */
 const BODY_CHILDREN = 7;
 
-/** The foot's height: the button row, and a status line over it for `none` and `error`. */
+/**
+ * The foot's height: the button row, as tall as its taller button, and a status line over it for
+ * `none` and `error`.
+ */
 function actionsHeight(status: NextSetStatus): number {
   const line = status === 'none' || status === 'error' ? type.body.lineHeight + ACTIONS_GAP : 0;
-  return line + BUTTON_HEIGHT;
+  return line + Math.max(PRIMARY_HEIGHT, OUTLINE_HEIGHT);
 }
 
 /** The Summary's content height in `status`, with a footer of `footerLines` lines. */
@@ -42,7 +45,7 @@ function summaryHeight(status: NextSetStatus, footerLines: 1 | 2): number {
   const title = TITLE_LINES * type.summaryTitle.lineHeight;
   const tiles = type.stat.lineHeight + type.caption.lineHeight + 2 * TILE_PADDING_Y;
   const masteryRow = type.small.lineHeight + ROW_GAP + BAR_HEIGHT;
-  const mastery = type.caption.lineHeight + MASTERY_ROWS * (MASTERY_GAP + masteryRow);
+  const mastery = type.caption.lineHeight + MAX_MASTERY_ROWS * (MASTERY_GAP + masteryRow);
   const footer = footerLines * type.small.lineHeight;
   const gaps = (BODY_CHILDREN - 1) * space[4];
   return kicker + title + tiles + mastery + footer + actionsHeight(status) + gaps;
@@ -67,10 +70,17 @@ describe('the Summary height budget', () => {
     },
   );
 
-  it('the card body has the children the budget counts, with three mastery rows', () => {
+  it('the card body has the children the budget counts, and no more mastery rows than it counts', () => {
+    const moved: FeedSet['summary']['moved'] = [
+      ['A', 0, 0.1],
+      ['B', 0, 0.2],
+      ['C', 0, 0.3],
+      ['D', 0, 0.4],
+      ['E', 0, 0.5],
+    ];
     render(
       createElement(SummaryCard, {
-        set: summarySet(),
+        set: summarySet(moved),
         active: true,
         onKeepGoing: jest.fn(),
         onViewTree: jest.fn(),
@@ -78,7 +88,8 @@ describe('the Summary height budget', () => {
       }),
     );
 
+    expect(MAX_MASTERY_ROWS).toBe(3);
     expect(screen.getByTestId('card-frame-body').children).toHaveLength(BODY_CHILDREN);
-    expect(screen.getAllByTestId('mastery-bar')).toHaveLength(MASTERY_ROWS);
+    expect(screen.getAllByTestId('mastery-bar')).toHaveLength(MAX_MASTERY_ROWS);
   });
 });
