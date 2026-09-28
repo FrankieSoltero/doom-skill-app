@@ -1,11 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { copy } from '../src/copy';
 import { colors } from '../src/theme';
 
 export default function HomeScreen() {
   return (
     <View testID="home-screen" style={styles.root}>
-      <Text style={styles.title}>LearnLoop</Text>
+      <Text style={styles.title}>{copy.appName}</Text>
     </View>
   );
 }

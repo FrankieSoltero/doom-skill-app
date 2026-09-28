@@ -24,6 +24,22 @@ const CARD_TYPE_SYNTAX = [
   { selector: 'TSInterfaceDeclaration[id.name=/Card$/]', message: CARD_TYPE_MESSAGE },
 ];
 
+// SS-8: UI strings live in src/copy. A string literal given to a prop a person reads, bare or in
+// braces, is rejected; other props (testID, accessibilityRole, style) are not text and stay free.
+const TEXT_PROP_MESSAGE = 'UI strings live in src/copy. Use a copy key instead.';
+const TEXT_PROP = 'JSXAttribute[name.name=/^(label|title|placeholder|accessibilityLabel)$/]';
+const TEXT_PROP_SYNTAX = [
+  { selector: `${TEXT_PROP} > Literal`, message: TEXT_PROP_MESSAGE },
+  { selector: `${TEXT_PROP} > JSXExpressionContainer > Literal`, message: TEXT_PROP_MESSAGE },
+  {
+    selector: `${TEXT_PROP} > JSXExpressionContainer > TemplateLiteral`,
+    message: TEXT_PROP_MESSAGE,
+  },
+];
+
+// The folders that render UI. SS-8 applies here only; other code has no UI text.
+const UI_FILES = ['app/**', 'src/components/**', 'src/cards/**'];
+
 // `no-restricted-syntax` options from selector groups. A later config object that sets the rule
 // replaces its whole list for the files it matches (flat config does not merge rule options), so
 // each scope below lists every group that stays on there. To add a group, define its array and
@@ -79,7 +95,7 @@ module.exports = [
       'import/no-default-export': 'error',
       // TS-12, SS-10
       'no-console': 'error',
-      // SS-1, SS-7
+      // SS-1, SS-7 (the UI folders add SS-8 below)
       'no-restricted-syntax': restrictSyntax(COLOR_LITERAL_SYNTAX, CARD_TYPE_SYNTAX),
       // SS-6
       'no-restricted-imports': CARD_DATA_IMPORTS,
@@ -93,6 +109,24 @@ module.exports = [
       '@typescript-eslint/no-explicit-any': 'error',
       // TS-10
       '@typescript-eslint/no-non-null-assertion': 'error',
+    },
+  },
+  // SS-8: UI strings live in src/copy. `react/jsx-no-literals` rejects literal child text
+  // (`<Text>Hello</Text>`, `<Text>{'Hello'}</Text>`); its message cannot name SS-8, so this
+  // comment and docs/standards.md map it. `ignoreProps` leaves props to the text-prop selectors,
+  // which carry the SS-8 message, so testID, accessibilityRole and style stay allowed.
+  // Exception #12 in docs/standards.md: both SS-8 checks are off under __tests__ because tests
+  // assert on literal UI text. Tests there keep the color and card-type selectors of the base.
+  {
+    files: UI_FILES,
+    ignores: ['**/__tests__/**'],
+    rules: {
+      'react/jsx-no-literals': ['error', { noStrings: true, ignoreProps: true }],
+      'no-restricted-syntax': restrictSyntax(
+        COLOR_LITERAL_SYNTAX,
+        CARD_TYPE_SYNTAX,
+        TEXT_PROP_SYNTAX,
+      ),
     },
   },
   // Exception #3 in docs/standards.md: TS-11 (import/no-default-export) off for app/** because
