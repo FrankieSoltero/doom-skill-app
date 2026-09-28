@@ -37,7 +37,10 @@ type ChoiceBodyProps = {
   explanation: string;
   /** The correct option's text color: the card type's color. */
   accent: string;
-  /** `stack`: one option under another (quiz). `grid`: two columns (predict). */
+  /**
+   * `stack`: one option under another (quiz). `grid`: two columns of compact options (predict):
+   * centered labels, no verdict icon.
+   */
   layout: 'stack' | 'grid';
   /** Sets the option labels in the code font. */
   mono: boolean;
@@ -114,6 +117,7 @@ export function ChoiceBody({
       state={optionState(index, picked, correct)}
       accent={accent}
       mono={mono}
+      compact={layout === 'grid'}
       picked={index === picked}
       onPress={() => {
         onPick(index);

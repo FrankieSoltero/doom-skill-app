@@ -12,13 +12,14 @@ type PredictCardProps = {
 
 /**
  * The predict card (docs/design/card-feed/README.md:76-85): kicker row, title, the card's code
- * in a code block, the options in a two-column grid in the body font, the explanation once
- * answered, then Next card. The correct option shows in aqua, the predict color. State and
- * locking are the quiz's, through `ChoiceCard`.
+ * in a code block, the options in a two-column grid in the code font, centered with no verdict
+ * icon (prototype line 132, screenshots/03-predict-answered.png), the explanation once answered,
+ * then Next card. The correct option shows in aqua, the predict color. State and locking are the
+ * quiz's, through `ChoiceCard`.
  */
 export function PredictCard({ card, index, onNext }: PredictCardProps) {
   return (
-    <ChoiceCard card={card} index={index} onNext={onNext} layout="grid" mono={false}>
+    <ChoiceCard card={card} index={index} onNext={onNext} layout="grid" mono>
       <CodeBlock code={card.code} />
     </ChoiceCard>
   );

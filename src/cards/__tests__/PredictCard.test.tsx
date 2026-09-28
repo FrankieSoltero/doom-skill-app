@@ -5,7 +5,7 @@ import type { PredictCard as PredictCardData } from '../../data';
 import type { CardAnswer } from '../../feed/answers';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType } from '../../feed/testing/sets';
-import { cardTheme, colors, type } from '../../theme';
+import { cardTheme, colors, fonts, type } from '../../theme';
 import { PredictCard } from '../PredictCard';
 import {
   answerAt,
@@ -41,6 +41,9 @@ function renderPredict(answers: Record<number, CardAnswer> = {}) {
     answers,
   );
 }
+
+/** Every verdict icon drawn, hidden from accessibility or not. */
+const icons = () => screen.queryAllByTestId(/^option-icon/, { includeHiddenElements: true });
 
 describe('PredictCard content, from the demo card (README.md:76-85)', () => {
   it('shows the kicker and estimate on the predict color, and a medium title', () => {
@@ -80,13 +83,21 @@ describe('PredictCard content, from the demo card (README.md:76-85)', () => {
     ]);
   });
 
-  it('shows the four options in the body font, in two columns of cells at least 62 tall', () => {
+  it('shows the four options in the code font at 14, centered, in two columns of cells', () => {
     renderPredict();
     const rows = screen.getAllByTestId('choice-row');
 
     expect(optionNames()).toStrictEqual(OPTIONS);
     for (const label of OPTIONS) {
-      expect(textStyleOf(screen.getByText(label))).toMatchObject(type.body);
+      expect(textStyleOf(screen.getByText(label))).toMatchObject({
+        ...type.code,
+        fontFamily: fonts.mono,
+        fontSize: 14,
+        textAlign: 'center',
+      });
+    }
+    for (const face of screen.getAllByTestId('option-face')) {
+      expect(viewStyleOf(face)).toMatchObject({ alignItems: 'center', justifyContent: 'center' });
     }
     expect(rows).toHaveLength(2);
     for (const row of rows) {
@@ -106,6 +117,7 @@ describe('PredictCard picking', () => {
 
     expect(answerAt(INDEX)).toStrictEqual({ kind: 'choice', picked: 0 });
     expect(textStyleOf(screen.getByText('c3 e3, then c3 g3')).color).toBe(colors.aqua);
+    expect(icons()).toHaveLength(0);
     expect(screen.getByTestId('choice-explanation')).toHaveTextContent(
       'Correct. c3 plays every cycle. The bracket alternates e3, g3, e3, g3… so odd cycles get e3.',
     );
@@ -123,6 +135,12 @@ describe('PredictCard picking', () => {
       'e3, then g3',
       'c3 e3 g3, twice. Not correct.',
     ]);
+    expect(textStyleOf(screen.getByText('c3 e3 g3, twice'))).toMatchObject({
+      opacity: 0.6,
+      textDecorationLine: 'line-through',
+    });
+    expect(textStyleOf(screen.getByText('c3 e3, then c3 g3')).color).toBe(colors.aqua);
+    expect(icons()).toHaveLength(0);
     expect(screen.getByTestId('choice-explanation')).toHaveTextContent(/^Not quite\. c3 plays/);
   });
 

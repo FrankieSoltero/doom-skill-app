@@ -8,7 +8,9 @@ import { textStyleOf, viewStyleOf } from '../testing/styles';
 const LABEL = 's("bd*4")';
 const HIDDEN = { includeHiddenElements: true };
 
-function renderOption(props: { state?: OptionState; mono?: boolean; picked?: boolean } = {}) {
+type Options = { state?: OptionState; mono?: boolean; picked?: boolean; compact?: boolean };
+
+function renderOption(props: Options = {}) {
   const onPress = jest.fn();
   render(
     <OptionButton label={LABEL} state="idle" accent={colors.coral} onPress={onPress} {...props} />,
@@ -226,5 +228,75 @@ describe('OptionButton accessibility', () => {
       accessibilityElementsHidden: true,
       importantForAccessibility: 'no-hide-descendants',
     });
+  });
+});
+
+// Predict's grid options, docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:132
+// and screenshots/03-predict-answered.png.
+describe('OptionButton compact', () => {
+  it.each<OptionState>(['correct', 'wrong'])('%s: no icon', (state) => {
+    const { button } = renderOption({ state, compact: true });
+
+    expect(within(button).queryAllByTestId(/option-icon/, HIDDEN)).toHaveLength(0);
+  });
+
+  it('centers the label, 8 and 12 padding, and sets code at 14', () => {
+    const { button } = renderOption({ mono: true, compact: true });
+
+    expect(viewStyleOf(face())).toMatchObject({
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      minHeight: 52,
+      flexGrow: 1,
+    });
+    expect(viewStyleOf(button).flexGrow).toBe(1);
+    expect(textStyleOf(labelText())).toMatchObject({
+      ...type.code,
+      fontSize: 14,
+      textAlign: 'center',
+      flexShrink: 1,
+    });
+  });
+
+  it('keeps the body style when not mono', () => {
+    renderOption({ compact: true });
+
+    expect(textStyleOf(labelText())).toMatchObject({ ...type.body, textAlign: 'center' });
+  });
+
+  it.each<OptionState>(['idle', 'correct', 'wrong', 'other'])(
+    '%s: the same fill, text, scale, spoken label and state as without compact',
+    (state) => {
+      const look = (compact: boolean) => {
+        const { button } = renderOption({ state, picked: true, mono: true, compact });
+        const { color, opacity, textDecorationLine, fontFamily } = textStyleOf(labelText());
+        const seen = {
+          fill: viewStyleOf(face()).backgroundColor,
+          text: { color, opacity, textDecorationLine, fontFamily },
+          transform: viewStyleOf(button).transform,
+          name: button.props.accessibilityLabel as unknown,
+          state: button.props.accessibilityState as unknown,
+          shadow: shadow() !== null,
+        };
+        screen.unmount();
+        return seen;
+      };
+
+      expect(look(true)).toStrictEqual(look(false));
+    },
+  );
+
+  it('moves 2 points and drops its shadow while pressed, like the default', () => {
+    jest.useFakeTimers();
+    const { button } = renderOption({ compact: true });
+    expect(shadow()).not.toBeNull();
+
+    fireEvent(button, 'responderGrant', PRESS_EVENT);
+
+    expect(viewStyleOf(button).transform).toStrictEqual([{ translateX: 2 }, { translateY: 2 }]);
+    expect(shadow()).toBeNull();
   });
 });

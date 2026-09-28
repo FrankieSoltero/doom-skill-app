@@ -197,6 +197,23 @@ describe('ChoiceBody layouts', () => {
   });
 });
 
+describe('ChoiceBody option size', () => {
+  it.each([
+    { layout: 'stack' as const, justifyContent: 'space-between', icons: 2 },
+    { layout: 'grid' as const, justifyContent: 'center', icons: 0 },
+  ])('$layout: faces $justifyContent, $icons verdict icons', ({ layout, ...expected }) => {
+    renderBody({ layout, picked: 0 });
+    const faces = screen.getAllByTestId('option-face').map(viewStyleOf);
+
+    expect(faces.map((face) => face.justifyContent)).toStrictEqual(
+      OPTIONS.map(() => expected.justifyContent),
+    );
+    expect(screen.queryAllByTestId(/^option-icon/, { includeHiddenElements: true })).toHaveLength(
+      expected.icons,
+    );
+  });
+});
+
 describe('ChoiceBody explanation', () => {
   it('is absent before a pick', () => {
     renderBody();

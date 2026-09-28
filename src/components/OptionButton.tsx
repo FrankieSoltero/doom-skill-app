@@ -29,6 +29,13 @@ const CONTENT_GAP = 10;
  * says "1-2px"; the prototype's options use `translate(2px,2px)` (line 108).
  */
 const PRESSED_OFFSET = 2;
+// A compact option: Predict's grid cells. Prototype line 132 ("padding:8px 12px; font-size:14px",
+// no icon markup, a plain button that centers its content) and screenshots/03-predict-answered.png
+// (labels centered in their cells, no check or X icon).
+/** Top and bottom padding of a compact option. */
+const COMPACT_PADDING_Y = 8;
+/** Left and right padding of a compact option. */
+const COMPACT_PADDING_X = 12;
 
 export type OptionState = 'idle' | 'correct' | 'wrong' | 'other';
 
@@ -104,6 +111,11 @@ type OptionButtonProps = {
   mono?: boolean;
   /** Whether the learner picked this option; exposed as `accessibilityState.selected`. */
   picked?: boolean;
+  /**
+   * For a grid cell (Predict): the label centered, 8 and 12 padding, code at 14 (the theme's code
+   * size) and no icon in any state. Fills, colors, spoken labels and states are unchanged.
+   */
+  compact?: boolean;
   /** Called on a press while idle. Every other state is locked. */
   onPress: () => void;
 };
@@ -120,9 +132,11 @@ export function OptionButton({
   accent,
   mono = false,
   picked = false,
+  compact = false,
   onPress,
 }: OptionButtonProps) {
   const look = looks(accent)[state];
+  const icon = compact ? null : look.icon;
   const idle = state === 'idle';
 
   return (
@@ -141,17 +155,22 @@ export function OptionButton({
       {({ pressed }: PressableStateCallbackType) => (
         <>
           {idle && !pressed ? <View testID="option-shadow" style={styles.shadow} /> : null}
-          <View testID="option-face" style={[styles.face, { backgroundColor: look.fill }]}>
-            <Text style={[mono ? styles.mono : styles.body, { color: look.ink }, look.text]}>
-              {label}
-            </Text>
-            {look.icon ? (
-              <look.icon.Icon
-                testID={look.icon.testID}
+          <View
+            testID="option-face"
+            style={[
+              styles.face,
+              compact ? styles.compactFace : null,
+              { backgroundColor: look.fill },
+            ]}
+          >
+            <Text style={[labelStyle(mono, compact), { color: look.ink }, look.text]}>{label}</Text>
+            {icon ? (
+              <icon.Icon
+                testID={icon.testID}
                 size={ICON_SIZE}
                 strokeWidth={ICON_STROKE}
                 color={look.ink}
-                opacity={look.icon.opacity}
+                opacity={icon.opacity}
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               />
@@ -161,6 +180,12 @@ export function OptionButton({
       )}
     </Pressable>
   );
+}
+
+/** The label's style: code or body font, centered when compact. */
+function labelStyle(mono: boolean, compact: boolean): TextStyle {
+  if (compact) return mono ? styles.compactMono : styles.compactBody;
+  return mono ? styles.mono : styles.body;
 }
 
 const styles = StyleSheet.create({
@@ -188,5 +213,12 @@ const styles = StyleSheet.create({
   },
   mono: { ...type.code, fontSize: MONO_SIZE, flexShrink: 1 },
   body: { ...type.body, flexShrink: 1 },
+  compactFace: {
+    justifyContent: 'center',
+    paddingVertical: COMPACT_PADDING_Y,
+    paddingHorizontal: COMPACT_PADDING_X,
+  },
+  compactMono: { ...type.code, flexShrink: 1, textAlign: 'center' },
+  compactBody: { ...type.body, flexShrink: 1, textAlign: 'center' },
   wrongText: { opacity: WRONG_OPACITY, textDecorationLine: 'line-through' },
 });
