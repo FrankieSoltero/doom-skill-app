@@ -3,7 +3,7 @@
   "cards": [
     { "type": "concept", "node": "Mini-notation", "estSeconds": 40,
       "title": "Alternate with angle brackets",
-      "body": "Wrap steps in < > and Strudel plays one of them per cycle, moving to the next each time round. It is the simplest way to make a pattern change over time.",
+      "body": "Wrap steps in **< >** and Strudel plays one of them per cycle, moving to the next each time round. It is the simplest way to make a pattern change over time.",
       "snippet": "note(\"<c3 e3 g3>\")", "snippetComment": "// cycle 1 → c3 · 2 → e3 · 3 → g3",
       "cycles": ["c3", "e3", "g3"] },
     { "type": "quiz", "node": "Speed", "estSeconds": 30,

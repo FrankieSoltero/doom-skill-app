@@ -49,6 +49,26 @@ export const copy = deepFreeze({
   progressLabel: (done: number, total: number) => `${String(done)} of ${String(total)} cards done`,
   /** Spoken label of the feed header's streak chip. */
   streakLabel: (days: number) => `${String(days)} day streak`,
+  /** The display name of each card type, shown in the card kicker, README.md:52. */
+  cardTypes: {
+    concept: 'Concept',
+    quiz: 'Quiz',
+    predict: 'Predict',
+    exercise: 'Exercise',
+    review: 'Review',
+    checkpoint: 'Checkpoint',
+  },
+  /**
+   * A card's kicker: its type name and node, README.md:47 and :52. Case is kept; the kicker style
+   * shows it uppercase.
+   */
+  cardKicker: (type: string, node: string) => `${type} · ${node}`,
+  /** A card's estimated time under two minutes, README.md:52 ("~40 S" by style). */
+  seconds: (n: number) => `~${String(n)} s`,
+  /** A card's estimated time from two minutes up, README.md:124 ("~3 MIN" by style). */
+  minutes: (n: number) => `~${String(n)} min`,
+  /** The label of a concept card's cycle tile, README.md:56 ("CYCLE 1" by style). */
+  cycleLabel: (n: number) => `Cycle ${String(n)}`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',

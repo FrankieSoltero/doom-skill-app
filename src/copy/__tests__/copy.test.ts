@@ -88,8 +88,39 @@ describe('copy', () => {
     // `Object.isFrozen` is true for any primitive, so first check that each group is an object.
     expect(copy.tabs).toBeInstanceOf(Object);
     expect(copy.placeholder).toBeInstanceOf(Object);
+    expect(copy.cardTypes).toBeInstanceOf(Object);
     expect(Object.isFrozen(copy.tabs)).toBe(true);
     expect(Object.isFrozen(copy.placeholder)).toBe(true);
+    expect(Object.isFrozen(copy.cardTypes)).toBe(true);
+  });
+});
+
+describe('copy for cards', () => {
+  it('names each card type for the card kicker', () => {
+    expect(copy.cardTypes).toStrictEqual({
+      concept: 'Concept',
+      quiz: 'Quiz',
+      predict: 'Predict',
+      exercise: 'Exercise',
+      review: 'Review',
+      checkpoint: 'Checkpoint',
+    });
+  });
+
+  it('writes the card kicker as type, middle dot, node, keeping case (the style uppercases)', () => {
+    expect(copy.cardKicker('Concept', 'Mini-notation')).toBe('Concept · Mini-notation');
+    expect(copy.cardKicker('Quiz', 'speed')).toBe('Quiz · speed');
+  });
+
+  it('writes a card estimate in seconds or minutes, lower case (the style uppercases)', () => {
+    expect(copy.seconds(40)).toBe('~40 s');
+    expect(copy.seconds(90)).toBe('~90 s');
+    expect(copy.minutes(3)).toBe('~3 min');
+  });
+
+  it('labels a concept cycle tile by its number', () => {
+    expect(copy.cycleLabel(1)).toBe('Cycle 1');
+    expect(copy.cycleLabel(12)).toBe('Cycle 12');
   });
 });
 
