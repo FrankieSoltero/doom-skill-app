@@ -228,20 +228,38 @@ describe('TabBar accessibility', () => {
 });
 
 describe('TabBar frame', () => {
+  // Border-box, as the prototype draws it (line 345, `height:82px`, `padding:8px 8px 22px`, with
+  // `box-sizing: border-box` from its design system): 1.5 border + 8 top padding + a 50.5 tab
+  // area + the bottom padding, which is the inset less 12, at least 8.
   it.each([
-    { bottom: 34, height: 82 },
-    { bottom: 0, height: 48 },
+    { bottom: 34, paddingBottom: 22, height: 82 },
+    { bottom: 0, paddingBottom: 8, height: 68 },
+    { bottom: 20, paddingBottom: 8, height: 68 },
+    { bottom: 48, paddingBottom: 36, height: 96 },
   ])(
-    'is $height tall with a bottom inset of $bottom, padded by the inset',
-    ({ bottom, height }) => {
+    'is $height tall with a bottom inset of $bottom: bottom padding $paddingBottom',
+    ({ bottom, paddingBottom, height }) => {
       renderBar({ bottom });
 
       expect(viewStyleOf(screen.getByTestId('tab-bar'))).toMatchObject({
         height,
-        paddingBottom: bottom,
+        paddingTop: 8,
+        paddingBottom,
       });
     },
   );
+
+  it('puts each tab in a 50.5 tall area, its content at the top', () => {
+    renderBar();
+
+    for (const tab of tabs()) {
+      expect(viewStyleOf(tab)).toMatchObject({
+        height: 50.5,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+      });
+    }
+  });
 
   it('has a 1.5 ink top border on a paper ground, and four equal columns', () => {
     renderBar();

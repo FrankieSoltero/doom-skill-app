@@ -8,13 +8,20 @@ import { border, colors, fonts } from '../theme';
 
 // Tab bar values from docs/design/card-feed/README.md:32-35 (or, where it gives none, the
 // prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html) that the theme lacks.
+// The bar's height, README.md:32: 82 including the home-indicator area on the 390x844 reference
+// device. The prototype splits it (line 345, `height:82px`, `padding:8px 8px 22px`, border-box
+// from its design system's `box-sizing: border-box`): 1.5 top border + 8 + 50.5 + 22 = 82.
+/** Padding above the tabs, prototype line 345. */
+const BAR_PADDING_TOP = 8;
+/** Height of the tabs: 82 - 1.5 border - 8 top padding - 22 bottom padding. */
+const TAB_AREA_HEIGHT = 50.5;
 /**
- * Height above the bottom safe-area inset. README.md:32 gives 82 including the home-indicator
- * area on the 390x844 reference device, whose bottom inset is 34: 82 - 34 = 48, top border
- * included. With no inset the bar is 48 tall. The prototype pads 8 above and 22 below (line 345),
- * which leaves no room for a 34 inset, so the tabs are centered in the 48 instead.
+ * How far the tabs reach into the home-indicator area: the reference device's 34-point bottom
+ * inset less the prototype's 22-point bottom padding.
  */
-const BAR_HEIGHT_ABOVE_INSET = 48;
+const HOME_INDICATOR_OVERLAP = 12;
+/** The least bottom padding, so the bar stays balanced on a device with no home indicator. */
+const MIN_BAR_PADDING_BOTTOM = 8;
 /** Side padding of the bar, from the prototype (`padding:8px 8px 22px`, line 345). */
 const BAR_PADDING_X = 8;
 /** The icon box, README.md:33. */
@@ -59,12 +66,19 @@ export type TabBarProps = Pick<BottomTabBarProps, 'insets'> & {
 
 type Route = TabBarProps['state']['routes'][number];
 
+/** The bar's full height, top border included (React Native sizes views border-box). */
+function barHeight(paddingBottom: number): number {
+  return border.strong + BAR_PADDING_TOP + TAB_AREA_HEIGHT + paddingBottom;
+}
+
 /**
  * The custom tab bar for Expo Router's `Tabs` (README.md:32-35): four equal columns, each an icon
- * box above a label. The focused tab's box is filled with its color and framed in ink. The bar is
- * 48 points plus the bottom safe-area inset, with a 1.5-point ink top border on paper.
+ * box above a label. The focused tab's box is filled with its color and framed in ink. The bar has
+ * a 1.5-point ink top border on paper; it is 82 points tall with a 34-point bottom inset and 68
+ * with none.
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
+  const paddingBottom = Math.max(insets.bottom - HOME_INDICATOR_OVERLAP, MIN_BAR_PADDING_BOTTOM);
   /** React Navigation's custom tab bar press: emit, then navigate unless focused or prevented. */
   const press = (route: Route, focused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -77,10 +91,7 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
     <View
       testID="tab-bar"
       accessibilityRole="tablist"
-      style={[
-        styles.bar,
-        { height: BAR_HEIGHT_ABOVE_INSET + insets.bottom, paddingBottom: insets.bottom },
-      ]}
+      style={[styles.bar, { height: barHeight(paddingBottom), paddingBottom }]}
     >
       {state.routes.map((route, position) => {
         const tab = TABS.get(route.name);
@@ -121,16 +132,19 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
+    paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: BAR_PADDING_X,
     borderTopWidth: border.strong,
     borderTopColor: colors.ink,
     backgroundColor: colors.paper,
   },
+  // The tabs sit at the top of their area, as in the prototype.
   tab: {
     flex: 1,
+    height: TAB_AREA_HEIGHT,
     minHeight: MIN_TOUCH,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: LABEL_GAP,
   },
   iconBox: {
