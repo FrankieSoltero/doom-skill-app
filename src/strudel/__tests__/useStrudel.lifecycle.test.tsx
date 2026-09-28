@@ -1,7 +1,7 @@
 // useStrudel against a flooding page, late page errors, and calls that come after the card has
 // hidden or unmounted.
 import { act, render } from '@testing-library/react-native';
-import { Activity, createElement } from 'react';
+import { Activity } from 'react';
 
 import { logWarning } from '../../log';
 import {
@@ -9,10 +9,12 @@ import {
   call,
   CODE,
   mountPlayer,
+  mountTwoPlayers,
   play,
   playingPlayer,
   readyPlayer,
 } from '../testing/player';
+import { logsOfFreshSession } from '../testing/freshSession';
 import { pagePosts, postRaw, sentToPage, webView } from '../testing/webview';
 import { useStrudel, type Strudel } from '../useStrudel';
 
@@ -50,7 +52,10 @@ describe('useStrudel: a flood of step messages', () => {
     expect(renders() - before).toBe(1);
     expect(result.current.step).toBe(0);
 
+    // The window reads performance.now(), which Jest's fake timers move with the time they fake.
+    const clock = performance.now();
     advance(STEP_GAP_MS - 1);
+    expect(performance.now() - clock).toBe(STEP_GAP_MS - 1);
     pagePosts({ type: 'step', step: 9 });
     expect(result.current.step).toBe(0);
     advance(1);
@@ -86,12 +91,26 @@ describe('useStrudel: late page errors', () => {
 });
 
 describe('useStrudel: after unmount', () => {
-  it.each(['play', 'stop', 'reset', 'clearError'] as const)(
-    '%s does nothing: no message, no timer, no log',
+  it('play does not stop another player that is playing', () => {
+    const { first, second } = mountTwoPlayers();
+    play(second.result);
+    const stale = first.result.current;
+    first.unmount();
+    const sentToSecond = sentToPage(1).length;
+    act(() => {
+      stale.play(CODE);
+    });
+    expect(second.result.current.playing).toBe(true);
+    expect(sentToPage(1)).toHaveLength(sentToSecond);
+  });
+
+  // Here each player is rendered in its own root, so its WebView outlives the hook: an action
+  // that ran after unmount would reach that page or start a timer. In an app the player unmounts
+  // with the hook, so `stop` then has nothing left to reach.
+  it.each(['play', 'stop', 'reset'] as const)(
+    '%s sends nothing to the page that outlived the hook, starts no timer and logs nothing',
     (action) => {
       const { result, unmountHook } = playingPlayer();
-      pagePosts({ type: 'error', message: 'kept' });
-      play(result);
       const page = webView();
       unmountHook();
       const sent = page.injected.length;
@@ -110,6 +129,18 @@ describe('useStrudel: after unmount', () => {
       expect(jest.mocked(logWarning).mock.calls).toStrictEqual([]);
     },
   );
+
+  // clearError after unmount changes only state that no one reads any more: nothing to observe.
+  it('clearError does not throw', () => {
+    const { result, unmountHook } = playingPlayer();
+    unmountHook();
+    const stale = result.current;
+    expect(() => {
+      act(() => {
+        stale.clearError();
+      });
+    }).not.toThrow();
+  });
 });
 
 describe('useStrudel: hidden and shown again', () => {
@@ -154,36 +185,24 @@ describe('useStrudel: hidden and shown again', () => {
 });
 
 describe('useStrudel: the dropped-message log', () => {
-  it('logs the first dropped message of a fresh session once, without its content', () => {
-    // A fresh copy of every module, so the session-wide flag starts unset whatever ran before.
-    // RNTL's `pure` entry adds no test hooks, which cannot be added inside a test.
+  /** A string no real log line contains, to search the logged values for. */
+  const MARKER = 'LEARNER-CODE-MARKER-3141';
+
+  it('logs the first dropped message of a fresh session once', () => {
+    // Uses up the log in the modules this file shares; the fresh session must still log.
     mountPlayer();
-    postRaw('uses up the log of the modules this file shares');
-    jest.mocked(logWarning).mockClear();
-    jest.isolateModules(() => {
-      const rntl = jest.requireActual<typeof import('@testing-library/react-native/pure')>(
-        '@testing-library/react-native/pure',
-      );
-      const fresh = jest.requireActual<typeof import('../useStrudel')>('../useStrudel');
-      const log = jest.requireMock<typeof import('../../log')>('../../log');
-      function FreshScreen() {
-        return fresh.useStrudel().player;
-      }
-      rntl.render(createElement(FreshScreen));
-      const host = rntl.screen.getByTestId('webview-mock', { includeHiddenElements: true });
-      for (const data of ['{"type":"error","message":"the learner code"', 'again', 42]) {
-        rntl.fireEvent(host, 'message', { nativeEvent: { data } });
-      }
-      expect(jest.mocked(log.logWarning).mock.calls).toStrictEqual([['strudel_message_dropped']]);
-      rntl.cleanup();
-    });
+    postRaw('bad');
+    const calls = logsOfFreshSession(['{"type":"error","message":"x"', 'again', 42]);
+    expect(calls).toStrictEqual([['strudel_message_dropped']]);
   });
 
-  it('never logs a dropped message with its content', () => {
-    mountPlayer();
-    postRaw('secret code');
-    for (const logged of jest.mocked(logWarning).mock.calls) {
-      expect(logged).toStrictEqual(['strudel_message_dropped']);
-    }
+  it('never logs the content of a dropped message', () => {
+    const calls = logsOfFreshSession([
+      `{"type":"error","message":"${MARKER}"`,
+      `s("${MARKER}")`,
+      { type: 'error', message: MARKER, nested: [{ code: MARKER }] },
+    ]);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(JSON.stringify(calls)).not.toContain(MARKER);
   });
 });

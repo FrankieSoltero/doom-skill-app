@@ -155,14 +155,12 @@ describe('useStrudel: forged and dropped messages', () => {
     ['not JSON', 'secret code here'],
     ['a non-string', { type: 'error', message: 'not a string' }],
     ['a number', 42],
-  ])('drops %s: nothing changes, and no log carries its content', (_name, data) => {
+  ])('drops %s: nothing changes', (_name, data) => {
+    // What the log says is tested in a fresh session: useStrudel.lifecycle.test.tsx.
     const { result } = playingPlayer();
     pagePosts({ type: 'step', step: 5 });
     postRaw(data);
     expect(result.current).toMatchObject({ status: 'ready', playing: true, step: 5, error: null });
-    for (const logged of warnings()) {
-      expect(logged).toStrictEqual(['strudel_message_dropped']);
-    }
   });
 
   it('logs dropped messages at most once in the session', () => {

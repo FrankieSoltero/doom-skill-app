@@ -86,7 +86,10 @@ class Session {
   private webView: WebView | null = null;
   /** Between mount and unmount. The actions do nothing outside it. */
   private mounted = false;
-  /** When the last page `step` updated the state (`Date.now()`). */
+  /**
+   * When the last page `step` updated the state, by `performance.now()`: monotonic, so a system
+   * clock set back cannot hold every step for the time it moved.
+   */
   private lastStepAt = -Infinity;
   private readyTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly clock = new StepClock((step) => {
@@ -129,7 +132,7 @@ class Session {
 
   /** Takes a page step unless it is the current one or comes within 16 ms of the last taken. */
   private followStep(step: number): void {
-    const now = Date.now();
+    const now = performance.now();
     if (step === this.state.step || now - this.lastStepAt < STEP_GAP_MS) {
       return;
     }
