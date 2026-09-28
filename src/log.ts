@@ -10,6 +10,8 @@
  * - Context values: strings (cut to 200 characters), numbers and booleans. Any other value is
  *   dropped with its key. At most the first 10 valid entries are logged.
  * - Errors: the name and the message, cut to 200 characters. Never the stack.
+ * - `logError` takes an optional context, cleaned by the same rules. It is logged as a separate
+ *   object after the error's, so a context key such as `name` cannot overwrite the error's fields.
  *
  * Never log card text, code the user typed, or anything that identifies a person. The checks run
  * at run time too, because a caller can pass data from outside that defeats the parameter types.
@@ -122,10 +124,17 @@ export function logWarning(event: string, context?: LogContext): void {
   }
 }
 
-/** Logs an error: one `console.error(event, { name, message })` call. */
-export function logError(event: string, error: unknown): void {
+/**
+ * Logs an error: one `console.error(event, { name, message })` call, or
+ * `console.error(event, { name, message }, context)` when a context is given.
+ */
+export function logError(event: string, error: unknown, context?: LogContext): void {
   try {
-    console.error(eventName(event), readError(error));
+    if (context === undefined) {
+      console.error(eventName(event), readError(error));
+    } else {
+      console.error(eventName(event), readError(error), cleanContext(context));
+    }
   } catch {
     // A broken console must not break the app.
   }
