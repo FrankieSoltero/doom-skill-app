@@ -246,8 +246,10 @@ module.exports = [
     rules: { 'no-console': 'off' },
   },
   // The generated Strudel bundle, written by the build script into src/strudel/generated/: tool
-  // mechanics (docs/standards.md, scope paragraph), not an SS-9 exception.
+  // mechanics (docs/standards.md, scope paragraph), not an SS-9 exception. ios/ and android/ are
+  // the native projects that `expo run:ios` and `expo prebuild` generate (docs/standards.md,
+  // "Generated files"); ESLint does not read .gitignore, so only this entry keeps ESLint off them.
   {
-    ignores: ['.expo/', 'dist/', 'expo-env.d.ts', 'src/strudel/generated/'],
+    ignores: ['.expo/', 'dist/', 'expo-env.d.ts', 'src/strudel/generated/', 'ios/', 'android/'],
   },
 ];

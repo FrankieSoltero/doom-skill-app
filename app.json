@@ -6,6 +6,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "plugins": ["expo-router", "expo-status-bar"]
+    "ios": {
+      "bundleIdentifier": "com.frankiesoltero.learnloop"
+    },
+    "plugins": ["expo-router", "expo-status-bar"],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ffc1b7f8-ec94-47a5-89e8-b348ef3865e5"
+      }
+    }
   }
 }
