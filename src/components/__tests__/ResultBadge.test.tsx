@@ -98,6 +98,15 @@ describe('ResultBadge message', () => {
     },
   );
 
+  it('shows an error message on at most 3 lines', () => {
+    renderBadge('error', 'Audio error', 'line one. line two. line three. line four.');
+
+    const { numberOfLines, ellipsizeMode } = outerText(screen.getByTestId('result-badge-message'))
+      .props as { numberOfLines?: number; ellipsizeMode?: string };
+    expect(numberOfLines).toBe(3);
+    expect(ellipsizeMode).toBe('tail');
+  });
+
   it('draws an error message as plain text: bold markers and tags are shown as typed', () => {
     const pageText = 'ReferenceError: **bold** <b>tag</b> [link](https://example.com)';
     renderBadge('error', 'Audio error', pageText);

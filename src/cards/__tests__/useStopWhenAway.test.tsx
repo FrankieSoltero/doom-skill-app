@@ -76,23 +76,28 @@ describe('useStopWhenAway: the current page', () => {
 });
 
 describe('useStopWhenAway: the app state', () => {
-  it.each<AppStateStatus>(['background', 'inactive'])('stops when the app turns %s', (state) => {
+  it('stops when the app goes to the background', () => {
     const { stop } = renderAway(true);
     const listener = appStateListener();
 
-    listener.send(state);
+    listener.send('background');
 
     expect(listener.event).toBe('change');
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
-  it('does not stop when the app turns active', () => {
-    const { stop } = renderAway(true);
+  // `inactive` is Control Center, the app switcher's peek or a call banner: the learner may be
+  // changing the volume, so playback goes on.
+  it.each<AppStateStatus>(['inactive', 'active'])(
+    'does not stop when the app turns %s',
+    (state) => {
+      const { stop } = renderAway(true);
 
-    appStateListener().send('active');
+      appStateListener().send(state);
 
-    expect(stop).not.toHaveBeenCalled();
-  });
+      expect(stop).not.toHaveBeenCalled();
+    },
+  );
 
   it('removes its app state listener when it unmounts', () => {
     const { unmount } = renderAway(true);
@@ -101,6 +106,44 @@ describe('useStopWhenAway: the app state', () => {
     unmount();
 
     expect(subscription.remove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useStopWhenAway: a stop that changes on every render', () => {
+  /** Renders the hook with a new `stop` on every render; returns each render's `stop`. */
+  function renderWithFreshStops(active: boolean) {
+    const stops: jest.Mock<undefined, []>[] = [];
+    const hook = renderHook(
+      (props: { active: boolean }) => {
+        const stop = jest.fn<undefined, []>();
+        stops.push(stop);
+        useStopWhenAway({ active: props.active, stop });
+      },
+      { initialProps: { active } },
+    );
+    const rerender = (next: boolean) => {
+      hook.rerender({ active: next });
+    };
+    return { stops, rerender };
+  }
+
+  it('adds its app state listener once, and the latest stop is the one called', () => {
+    const { stops, rerender } = renderWithFreshStops(true);
+    rerender(true);
+    rerender(true);
+
+    appStateListener().send('background');
+
+    expect(appState.addEventListener.mock.calls).toHaveLength(1);
+    expect(stops.map((stop) => stop.mock.calls.length)).toStrictEqual([0, 0, 1]);
+  });
+
+  it('stops an inactive card once, not on every render', () => {
+    const { stops, rerender } = renderWithFreshStops(false);
+    rerender(false);
+    rerender(false);
+
+    expect(stops.map((stop) => stop.mock.calls.length)).toStrictEqual([1, 0, 0]);
   });
 });
 

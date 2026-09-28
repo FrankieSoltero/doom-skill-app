@@ -1,8 +1,8 @@
-import { act, screen, within } from '@testing-library/react-native';
+import { act, screen, userEvent, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { renderRouter } from 'expo-router/testing-library';
-import { AppState, Text } from 'react-native';
+import { AppState, Keyboard, Text } from 'react-native';
 
 import { viewStyleOf } from '../../components/testing/styles';
 import { pagePosts, sentToPage } from '../../strudel/testing/webview';
@@ -18,6 +18,7 @@ import {
   press,
   renderExerciseCard,
   setUpExerciseCardTests,
+  storedAnswer,
   typeCode,
 } from '../testing/exerciseCards';
 import { setAudio, strudelActions } from '../testing/strudelDouble';
@@ -37,6 +38,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  jest.restoreAllMocks();
   jest.useRealTimers();
 });
 
@@ -212,6 +214,62 @@ describe('ExerciseCard stops when away', () => {
     });
 
     expect(stop).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ExerciseCard keyboard', () => {
+  it.each([
+    { name: 'Play', setUp: () => undefined, action: play },
+    {
+      name: 'Stop',
+      setUp: () => {
+        setAudio({ playing: true });
+      },
+      action: stop,
+    },
+    {
+      name: 'Reset audio',
+      setUp: () => {
+        setAudio({ status: 'unavailable' });
+      },
+      action: reset,
+    },
+  ])('dismisses the keyboard before $name acts', ({ name, setUp, action }) => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    renderExerciseCard(demo());
+    setUp();
+
+    press(name);
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(dismiss.mock.invocationCallOrder[0]).toBeLessThan(
+      action.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('dismisses the keyboard before Check stores its result', () => {
+    const seen: unknown[] = [];
+    jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {
+      seen.push(storedAnswer());
+    });
+    renderExerciseCard(demo());
+
+    press('Check');
+
+    expect(seen).toStrictEqual([undefined]);
+    expect(storedAnswer()).toMatchObject({ result: 'fail' });
+  });
+
+  it('dismisses the keyboard on a tap on the card outside the editor and the buttons', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    renderExerciseCard(demo());
+
+    const area = screen.getByTestId('dismiss-keyboard-area');
+    expect(within(area).getByTestId('card-frame')).toBeOnTheScreen();
+    await userEvent.setup().press(screen.getByText('Exercise · REPL'));
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 });
 

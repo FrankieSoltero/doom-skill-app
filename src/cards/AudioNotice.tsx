@@ -1,10 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { FadedBorder } from '../components/FadedBorder';
 import { ResultBadge } from '../components/ResultBadge';
 import { copy } from '../copy';
 import { STRUDEL_ERROR, type Strudel } from '../strudel/useStrudel';
 import { colors, fonts } from '../theme';
-import { FadedBorder } from './ExerciseControls';
 
 // The design has no audio notices (docs/design/card-feed/README.md:86-112 simulates the audio).
 // They reuse the result badge; the values below that the theme lacks are this card's own.
@@ -28,13 +28,15 @@ type Notice = { tone: 'error' | 'warn'; label: string; message: string; resettab
 
 /**
  * The text of an audio error: the card's words for the hook's fixed keys, which are checked
- * first; any other error is page text, untrusted, cut to its first 200 characters (whole
- * characters, so a pair of UTF-16 code units is never split).
+ * first; any other error is page text, untrusted: every run of whitespace (newlines included)
+ * becomes one space, then it is cut to its first 200 characters (whole characters, so a pair of
+ * UTF-16 code units is never split). `ResultBadge` shows an error on at most 3 lines.
  */
 function errorText(error: string): string {
   if (error === STRUDEL_ERROR.codeTooLong) return copy.codeTooLong;
   if (error === STRUDEL_ERROR.playerUnavailable) return copy.audioUnavailable;
-  return Array.from(error).slice(0, PAGE_TEXT_LIMIT).join('');
+  const oneLine = error.replace(/\s+/g, ' ').trim();
+  return Array.from(oneLine).slice(0, PAGE_TEXT_LIMIT).join('');
 }
 
 /** The one notice to show, by precedence: an error, then unavailable, then no connection. */

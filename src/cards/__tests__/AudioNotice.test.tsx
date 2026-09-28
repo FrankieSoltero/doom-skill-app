@@ -21,6 +21,14 @@ function renderNotice(change: Partial<AudioStatus>) {
 
 const label = () => screen.getByTestId('result-badge-label');
 const message = () => screen.getByTestId('result-badge-message');
+/**
+ * The message exactly as drawn, whitespace kept: `toHaveTextContent` collapses whitespace itself,
+ * so it cannot tell collapsed text from raw text.
+ */
+function rawMessage(): unknown {
+  const [text] = message().children;
+  return typeof text === 'string' || text === undefined ? text : text.props.children;
+}
 const resetButton = () => screen.queryByRole('button', { name: 'Reset audio' });
 const fillOf = () => textStyleOf(label()).backgroundColor;
 
@@ -93,6 +101,19 @@ describe('AudioNotice: error text', () => {
     renderNotice({ error: pageText });
 
     expect(message()).toHaveTextContent(`${'a'.repeat(199)}b`, { exact: true });
+  });
+
+  it('collapses every run of whitespace, newlines and tabs included, to one space', () => {
+    renderNotice({ error: '\n  TypeError:\n\n\tx\r\n  is   not a function  \n' });
+
+    expect(rawMessage()).toBe('TypeError: x is not a function');
+  });
+
+  it('cuts to 200 characters after collapsing the whitespace', () => {
+    const words = Array.from({ length: 100 }, () => 'ab');
+    renderNotice({ error: words.join('\n\t  \n') });
+
+    expect(rawMessage()).toBe(words.join(' ').slice(0, 200));
   });
 
   it('never splits a character made of two code units at the cut', () => {

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react-native';
+import { screen, userEvent, within } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
 
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
@@ -210,6 +210,17 @@ describe('CheckpointCard keyboard', () => {
     expect(dismiss).toHaveBeenCalledTimes(2);
     expect(seen).toStrictEqual(['idle', 'done']);
     expect(storedAnswer()).toMatchObject({ status: 'grading' });
+  });
+
+  it('dismisses the keyboard on a tap on the card outside the editor and the button', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    renderCheckpointCard(demo());
+
+    const area = screen.getByTestId('dismiss-keyboard-area');
+    expect(within(area).getByTestId('card-frame')).toBeOnTheScreen();
+    await userEvent.setup().press(screen.getByRole('header', { name: 'Build a 4-bar drum loop' }));
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
   it('leaves the keyboard alone when drawn inactive, or while active', () => {

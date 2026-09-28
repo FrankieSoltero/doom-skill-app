@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 
 import { announce } from '../components/announce';
 import { BeatGrid } from '../components/BeatGrid';
 import { CardFrame } from '../components/CardFrame';
 import { CodeEditor } from '../components/CodeEditor';
+import { FadedBorder } from '../components/FadedBorder';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ResultBadge } from '../components/ResultBadge';
 import { spokenText } from '../components/spokenText';
@@ -18,7 +19,9 @@ import { border, colors } from '../theme';
 import { AudioNotice } from './AudioNotice';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardTitle } from './CardText';
-import { ExerciseControls, FadedBorder } from './ExerciseControls';
+import { DismissKeyboardArea } from './DismissKeyboardArea';
+import { ExerciseControls } from './ExerciseControls';
+import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 import { useStopWhenAway } from './useStopWhenAway';
 
 // Exercise card values from docs/design/card-feed/README.md:86-112 that the theme does not hold.
@@ -40,19 +43,6 @@ function resultBadge(result: CheckResult, card: ExerciseCardData) {
   return result === 'pass'
     ? { tone: 'pass' as const, label: copy.specMet, message: card.passMsg }
     : { tone: 'warn' as const, label: copy.notYet, message: card.failMsg };
-}
-
-/**
- * Dismisses the keyboard when the card stops being the current page, which blurs its editor, so
- * the pager's swipe is not left off on the next card. Only on that change: a card drawn off the
- * current page leaves the keyboard alone.
- */
-function useDismissKeyboardWhenLeft(active: boolean): void {
-  const wasActive = useRef(active);
-  useEffect(() => {
-    if (wasActive.current && !active) Keyboard.dismiss();
-    wasActive.current = active;
-  }, [active]);
 }
 
 type EditorFrameProps = {
@@ -94,6 +84,8 @@ type ExerciseCardProps = {
  * or Stop and Check, the audio notice and the check result, a flex spacer, then Next card (paper),
  * enabled after a pass.
  *
+ * A tap on the card outside the editor and the buttons, and every button, dismisses the keyboard.
+ *
  * The answer lives in the feed store at `index`: before the first edit there is none and the editor
  * shows the starter code; an edit stores the code with no result; Check stores the result for the
  * code. The audio comes from `useStrudel`, whose player is rendered once, last, in every state, so
@@ -117,7 +109,9 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
     setAnswer(index, { kind: 'exercise', code: next, result: null });
     if (strudel.error !== null) strudel.clearError();
   };
+  // Each button dismisses the keyboard first: it would cover the result and the notices.
   const onCheck = () => {
+    Keyboard.dismiss();
     const checked = codeNow();
     const passed = checkExercise(checked, card.checks);
     setAnswer(index, { kind: 'exercise', code: checked, result: passed ? 'pass' : 'fail' });
@@ -125,10 +119,16 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
     announce(copy.badgeSpoken(badge.label, spokenText(badge.message)));
   };
   const onPlay = () => {
+    Keyboard.dismiss();
     strudel.clearError();
     strudel.play(codeNow());
   };
+  const onStop = () => {
+    Keyboard.dismiss();
+    strudel.stop();
+  };
   const onReset = () => {
+    Keyboard.dismiss();
     strudel.reset();
     strudel.clearError();
   };
@@ -136,26 +136,36 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
 
   return (
     <>
-      <CardFrame type="exercise" kicker={cardKickerText(card)} meta={cardMetaText(card.estSeconds)}>
-        <CardTitle size="s">{card.title}</CardTitle>
-        <EditorFrame code={code} onChange={onChange} step={strudel.playing ? strudel.step : null} />
-        <ExerciseControls
-          playing={strudel.playing}
-          canPlay={canPlay}
-          onPlay={onPlay}
-          onStop={strudel.stop}
-          onCheck={onCheck}
-        />
-        <AudioNotice audio={strudel} onReset={onReset} />
-        {result === null ? null : <ResultBadge {...resultBadge(result, card)} />}
-        <View testID="exercise-spacer" style={styles.spacer} />
-        <PrimaryButton
-          label={copy.nextCard}
-          onPress={onNext}
-          disabled={result !== 'pass'}
-          variant="paper"
-        />
-      </CardFrame>
+      <DismissKeyboardArea>
+        <CardFrame
+          type="exercise"
+          kicker={cardKickerText(card)}
+          meta={cardMetaText(card.estSeconds)}
+        >
+          <CardTitle size="s">{card.title}</CardTitle>
+          <EditorFrame
+            code={code}
+            onChange={onChange}
+            step={strudel.playing ? strudel.step : null}
+          />
+          <ExerciseControls
+            playing={strudel.playing}
+            canPlay={canPlay}
+            onPlay={onPlay}
+            onStop={onStop}
+            onCheck={onCheck}
+          />
+          <AudioNotice audio={strudel} onReset={onReset} />
+          {result === null ? null : <ResultBadge {...resultBadge(result, card)} />}
+          <View testID="exercise-spacer" style={styles.spacer} />
+          <PrimaryButton
+            label={copy.nextCard}
+            onPress={onNext}
+            disabled={result !== 'pass'}
+            variant="paper"
+          />
+        </CardFrame>
+      </DismissKeyboardArea>
       {strudel.player}
     </>
   );

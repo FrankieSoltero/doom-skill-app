@@ -123,6 +123,8 @@ export const copy = deepFreeze({
   notYet: 'Not yet',
   /** Spoken label of the exercise card's code editor. */
   codeEditor: 'Code editor',
+  /** The key above an editor's keyboard (iOS) that closes the keyboard. */
+  done: 'Done',
   /** The notice shown while the audio plays without its samples (no network). */
   audioNeedsConnection: 'Audio needs a connection',
   /** The notice shown when the audio player could not start or stopped working. */

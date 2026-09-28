@@ -18,6 +18,8 @@ const LINE_HEIGHT = 22;
 const GAP = 8;
 /** The label's side padding, README.md:109 ("0/6 padding"). */
 const LABEL_PADDING_X = 6;
+/** The most lines an error message takes: page text can be long, and the card is fixed height. */
+const ERROR_MAX_LINES = 3;
 
 type Tone = 'pass' | 'warn' | 'error';
 
@@ -44,10 +46,16 @@ type ResultBadgeProps = {
  * How the message is drawn, decided here by `tone` so no caller can choose. A `pass` or `warn`
  * message is trusted card text that may mark bold (rule SS-11), so it goes through `BoldText`. An
  * `error` message may be text the audio page sent, which is untrusted: it is one plain `Text`,
- * never parsed for markup.
+ * never parsed for markup, cut off with an ellipsis after 3 lines.
  */
 function renderMessage(tone: Tone, message: string, style: StyleProp<TextStyle>) {
-  if (tone === 'error') return <Text style={style}>{message}</Text>;
+  if (tone === 'error') {
+    return (
+      <Text numberOfLines={ERROR_MAX_LINES} ellipsizeMode="tail" style={style}>
+        {message}
+      </Text>
+    );
+  }
   return <BoldText text={message} style={style} />;
 }
 

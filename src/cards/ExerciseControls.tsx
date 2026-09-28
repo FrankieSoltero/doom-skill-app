@@ -1,9 +1,10 @@
 import { Play, Square } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { PressableStateCallbackType } from 'react-native';
+import type { PressableStateCallbackType, ViewStyle } from 'react-native';
 
+import { FadedBorder } from '../components/FadedBorder';
 import { copy } from '../copy';
-import { border, colors, fonts } from '../theme';
+import { colors, fonts } from '../theme';
 
 // Exercise button values from docs/design/card-feed/README.md:103-105 and, where it is silent,
 // the prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:162-168 and its
@@ -28,17 +29,8 @@ const DISABLED_OPACITY = 0.45;
 /** How far a pressed button moves right and down, prototype lines 163 and 167. */
 const PRESSED_OFFSET = 1;
 
-/**
- * A 1pt paper border at `opacity`, drawn over the box of its parent, which must be positioned. It
- * holds no children, so its opacity fades only the border: the theme has no paper color at reduced
- * opacity, and a color literal is not allowed outside it (rule SS-1). It ignores touches.
- */
-export function FadedBorder({ opacity }: { opacity: number }) {
-  return <View testID="faded-border" pointerEvents="none" style={[styles.faded, { opacity }]} />;
-}
-
 /** The style of a button, pressed or not; `disabled` dims it. */
-function buttonStyle(look: object, disabled: boolean) {
+function buttonStyle(look: ViewStyle, disabled: boolean) {
   return ({ pressed }: PressableStateCallbackType) => [
     styles.button,
     look,
@@ -124,13 +116,4 @@ const styles = StyleSheet.create({
   label: { fontFamily: fonts.heading, fontSize: LABEL_SIZE },
   playLabel: { color: colors.ink },
   checkLabel: { color: colors.paper },
-  faded: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    borderWidth: border.hairline,
-    borderColor: colors.paper,
-  },
 });

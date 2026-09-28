@@ -194,6 +194,10 @@ describe('copy for the exercise card', () => {
     expect(copy.codeEditor).toBe('Code editor');
   });
 
+  it("labels the Done key over the editor's keyboard", () => {
+    expect(copy.done).toBe('Done');
+  });
+
   it('words the audio notices and their Reset action', () => {
     expect(copy.audioNeedsConnection).toBe('Audio needs a connection');
     expect(copy.audioUnavailable).toBe('Audio unavailable');

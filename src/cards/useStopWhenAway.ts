@@ -1,7 +1,7 @@
 // Stops a card's audio when the learner can no longer hear it on purpose: the card is not the
-// current page, its screen is not the one shown, or the app is not in the foreground.
+// current page, its screen is not the one shown, or the app is in the background.
 import { NavigationContext } from 'expo-router/react-navigation';
-import { use, useEffect } from 'react';
+import { use, useEffect, useEffectEvent } from 'react';
 import { AppState } from 'react-native';
 
 type StopWhenAwayOptions = {
@@ -13,7 +13,12 @@ type StopWhenAwayOptions = {
 
 /**
  * Calls `stop` when the card is drawn or becomes not active, when its screen loses focus (the Today
- * tab stays mounted while another tab shows), and when the app state turns anything but `active`.
+ * tab stays mounted while another tab shows), and when the app goes to the background. The app
+ * turning `inactive` (Control Center, the app switcher's peek, a call banner) does not stop it: the
+ * learner may be changing the volume.
+ *
+ * The listeners are added once and call the latest `stop` (`useEffectEvent`), so a caller may pass
+ * a new function on every render without resubscribing or stopping again.
  *
  * The screen part listens for the navigation `blur` event, as Expo Router's `useFocusEffect` does
  * for its cleanup. It reads the screen's navigation from context instead of calling that hook,
@@ -22,25 +27,26 @@ type StopWhenAwayOptions = {
  */
 export function useStopWhenAway({ active, stop }: StopWhenAwayOptions): void {
   const navigation = use(NavigationContext);
+  const stopNow = useEffectEvent(stop);
 
   useEffect(() => {
-    if (!active) stop();
-  }, [active, stop]);
+    if (!active) stopNow();
+  }, [active]);
 
   useEffect(
     () =>
       navigation?.addListener('blur', () => {
-        stop();
+        stopNow();
       }),
-    [navigation, stop],
+    [navigation],
   );
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state !== 'active') stop();
+      if (state === 'background') stopNow();
     });
     return () => {
       subscription.remove();
     };
-  }, [stop]);
+  }, []);
 }

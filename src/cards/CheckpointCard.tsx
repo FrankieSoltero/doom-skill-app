@@ -16,6 +16,8 @@ import { useFeedStore } from '../feed/store';
 import { cardTheme, colors, fonts } from '../theme';
 import { cardMetaText, checkpointKickerText } from './cardLabels';
 import { CardTitle } from './CardText';
+import { DismissKeyboardArea } from './DismissKeyboardArea';
+import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 
 // Checkpoint card values from docs/design/card-feed/README.md:123-140 and, where it is silent, the
 // prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:215-240. The theme holds
@@ -51,19 +53,6 @@ function scoreLine(grade: CheckpointGrade): string {
   return grade.passed
     ? copy.passedOf(grade.passCount, total)
     : copy.notYetOf(grade.passCount, total);
-}
-
-/**
- * Dismisses the keyboard when the card stops being the current page, which blurs its editor, so
- * the pager's swipe is not left off on the next card. The same rule as the exercise card's; a card
- * drawn off the current page leaves the keyboard alone.
- */
-function useDismissKeyboardWhenLeft(active: boolean): void {
-  const wasActive = useRef(active);
-  useEffect(() => {
-    if (wasActive.current && !active) Keyboard.dismiss();
-    wasActive.current = active;
-  }, [active]);
 }
 
 /**
@@ -168,6 +157,8 @@ type CheckpointCardProps = {
  * editor on an ink panel, the rubric, the score line and feedback once graded, a flex spacer, then
  * one button whose label and action follow the state.
  *
+ * A tap on the card outside the editor and the button dismisses the keyboard.
+ *
  * The answer lives in the feed store at `index` (see `useCheckpointAnswer`). Before the first edit
  * or submit there is none and the editor shows the starter code. Grading is local, the pure
  * `gradeCheckpoint` behind a 1,600 ms delay; the server call replaces it later. The card counts
@@ -183,29 +174,31 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
       : grade.results.map(({ label, passed }) => ({ label, passed }));
 
   return (
-    <CardFrame
-      type="checkpoint"
-      kicker={checkpointKickerText(card)}
-      meta={cardMetaText(card.estSeconds)}
-    >
-      <CardTitle size="s">{card.title}</CardTitle>
-      <View testID="checkpoint-editor-panel" style={styles.panel}>
-        <CodeEditor
-          value={code}
-          onChange={edit}
-          caret={cardTheme.checkpoint.bg}
-          height={EDITOR_HEIGHT}
+    <DismissKeyboardArea>
+      <CardFrame
+        type="checkpoint"
+        kicker={checkpointKickerText(card)}
+        meta={cardMetaText(card.estSeconds)}
+      >
+        <CardTitle size="s">{card.title}</CardTitle>
+        <View testID="checkpoint-editor-panel" style={styles.panel}>
+          <CodeEditor
+            value={code}
+            onChange={edit}
+            caret={cardTheme.checkpoint.bg}
+            height={EDITOR_HEIGHT}
+          />
+        </View>
+        <RubricList items={items} />
+        <CheckpointResult grade={grade} />
+        <View testID="checkpoint-spacer" style={styles.spacer} />
+        <PrimaryButton
+          label={button.label}
+          onPress={button.finishes ? onNext : submit}
+          disabled={button.disabled}
         />
-      </View>
-      <RubricList items={items} />
-      <CheckpointResult grade={grade} />
-      <View testID="checkpoint-spacer" style={styles.spacer} />
-      <PrimaryButton
-        label={button.label}
-        onPress={button.finishes ? onNext : submit}
-        disabled={button.disabled}
-      />
-    </CardFrame>
+      </CardFrame>
+    </DismissKeyboardArea>
   );
 }
 
