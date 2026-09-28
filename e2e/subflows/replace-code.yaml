@@ -1,0 +1,26 @@
+# Replaces the whole text of the current card's code editor with CODE, then checks the editor
+# holds exactly CODE. Only the current card's editor is in the accessibility tree.
+#
+# Typing replaces a selection, so the text is selected first with Select All in the iOS edit
+# menu. The first tap focuses the editor and puts the caret where it lands. Where the tap lands
+# on text, a second tap on the caret shows the menu; where it lands below the text, the caret
+# goes to the end and a long press shows the menu instead.
+appId: com.frankiesoltero.learnloop
+---
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn: 'Code editor'
+      - tapOn: 'Code editor'
+      - runFlow:
+          when:
+            notVisible: 'Select All'
+          commands:
+            - longPressOn: 'Code editor'
+      - tapOn: 'Select All'
+- inputText: ${CODE}
+- copyTextFrom: 'Code editor'
+- assertTrue:
+    condition: ${maestro.copiedText == CODE}
+    label: 'The editor holds exactly the code typed'
+- tapOn: 'Done'

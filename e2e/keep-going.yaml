@@ -1,0 +1,86 @@
+# The keep-going flow: answers set 1, then from each Summary taps Keep going, through sets 2, 3
+# and 4 and into set 5. Checks the header's set number and that each Summary title counts the
+# whole session. See README.md.
+#
+# Each title is computed from the cards done and their estimated seconds (sets 1 to 4 estimate
+# 405, 435, 440 and 445 seconds). Minutes are rounded; counts above twenty are written in digits.
+appId: com.frankiesoltero.learnloop
+---
+- runFlow: subflows/launch.yaml
+
+# Set 1.
+- runFlow:
+    file: subflows/answer-set.yaml
+    env:
+      SHOTS: 'false'
+      QUIZ_OPTION: 's\("bd\*4"\)'
+      PREDICT_OPTION: 'c3 e3, then c3 g3'
+      EXERCISE_CODE: "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*8\")\n)"
+      CHECKPOINT_CODE: "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))"
+      CHECKPOINT_SCORE: 'Passed · 4 of 4'
+- assertVisible: 'Six cards. Seven minutes.'
+- assertVisible: '13 day streak'
+
+# Set 2.
+- tapOn: 'Keep going'
+- extendedWaitUntil:
+    visible: 'STRUDEL · DAY 4 OF 14 · SET 2'
+    timeout: 10000
+- assertVisible: 'Spread beats with round brackets'
+- assertVisible: '13 day streak'
+- runFlow:
+    file: subflows/answer-set.yaml
+    env:
+      SHOTS: 'false'
+      QUIZ_OPTION: 's\("bd\(5,8\)"\)'
+      PREDICT_OPTION: 'c3 with g3, then e3 with g3'
+      EXERCISE_CODE: "stack(\n  s(\"bd ~ sd ~\"),\n  note(\"c3,e3,g3\")\n)"
+      CHECKPOINT_CODE: "stack(\n  s(\"bd(3,8), hh*8\"),\n  note(\"c2 ~ c2 g2, [c3,e3,g3]\")\n)"
+      CHECKPOINT_SCORE: 'Passed · 4 of 4'
+- assertVisible: 'Twelve cards. Fourteen minutes.'
+- takeScreenshot: 08-summary-after-set-2
+
+# Set 3.
+- tapOn: 'Keep going'
+- extendedWaitUntil:
+    visible: 'STRUDEL · DAY 4 OF 14 · SET 3'
+    timeout: 10000
+- assertVisible: 'Change speed with .fast and .slow'
+- runFlow:
+    file: subflows/answer-set.yaml
+    env:
+      SHOTS: 'false'
+      QUIZ_OPTION: 's\("\[bd sd\]\*2"\)'
+      PREDICT_OPTION: 'g3 e3 c3, then c3 e3 g3'
+      EXERCISE_CODE: "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*2 cp hh\").every(2, rev)\n)"
+      CHECKPOINT_CODE: "stack(\n  s(\"bd ~ sd ~, hh*4\").every(4, fast(2)),\n  note(\"c3 e3 g3 b3\").slow(2).rev()\n)"
+      CHECKPOINT_SCORE: 'Passed · 4 of 4'
+- assertVisible: 'Eighteen cards. 21 minutes.'
+
+# Set 4.
+- tapOn: 'Keep going'
+- extendedWaitUntil:
+    visible: 'STRUDEL · DAY 4 OF 14 · SET 4'
+    timeout: 10000
+- assertVisible: 'Add a changed copy with .off and .jux'
+- runFlow:
+    file: subflows/answer-set.yaml
+    env:
+      SHOTS: 'false'
+      QUIZ_OPTION: 's\("bd hh sd hh"\)\.jux\(rev\)'
+      PREDICT_OPTION: '2000, the last value'
+      EXERCISE_CODE: "stack(\n  s(\"bd ~ bd ~\").lpf(800),\n  s(\"~ sd ~ sd\").room(0.5),\n  s(\"hh*8\").gain(0.5)\n)"
+      CHECKPOINT_CODE: "stack(\n  s(\"bd ~ sd ~, hh*8\").jux(rev),\n  note(\"c3 e3 g3 e3\").off(1/8, x=>x.add(note(12))).lpf(1200).room(0.5)\n)"
+      CHECKPOINT_SCORE: 'Passed · 4 of 4'
+- assertVisible: '24 cards. 29 minutes.'
+- takeScreenshot: 09-summary-after-set-4
+
+# Set 5: the demo source loops, so set 5 serves set 1's cards again.
+- tapOn: 'Keep going'
+- extendedWaitUntil:
+    visible: 'STRUDEL · DAY 4 OF 14 · SET 5'
+    timeout: 10000
+- assertVisible: 'Card 1 of 7'
+- assertVisible: 'Alternate with angle brackets'
+- assertVisible: '13 day streak'
+- takeScreenshot: 10-set-5-first-card

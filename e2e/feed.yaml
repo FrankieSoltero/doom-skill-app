@@ -1,0 +1,38 @@
+# The feed flow: answers the six cards of set 1 in order, checks the gate toast on an unanswered
+# card, reaches the Summary, and takes a screenshot of each card and of each tab. See README.md.
+appId: com.frankiesoltero.learnloop
+---
+- runFlow: subflows/launch.yaml
+- assertVisible: '12 day streak'
+- runFlow:
+    file: subflows/answer-set.yaml
+    env:
+      SHOTS: 'true'
+      QUIZ_OPTION: 's\("bd\*4"\)'
+      PREDICT_OPTION: 'c3 e3, then c3 g3'
+      EXERCISE_CODE: "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*8\")\n)"
+      CHECKPOINT_CODE: "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))"
+      CHECKPOINT_SCORE: 'Passed · 4 of 4'
+
+# The Summary of set 1. Its title is computed from the cards done: 405 seconds of estimates.
+- assertVisible: 'Six cards. Seven minutes.'
+- assertVisible: '13 day streak'
+- takeScreenshot: 07-summary
+
+# Each tab once. Tree, Explore and Profile are placeholders.
+- tapOn: 'Tree'
+- assertVisible: 'Skill tree'
+- takeScreenshot: tab-tree
+- tapOn: 'Explore'
+- assertVisible:
+    text: 'Explore'
+    index: 1
+- takeScreenshot: tab-explore
+- tapOn: 'Profile'
+- assertVisible:
+    text: 'Profile'
+    index: 1
+- takeScreenshot: tab-profile
+- tapOn: 'Today'
+- assertVisible: 'Card 7 of 7'
+- takeScreenshot: tab-today

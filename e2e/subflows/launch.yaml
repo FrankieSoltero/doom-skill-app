@@ -1,0 +1,35 @@
+# Starts the app from cold and loads its JavaScript from the dev server (Metro, port 8081).
+# The app is a development build (expo-dev-client), so a launch alone shows the dev launcher;
+# the link below tells it which server to load. The app keeps no state between launches, so
+# every run starts on set 1, card 1.
+appId: com.frankiesoltero.learnloop
+env:
+  DEV_SERVER_LINK: exp+learnloop://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+---
+- launchApp:
+    stopApp: true
+- openLink: ${DEV_SERVER_LINK}
+# iOS may ask to confirm the link: "Open in LearnLoop?".
+- runFlow:
+    when:
+      visible: 'Open'
+    commands:
+      - tapOn: 'Open'
+# The feed, or on a build's first launch Expo's developer menu introduction, which covers it.
+- extendedWaitUntil:
+    visible: 'Card 1 of 7|Continue'
+    timeout: 120000
+# The introduction can show a moment after the feed. Continue opens the developer menu itself.
+- extendedWaitUntil:
+    visible: 'Continue'
+    timeout: 5000
+    optional: true
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+      - tapOn: 'Close'
+- assertVisible: 'Card 1 of 7'
+- assertVisible: 'STRUDEL · DAY 4 OF 14'
+- assertVisible: 'Today'
