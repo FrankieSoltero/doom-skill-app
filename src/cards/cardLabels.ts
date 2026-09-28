@@ -1,6 +1,6 @@
 // The kicker and meta strings every card shows in its kicker row (docs/design/card-feed/README.md:47).
 import { copy } from '../copy';
-import type { Card } from '../data';
+import type { Card, ReviewCard as ReviewCardData } from '../data';
 
 /**
  * The fields the kicker reads, from the four card types whose kicker is type and node. Review and
@@ -19,11 +19,20 @@ const SECONDS_PER_MINUTE = 60;
  * The kicker of a concept, quiz, predict or exercise card: type name, middle dot, node, such as
  * `Concept · Mini-notation` (README.md:52). The kicker style shows it uppercase. It accepts no
  * other card type: a review card's kicker is built from `lastSeenDays` ("REVIEW · SEEN 3 DAYS
- * AGO", README.md:115) and a checkpoint card's from its milestone (README.md:124), so each of
- * those cards writes its own.
+ * AGO", README.md:115, see `reviewKickerText`) and a checkpoint card's from its milestone
+ * (README.md:124).
  */
 export function cardKickerText(card: NodeKickerFields): string {
   return copy.cardKicker(copy.cardTypes[card.type], card.node);
+}
+
+/**
+ * The kicker of a review card: its type name, middle dot, and when it was last seen, such as
+ * `Review · Seen 3 days ago` (README.md:115). The kicker style shows it uppercase. It accepts
+ * only a review card.
+ */
+export function reviewKickerText(card: Pick<ReviewCardData, 'type' | 'lastSeenDays'>): string {
+  return copy.cardKicker(copy.cardTypes[card.type], copy.seenDaysAgo(card.lastSeenDays));
 }
 
 /**

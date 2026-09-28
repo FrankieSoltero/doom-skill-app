@@ -146,6 +146,28 @@ describe('copy for cards', () => {
   });
 });
 
+describe('copy for the review card', () => {
+  it('words the reveal button and the rating caption, README.md:116 and :119', () => {
+    expect(copy.recallThenReveal).toBe('Recall it, then tap to reveal');
+    expect(copy.howWell).toBe('How well did you remember?');
+  });
+
+  it.each([
+    [0, 'Seen today'],
+    [1, 'Seen 1 day ago'],
+    [2, 'Seen 2 days ago'],
+    [3, 'Seen 3 days ago'],
+    [30, 'Seen 30 days ago'],
+  ])('writes %i days since last seen as %s (the kicker style uppercases)', (days, expected) => {
+    expect(copy.seenDaysAgo(days)).toBe(expected);
+  });
+
+  it('speaks a rating button as its label and its next interval, as given', () => {
+    expect(copy.ratingLabel('Good', '4 days')).toBe('Good, next review in 4 days');
+    expect(copy.ratingLabel('Again', '<1 min')).toBe('Again, next review in <1 min');
+  });
+});
+
 describe('deepFreeze', () => {
   it('freezes every nested object and leaves functions callable', () => {
     const shout = (text: string) => `${text}!`;

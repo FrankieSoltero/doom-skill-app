@@ -91,6 +91,21 @@ export const copy = deepFreeze({
    * bold-marked text (rule SS-11), drawn through `BoldText`.
    */
   verdict: (verdict: string, explanation: string) => `**${verdict}** ${explanation}`,
+  /** The review card's reveal button, README.md:116. */
+  recallThenReveal: 'Recall it, then tap to reveal',
+  /** The caption over the review card's rating buttons, README.md:119. */
+  howWell: 'How well did you remember?',
+  /**
+   * When a review card was last seen, the node part of its kicker, README.md:115 ("SEEN 3 DAYS
+   * AGO" by style). `days` is a whole number, 0 or more.
+   */
+  seenDaysAgo: (days: number) => {
+    if (days === 0) return 'Seen today';
+    if (days === 1) return 'Seen 1 day ago';
+    return `Seen ${String(days)} days ago`;
+  },
+  /** Spoken label of a review rating button: its label and next interval, as the card gives them. */
+  ratingLabel: (label: string, interval: string) => `${label}, next review in ${interval}`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',

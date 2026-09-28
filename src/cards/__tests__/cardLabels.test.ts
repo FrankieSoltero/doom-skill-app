@@ -1,5 +1,5 @@
 import { cardsByType } from '../../feed/testing/sets';
-import { cardKickerText, cardMetaText } from '../cardLabels';
+import { cardKickerText, cardMetaText, reviewKickerText } from '../cardLabels';
 
 describe('cardKickerText', () => {
   it('writes the demo concept kicker, README.md:52 (uppercase comes from the style)', () => {
@@ -29,6 +29,25 @@ describe('cardKickerText', () => {
 
     expect(reviewKicker).toBeInstanceOf(Function);
     expect(checkpointKicker).toBeInstanceOf(Function);
+  });
+});
+
+describe('reviewKickerText', () => {
+  it.each([
+    [3, 'Review · Seen 3 days ago'],
+    [1, 'Review · Seen 1 day ago'],
+    [0, 'Review · Seen today'],
+  ])('names a review card seen %i days ago (uppercase comes from the style)', (days, expected) => {
+    expect(reviewKickerText({ ...cardsByType.review, lastSeenDays: days })).toBe(expected);
+  });
+
+  it('accepts only a review card: tsc fails if another type-checks', () => {
+    // Never called: the check is the compiler's.
+    const quizKicker = () =>
+      // @ts-expect-error -- only a review card has a kicker built from `lastSeenDays`.
+      reviewKickerText({ ...cardsByType.quiz, lastSeenDays: 3 });
+
+    expect(quizKicker).toBeInstanceOf(Function);
   });
 });
 

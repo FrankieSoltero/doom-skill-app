@@ -6,11 +6,12 @@ import { ConceptCard } from '../ConceptCard';
 import { PredictCard } from '../PredictCard';
 import { QuizCard } from '../QuizCard';
 import { canRenderCard, renderCard } from '../registry';
+import { ReviewCard } from '../ReviewCard';
 
 const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 
 // The card types no task has registered yet. Each later task moves its type out of this list.
-const UNREGISTERED = [exercise, review, checkpoint];
+const UNREGISTERED = [exercise, checkpoint];
 
 describe('renderCard', () => {
   it('renders a concept card with the card, its active flag and onNext', () => {
@@ -78,13 +79,33 @@ describe('renderCard', () => {
     expect(screen.getByRole('button', { name: 'Next card' })).toBeOnTheScreen();
   });
 
+  it('renders a review card with the card, its index and onNext, and no active flag', () => {
+    const onNext = jest.fn<undefined, []>();
+
+    const element = renderCard(review, { index: 2, active: true, onNext });
+
+    expect(isValidElement(element) && element.type).toBe(ReviewCard);
+    expect(isValidElement<object>(element) && element.props).toStrictEqual({
+      card: review,
+      index: 2,
+      onNext,
+    });
+  });
+
+  it('draws the review card, with its prompt and reveal button', () => {
+    render(<>{renderCard(review, { index: 0, active: true, onNext: jest.fn() })}</>);
+
+    expect(screen.getByText(review.prompt)).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Recall it, then tap to reveal' })).toBeOnTheScreen();
+  });
+
   it.each(UNREGISTERED)('returns null for $type, which has no component yet', (card) => {
     expect(renderCard(card, { index: 0, active: true, onNext: jest.fn() })).toBeNull();
   });
 });
 
 describe('canRenderCard', () => {
-  it.each([concept, quiz, predict])('accepts a $type card', (card) => {
+  it.each([concept, quiz, predict, review])('accepts a $type card', (card) => {
     expect(canRenderCard(card)).toBe(true);
   });
 
