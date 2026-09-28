@@ -2,19 +2,27 @@
 import { copy } from '../copy';
 import type { Card } from '../data';
 
-/** The fields the kicker reads, from any card type that names a node. */
-type NodeFields = Pick<Extract<Card, { node: string }>, 'type' | 'node'>;
+/**
+ * The fields the kicker reads, from the four card types whose kicker is type and node. Review and
+ * checkpoint cards are left out: their kickers are built from other fields.
+ */
+type NodeKickerFields = Pick<
+  Extract<Card, { type: 'concept' | 'quiz' | 'predict' | 'exercise' }>,
+  'type' | 'node'
+>;
 
 /** Below this many seconds the estimate is in seconds; from here up, in minutes. */
 const MINUTES_FROM = 120;
 const SECONDS_PER_MINUTE = 60;
 
 /**
- * The kicker of a card that names its node: type name, middle dot, node, such as
- * `Concept · Mini-notation` (README.md:52). The kicker style shows it uppercase. Review and
- * checkpoint cards write their own kickers (README.md:115, :124).
+ * The kicker of a concept, quiz, predict or exercise card: type name, middle dot, node, such as
+ * `Concept · Mini-notation` (README.md:52). The kicker style shows it uppercase. It accepts no
+ * other card type: a review card's kicker is built from `lastSeenDays` ("REVIEW · SEEN 3 DAYS
+ * AGO", README.md:115) and a checkpoint card's from its milestone (README.md:124), so each of
+ * those cards writes its own.
  */
-export function cardKickerText(card: NodeFields): string {
+export function cardKickerText(card: NodeKickerFields): string {
   return copy.cardKicker(copy.cardTypes[card.type], card.node);
 }
 

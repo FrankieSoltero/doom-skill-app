@@ -18,7 +18,8 @@ type CardTitleProps = {
 
 /**
  * A card's title in the theme title style for `size`, in the enclosing card frame's text color.
- * A screen reader hears it as a header. Render it inside a `CardFrame`.
+ * A screen reader hears it as a header. Render it inside a `CardFrame`: outside any frame there
+ * is no frame color to read, and it silently falls back to ink.
  */
 export function CardTitle({ children, size }: CardTitleProps) {
   const color = useCardTextColor();
@@ -31,7 +32,8 @@ export function CardTitle({ children, size }: CardTitleProps) {
 
 /**
  * A card's body text in the theme body style and the enclosing card frame's text color. Text
- * between a pair of `**` is bold (see `BoldText`). Render it inside a `CardFrame`.
+ * between a pair of `**` is bold (see `BoldText`). Render it inside a `CardFrame`: outside any
+ * frame there is no frame color to read, and it silently falls back to ink.
  */
 export function CardBody({ text }: { text: string }) {
   const color = useCardTextColor();

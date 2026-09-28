@@ -11,7 +11,7 @@ import { border, colors, fonts, motion, type } from '../theme';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardBody, CardTitle } from './CardText';
 
-// Cycle tile values the theme does not hold, from docs/design/card-feed/README.md:55-57 and,
+// Cycle tile values the theme does not hold, from docs/design/card-feed/README.md:55-56 and,
 // where it gives none, reference/LearnLoop Card Feed v2.dc.html:87-91.
 /** Space between tiles, README.md:55 ("6px gap"). The nearest theme step, space[2], is 6.8. */
 const TILE_GAP = 6;
@@ -19,9 +19,9 @@ const TILE_GAP = 6;
 const TILE_PADDING = 8;
 /** Space between a tile's label and its note, prototype line 89 ("gap:2px"). */
 const TILE_INNER_GAP = 2;
-/** How far the highlighted tile rises, README.md:57 ("translateY(-3)"). */
+/** How far the highlighted tile rises, README.md:56 ("translateY(-3)"). */
 const TILE_LIFT = -3;
-/** The note's size, README.md:56 ("24px heading"). */
+/** The note's size, README.md:55 ("24px heading"). */
 const NOTE_FONT_SIZE = 24;
 /** The note's line height: 24px at the prototype's body line height of 1.55, rounded. */
 const NOTE_LINE_HEIGHT = 37;
@@ -59,7 +59,7 @@ function useCycleHighlight(count: number, active: boolean): number {
 type CycleTilesProps = { cycles: readonly string[]; highlighted: number };
 
 /**
- * One tile per cycle, in a row of equal widths (README.md:55-57): a label and the note. The
+ * One tile per cycle, in a row of equal widths (README.md:55-56): a label and the note. The
  * highlighted tile has a paper fill and sits 3 points higher. A screen reader reads the row as
  * one text; the moving highlight is decoration and is not announced.
  */

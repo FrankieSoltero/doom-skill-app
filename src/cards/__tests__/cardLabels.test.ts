@@ -13,17 +13,21 @@ describe('cardKickerText', () => {
     ['quiz', 'Quiz · mini-notation'],
     ['predict', 'Predict · mini-notation'],
     ['exercise', 'Exercise · mini-notation'],
-    ['review', 'Review · mini-notation'],
   ] as const)('names the %s card by its type and node', (cardType, expected) => {
     expect(cardKickerText(cardsByType[cardType])).toBe(expected);
   });
 
-  it('accepts only a card that names a node: tsc fails if a checkpoint card type-checks', () => {
-    // Never called: the check is the compiler's. A checkpoint card has no `node`.
+  it('accepts only concept, quiz, predict and exercise cards: tsc fails if another type-checks', () => {
+    // Never called: the checks are the compiler's. Review and checkpoint cards write their own
+    // kickers (README.md:115, :124), so passing one here is a type error.
+    const reviewKicker = () =>
+      // @ts-expect-error -- a review card's kicker is built from `lastSeenDays`, not its node.
+      cardKickerText(cardsByType.review);
     const checkpointKicker = () =>
-      // @ts-expect-error -- `cardKickerText` needs a card with a `node`.
+      // @ts-expect-error -- a checkpoint card's kicker names its milestone; it has no node.
       cardKickerText(cardsByType.checkpoint);
 
+    expect(reviewKicker).toBeInstanceOf(Function);
     expect(checkpointKicker).toBeInstanceOf(Function);
   });
 });

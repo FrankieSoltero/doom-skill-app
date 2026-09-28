@@ -27,6 +27,18 @@ const correctOutOfRange = {
   path: ['correct'],
 };
 
+// Bold marking in card text (rule SS-11 in docs/standards.md). A card's prose fields may mark
+// bold with a pair of `**`, as the design does (docs/design/card-feed/README.md:53, :118):
+// "Wrap steps in **< >** and ...". Nothing else is markup, and an unpaired `**` is shown as
+// typed. Only `apps/mobile/src/components/BoldText.tsx` renders it. The fields it applies to:
+// - concept `body` (README.md:53)
+// - quiz and predict `explanation` (README.md:73, :85)
+// - review `answer` (README.md:118)
+// - exercise `passMsg` and `failMsg`: prose shown to the learner beside the pass and fail badges
+//   (README.md:107-108)
+// Every other field is plain text: titles, `prompt`, `options`, `node`, the rating labels, the
+// checkpoint rubric `label`s (short row labels, README.md:130-134), and every code field
+// (`snippet`, `snippetComment`, `code`, `starterCode`), where `*` is Strudel syntax.
 const conceptCardSchema = z.object({
   type: z.literal('concept'),
   node: text,
