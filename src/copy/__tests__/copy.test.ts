@@ -105,6 +105,10 @@ describe('copy for the Today screen', () => {
     expect(copy.nothingYet).toBe('Nothing to learn yet.');
     expect(copy.cardFailed).toBe("This card couldn't be shown.");
   });
+
+  it("words the app's crash screen", () => {
+    expect(copy.appFailed).toBe('Something went wrong.');
+  });
 });
 
 describe('copy for cards', () => {

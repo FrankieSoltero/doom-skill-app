@@ -4,10 +4,14 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { ErrorScreen } from '../src/components/ErrorScreen';
+import { copy } from '../src/copy';
 import { logWarning } from '../src/log';
 import { colors } from '../src/theme';
 
@@ -63,9 +67,36 @@ export default function RootLayout() {
   // feed pager's pan works on every screen.
   return (
     <GestureHandlerRootView style={styles.root}>
-      <Stack screenOptions={STACK_OPTIONS} />
+      <RootBoundary>
+        <Stack screenOptions={STACK_OPTIONS} />
+      </RootBoundary>
       <StatusBar style="dark" />
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * The app's last error boundary: an error thrown while rendering any screen that no inner boundary
+ * caught (the header, the pager, the tab bar, a fallback) shows a full-screen message with Retry
+ * instead of reaching the React root. Retry changes the boundary's key, so it remounts the routes
+ * with fresh state. The fallback reads only `copy` and draws `ErrorScreen`: no store, no router.
+ */
+function RootBoundary({ children }: { children: ReactNode }) {
+  const [attempt, setAttempt] = useState(0);
+  const fallback = (
+    <ErrorScreen
+      message={copy.appFailed}
+      actionLabel={copy.retry}
+      onAction={() => {
+        setAttempt((n) => n + 1);
+      }}
+    />
+  );
+
+  return (
+    <ErrorBoundary key={attempt} name="root" fallback={fallback}>
+      {children}
+    </ErrorBoundary>
   );
 }
 

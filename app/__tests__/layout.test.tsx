@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { hideAsync, preventAutoHideAsync } from 'expo-splash-screen';
@@ -33,10 +33,21 @@ jest.mock('@expo-google-fonts/barlow', () => ({
 }));
 jest.mock('@expo-google-fonts/barlow-condensed', () => ({ BarlowCondensed_600SemiBold: 601 }));
 jest.mock('../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+// Set by a test to make the routes throw while rendering; read by the Stack mock on every render.
+let mockRoutesThrow = false;
+const mockRoutesError = new Error('routes broke');
+
 jest.mock('expo-router', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
   const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
-  return { Stack: jest.fn(() => createElement(Text, { testID: 'routes' }, 'routes')) };
+  return {
+    Stack: jest.fn(() => {
+      if (mockRoutesThrow) {
+        throw mockRoutesError;
+      }
+      return createElement(Text, { testID: 'routes' }, 'routes');
+    }),
+  };
 });
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -172,6 +183,59 @@ describe('RootLayout gesture root', () => {
     expect(viewStyleOf(root)).toStrictEqual({ flex: 1 });
     expect(within(root).getByTestId('routes')).toBeOnTheScreen();
     expect(within(root).getByTestId('status-bar')).toBeOnTheScreen();
+  });
+});
+
+describe('RootLayout error boundary', () => {
+  let consoleError: jest.SpiedFunction<typeof console.error>;
+
+  beforeEach(() => {
+    mockRoutesThrow = true;
+    fontState(true, null);
+    // React reports every error a boundary catches through console.error; keep the run quiet.
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    mockRoutesThrow = false;
+    consoleError.mockRestore();
+  });
+
+  it('shows the crash screen with Retry inside the app root when the routes throw', () => {
+    render(<RootLayout />);
+
+    const root = screen.UNSAFE_getByType(GestureHandlerRootView);
+    expect(within(root).getByText('Something went wrong.')).toBeOnTheScreen();
+    expect(within(root).getByRole('button', { name: 'Retry' })).toBeOnTheScreen();
+    expect(within(root).getByTestId('status-bar')).toBeOnTheScreen();
+    expect(screen.queryByTestId('routes')).toBeNull();
+  });
+
+  it('draws the crash screen on the paper ground, filling the screen', () => {
+    render(<RootLayout />);
+
+    expect(viewStyleOf(screen.getByTestId('error-screen'))).toMatchObject({
+      flex: 1,
+      backgroundColor: colors.paper,
+    });
+  });
+
+  it('logs the error once, with the boundary named root', () => {
+    render(<RootLayout />);
+
+    expect(logError).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledWith('render_failed', mockRoutesError, { boundary: 'root' });
+  });
+
+  it('renders the routes again when Retry is pressed', () => {
+    render(<RootLayout />);
+
+    mockRoutesThrow = false;
+    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(screen.getByTestId('routes')).toBeOnTheScreen();
+    expect(screen.queryByText('Something went wrong.')).toBeNull();
+    expect(logError).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -52,6 +52,8 @@ export const copy = deepFreeze({
   nothingYet: 'Nothing to learn yet.',
   /** The fallback card shown in place of a card that failed to render. */
   cardFailed: "This card couldn't be shown.",
+  /** The whole screen when the app itself failed to render; Retry draws it again. */
+  appFailed: 'Something went wrong.',
   /** The feed header's kicker on a day's first set, docs/design/card-feed/README.md:28. */
   kicker: (topic: string, day: number, horizon: number) =>
     `${topic.toUpperCase()} · DAY ${String(day)} OF ${String(horizon)}`,
