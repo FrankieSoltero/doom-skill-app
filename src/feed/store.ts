@@ -1,0 +1,85 @@
+// The feed session: the set being worked through, the current page, the answers so far, and the
+// day's totals and streak. Held in memory only; the store is not persisted, so "today" means
+// since the store was created or last reset.
+import { create } from 'zustand';
+
+import type { FeedSet } from '../data';
+import type { CardAnswer } from './answers';
+
+type FeedState = {
+  set: FeedSet | null;
+  index: number;
+  answers: Record<number, CardAnswer>;
+  totals: { cards: number; seconds: number };
+  streak: number;
+  streakCounted: boolean;
+  /** True once the current set has been added to the totals, so its Summary counts only once. */
+  setCounted: boolean;
+};
+
+type FeedActions = {
+  startSet: (set: FeedSet) => void;
+  setIndex: (index: number) => void;
+  setAnswer: (cardIndex: number, answer: CardAnswer) => void;
+  reachSummary: () => void;
+  reset: () => void;
+};
+
+const initialState: FeedState = {
+  set: null,
+  index: 0,
+  answers: {},
+  totals: { cards: 0, seconds: 0 },
+  streak: 0,
+  streakCounted: false,
+  setCounted: false,
+};
+
+/** The pages of a set: one per card, then the Summary page. */
+export function pageCount(set: FeedSet): number {
+  return set.cards.length + 1;
+}
+
+/** `index` limited to the pages of `set`; 0 when no set is started. */
+function clampIndex(set: FeedSet | null, index: number): number {
+  if (set === null) return 0;
+  return Math.min(Math.max(index, 0), pageCount(set) - 1);
+}
+
+/** The state after a new set starts. The first set of the session brings its topic's streak. */
+function started(state: FeedState, set: FeedSet): Partial<FeedState> {
+  const streak = state.set === null ? set.topic.streak : state.streak;
+  return { set, index: 0, answers: {}, streak, setCounted: false };
+}
+
+/** The state after the Summary is reached: the set joins the totals once, the streak once a day. */
+function summarized(state: FeedState): Partial<FeedState> {
+  if (state.set === null || state.setCounted) return {};
+  const { cards } = state.set;
+  const seconds = cards.reduce((sum, card) => sum + card.estSeconds, 0);
+  return {
+    totals: { cards: state.totals.cards + cards.length, seconds: state.totals.seconds + seconds },
+    streak: state.streakCounted ? state.streak : state.streak + 1,
+    streakCounted: true,
+    setCounted: true,
+  };
+}
+
+export const useFeedStore = create<FeedState & FeedActions>()((setState) => ({
+  ...initialState,
+  startSet: (set) => {
+    setState((state) => started(state, set));
+  },
+  setIndex: (index) => {
+    setState((state) => ({ index: clampIndex(state.set, index) }));
+  },
+  setAnswer: (cardIndex, answer) => {
+    setState((state) => ({ answers: { ...state.answers, [cardIndex]: answer } }));
+  },
+  reachSummary: () => {
+    setState(summarized);
+  },
+  reset: () => {
+    setState(initialState);
+  },
+}));
