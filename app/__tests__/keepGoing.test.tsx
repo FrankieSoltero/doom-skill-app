@@ -116,7 +116,8 @@ describe('Keep going', () => {
     source.resolve(secondSet);
     await settle();
 
-    expect(store()).toMatchObject({ index: 0, answers: {}, round: 2 });
+    expect(store()).toMatchObject({ index: 0, round: 2 });
+    expect(store().answers).toStrictEqual({});
     expect(store()).toMatchObject({ totals: { cards: 2, seconds: 50 }, streak: 13 });
     const header = screen.getByTestId('feed-header');
     expect(within(header).getByText('STRUDEL · DAY 1 OF 30 · SET 2')).toBeOnTheScreen();

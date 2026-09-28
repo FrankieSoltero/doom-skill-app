@@ -8,23 +8,23 @@ import { StatTile } from '../components/StatTile';
 import { copy } from '../copy';
 import type { FeedSet, Summary } from '../data';
 import { useFeedStore } from '../feed/store';
+import type { NextSetStatus } from '../feed/useFeedSession';
 import { colors, type } from '../theme';
 import { SummaryActions } from './SummaryActions';
-import type { NextSetStatus } from './SummaryActions';
 import { progressPercent, summaryTitle } from './summaryText';
 
 // Summary values from docs/design/card-feed/README.md:143-153 and the prototype,
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:245-266, that the theme lacks.
-/** Gap between the two stat tiles, prototype line 250 (`gap:8px`). */
+// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:243-265, that the theme lacks.
+/** Gap between the two stat tiles, prototype line 249 (`gap:8px`). */
 const TILES_GAP = 8;
-/** Gap between the mastery heading and its rows, prototype line 254 (`gap:10px`). */
-const MASTERY_GAP = 10;
+/** Gap between the mastery heading and its rows, prototype line 253 (`gap:10px`). */
+export const MASTERY_GAP = 10;
 /**
  * The title's most lines. The design's title fits two lines at 50 points (README.md:146); a
  * longer count ("Twelve cards. Eighteen minutes.") is shrunk to fit them, down to this scale, so
  * the card's buttons stay on the card.
  */
-const TITLE_LINES = 2;
+export const TITLE_LINES = 2;
 const TITLE_MIN_SCALE = 0.6;
 
 export type SummaryCardProps = {

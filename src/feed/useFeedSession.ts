@@ -14,7 +14,8 @@ import { useFeedStore } from './store';
 const TOAST_MS = 1400;
 
 type SessionStatus = 'loading' | 'ready' | 'error' | 'empty';
-type NextSetStatus = 'idle' | 'loading' | 'error' | 'none';
+/** Where loading the next set stands: the hook's `nextSetStatus`, which the Summary shows. */
+export type NextSetStatus = 'idle' | 'loading' | 'error' | 'none';
 type CardFilter = (card: Card) => boolean;
 
 const acceptAll: CardFilter = () => true;

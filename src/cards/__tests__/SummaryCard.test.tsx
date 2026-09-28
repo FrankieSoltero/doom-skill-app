@@ -4,7 +4,7 @@ import { AccessibilityInfo } from 'react-native';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import type { FeedSet } from '../../data';
 import { useFeedStore } from '../../feed/store';
-import { cardTheme, colors, type } from '../../theme';
+import { cardTheme, colors, space, type } from '../../theme';
 import { SummaryCard } from '../SummaryCard';
 import type { SummaryCardProps } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
@@ -154,18 +154,51 @@ describe('SummaryCard buttons', () => {
     );
   });
 
-  it('View skill tree: an outline button under it that calls onViewTree once', () => {
+  it('View skill tree: an outline button beside it that calls onViewTree once', () => {
     const { onKeepGoing, onViewTree } = renderSummary();
 
     fireEvent.press(button('View skill tree'));
 
     expect(onViewTree).toHaveBeenCalledTimes(1);
     expect(onKeepGoing).not.toHaveBeenCalled();
-    const labels = screen
-      .getAllByRole('button')
-      .map((each) => String(each.props.accessibilityLabel));
-    expect(labels).toStrictEqual(['Keep going', 'View skill tree']);
     expect(viewStyleOf(button('View skill tree')).borderColor).toBe(colors.paper);
+  });
+
+  it('sets the two buttons side by side in equal halves, space[3] apart', () => {
+    renderSummary();
+
+    expect(viewStyleOf(screen.getByTestId('summary-buttons'))).toMatchObject({
+      flexDirection: 'row',
+      gap: space[3],
+    });
+    const halves = screen.getAllByTestId('summary-button-half').map(viewStyleOf);
+    expect(halves.map((half) => half.flex)).toStrictEqual([1, 1]);
+  });
+
+  it.each([
+    { status: 'idle', parts: ['summary-buttons'], halves: ['Keep going', 'View skill tree'] },
+    { status: 'loading', parts: ['summary-buttons'], halves: ['Loading…', 'View skill tree'] },
+    {
+      status: 'none',
+      parts: ['summary-status-line', 'summary-buttons'],
+      halves: ['View skill tree'],
+    },
+    {
+      status: 'error',
+      parts: ['summary-status-line', 'summary-buttons'],
+      halves: ['Retry', 'View skill tree'],
+    },
+  ] as const)('lays out $status: $parts, with $halves', ({ status, parts, halves }) => {
+    renderSummary(status);
+
+    const shown = within(screen.getByTestId('summary-status'))
+      .getAllByTestId(/^summary-(status-line|buttons)$/)
+      .map((part) => String(part.props.testID));
+    expect(shown).toStrictEqual(parts);
+    const labels = screen
+      .getAllByTestId('summary-button-half')
+      .map((half) => String(within(half).getByRole('button').props.accessibilityLabel));
+    expect(labels).toStrictEqual(halves);
   });
 
   it('while loading: the button reads Loading…, is disabled, and does nothing', () => {
@@ -201,12 +234,12 @@ describe('SummaryCard buttons', () => {
 });
 
 describe('SummaryCard status for screen readers', () => {
-  it('holds the status line and the button in a polite live region', () => {
+  it('holds the status line and the buttons in one polite live region', () => {
     renderSummary('none');
 
     const status = screen.getByTestId('summary-status');
     expect(status.props).toHaveProperty('accessibilityLiveRegion', 'polite');
-    expect(status).toHaveTextContent("That's everything for now.");
+    expect(status).toHaveTextContent("That's everything for now.View skill tree");
   });
 
   it('announces a change to none or error on iOS, once each, and nothing for idle or loading', () => {
@@ -224,4 +257,18 @@ describe('SummaryCard status for screen readers', () => {
       ["That's everything for now."],
     ]);
   });
+
+  it.each(['none', 'error'] as const)(
+    'does not announce a Summary that mounts already in %s, only a later change back to it',
+    (status) => {
+      const { rerender } = renderSummary(status);
+      rerender(status);
+      expect(accessibility.announceForAccessibility).not.toHaveBeenCalled();
+
+      rerender('loading');
+      rerender(status);
+
+      expect(accessibility.announceForAccessibility).toHaveBeenCalledTimes(1);
+    },
+  );
 });

@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, type } from '../theme';
 
 // Stat tile values from the prototype, docs/design/card-feed/reference/LearnLoop Card Feed
-// v2.dc.html:251-252 (`padding:10px 12px`), which the theme does not hold.
+// v2.dc.html:250 (`padding:10px 12px`), which the theme does not hold.
 /** Inner padding, top and bottom. */
-const TILE_PADDING_Y = 10;
+export const TILE_PADDING_Y = 10;
 /** Inner padding, left and right. */
 const TILE_PADDING_X = 12;
 

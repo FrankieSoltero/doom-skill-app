@@ -5,14 +5,14 @@ import { colors, type } from '../theme';
 import { useCardTextColor } from './cardTextColor';
 
 // Mastery row values from docs/design/card-feed/README.md:151 and the prototype,
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:257-259, which the theme lacks.
+// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:256-258, which the theme lacks.
 /** The bar's height, README.md:151 ("a 6px bar"). */
-const BAR_HEIGHT = 6;
-/** Gap between the text line and the bar, prototype line 257 (`gap:5px`). */
-const ROW_GAP = 5;
+export const BAR_HEIGHT = 6;
+/** Gap between the text line and the bar, prototype line 256 (`gap:5px`). */
+export const ROW_GAP = 5;
 /**
  * The track's opacity: the prototype fills it with the card's paper at 15%
- * (`color-mix(in srgb,var(--color-bg) 15%,transparent)`, line 259). The theme has no such color,
+ * (`color-mix(in srgb,var(--color-bg) 15%,transparent)`, line 258). The theme has no such color,
  * so the track is paper drawn at this opacity, under the fill.
  */
 const TRACK_OPACITY = 0.15;

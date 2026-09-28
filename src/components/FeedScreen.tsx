@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Fragment, useEffect, useEffectEvent } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { Toast } from './Toast';
 
 type CardDrawer = typeof renderCard;
+type SummaryDrawer = typeof renderSummary;
 type FeedSession = ReturnType<typeof useFeedSession>;
 
 /** Shown while the first set loads; see `FeedScreen` for the screen-reader choice. */
@@ -107,8 +108,30 @@ function CardPage({ card, index, round, session, drawCard }: CardPageProps) {
   );
 }
 
-/** How the ready feed draws a card, and what the Summary's `View skill tree` does. */
-type ScreenActions = { drawCard: CardDrawer; onViewTree: () => void };
+/** How the ready feed draws a card and the Summary, and what the Summary's `View skill tree` does. */
+type ScreenActions = { drawCard: CardDrawer; drawSummary: SummaryDrawer; onViewTree: () => void };
+
+type DrawnSummaryProps = {
+  drawSummary: SummaryDrawer;
+  props: Parameters<SummaryDrawer>[0];
+};
+
+/** Calls `drawSummary` while rendering, so an error it throws reaches the Summary's boundary. */
+function DrawnSummary({ drawSummary, props }: DrawnSummaryProps) {
+  return drawSummary(props);
+}
+
+/**
+ * Drawn in place of a Summary that threw while rendering: the Summary's ink frame and kicker, and a
+ * line saying it could not be shown. It has no button: there is no page after the Summary.
+ */
+function FailedSummary({ set }: { set: FeedSet }) {
+  return (
+    <CardFrame type="summary" kicker={copy.dayComplete(set.topic.day)}>
+      <CardBody text={copy.cardFailed} />
+    </CardFrame>
+  );
+}
 
 type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
 
@@ -117,7 +140,7 @@ type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
  * whose `Keep going` loads the next set. A new set's pages get new keys (the store's round), so
  * every card of it starts fresh and the old set's cards unmount.
  */
-function ReadyFeed({ set, session, drawCard, onViewTree }: ReadyFeedProps) {
+function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFeedProps) {
   const streak = useFeedStore((state) => state.streak);
   const round = String(session.setRound);
   const pages: ReactNode[] = [
@@ -131,17 +154,20 @@ function ReadyFeed({ set, session, drawCard, onViewTree }: ReadyFeedProps) {
         drawCard={drawCard}
       />
     )),
-    <Fragment key={`${round}-summary`}>
-      {renderSummary({
-        set,
-        active: session.index === set.cards.length,
-        onKeepGoing: () => {
-          void session.loadNextSet();
-        },
-        onViewTree,
-        nextSetStatus: session.nextSetStatus,
-      })}
-    </Fragment>,
+    <ErrorBoundary key={`${round}-summary`} name="summary" fallback={<FailedSummary set={set} />}>
+      <DrawnSummary
+        drawSummary={drawSummary}
+        props={{
+          set,
+          active: session.index === set.cards.length,
+          onKeepGoing: () => {
+            void session.loadNextSet();
+          },
+          onViewTree,
+          nextSetStatus: session.nextSetStatus,
+        }}
+      />
+    </ErrorBoundary>,
   ];
 
   return (
@@ -183,6 +209,8 @@ type FeedScreenProps = {
   renderCard?: CardDrawer;
   /** Which cards `renderCard` can draw; the others are left out of the set. The registry's by default. */
   canRenderCard?: (card: Card) => boolean;
+  /** Draws the Summary. The registry's `renderSummary` unless a test passes its own. */
+  renderSummary?: SummaryDrawer;
   /** What the Summary's `View skill tree` does. `openSkillTree` unless a test passes its own. */
   onViewTree?: () => void;
 };
@@ -204,6 +232,7 @@ export function FeedScreen({
   source,
   renderCard: drawCard = renderCard,
   canRenderCard: canDraw = canRenderCard,
+  renderSummary: drawSummary = renderSummary,
   onViewTree = openSkillTree,
 }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
@@ -211,7 +240,12 @@ export function FeedScreen({
 
   return (
     <View testID="today-screen" style={[styles.root, { paddingTop: insets.top }]}>
-      <FeedBody session={session} drawCard={drawCard} onViewTree={onViewTree} />
+      <FeedBody
+        session={session}
+        drawCard={drawCard}
+        drawSummary={drawSummary}
+        onViewTree={onViewTree}
+      />
     </View>
   );
 }

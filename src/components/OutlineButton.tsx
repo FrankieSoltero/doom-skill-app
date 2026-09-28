@@ -5,7 +5,7 @@ import { useCardTextColor } from './cardTextColor';
 
 // Values shared with `PrimaryButton`, which keeps its own private; the theme has none of them.
 /** Height, docs/design/card-feed/README.md:49. Above the 44pt minimum touch target. */
-const BUTTON_HEIGHT = 50;
+export const BUTTON_HEIGHT = 50;
 /**
  * How far the button moves right and down while pressed, as `PrimaryButton` does: the prototype's
  * buttons use `translate(1px,1px)` (docs/design/card-feed/reference/LearnLoop Card Feed

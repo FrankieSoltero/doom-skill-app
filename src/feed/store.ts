@@ -1,6 +1,6 @@
 // The feed session: the set being worked through, the current page, the answers so far, and the
 // day's totals and streak. Held in memory only; the store is not persisted, so "today" means
-// since the store was created or last reset.
+// since the store was created or last reset (the set round alone keeps counting across a reset).
 import { create } from 'zustand';
 
 import type { FeedSet } from '../data';
@@ -20,9 +20,9 @@ type FeedState = {
    */
   setCounted: boolean;
   /**
-   * Counts the sets started since the store was created or reset, from 1 (0 before the first).
-   * It changes in the same update as `set`, so the screen's page keys, which include it, never
-   * show a new set under the keys of the set before it.
+   * Counts the sets started since the store was created, from 1 (0 before the first). `reset`
+   * keeps it. It changes in the same update as `set`, so the screen's page keys, which include
+   * it, never show a new set under the keys of an earlier set.
    */
   round: number;
 };
@@ -99,7 +99,9 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState) => ({
   reachSummary: () => {
     setState(summarized);
   },
+  // Every field returns to its start except `round`, which keeps counting: a set started after a
+  // reset must not reuse the page keys of a set started before it.
   reset: () => {
-    setState(initialState);
+    setState((state) => ({ ...initialState, round: state.round }));
   },
 }));

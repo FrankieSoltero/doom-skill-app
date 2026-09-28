@@ -252,6 +252,27 @@ describe('FeedScreen card failure', () => {
     expect(viewStyleOf(face).backgroundColor).toBe(colors.paper);
   });
 
+  it('shows a fallback Summary with no button when the Summary fails; the cards still work', async () => {
+    const source = scriptedSource(makeSet(12, [concept]));
+    await renderWithInsets(
+      <FeedScreen
+        source={source}
+        renderCard={stubCard}
+        canRenderCard={() => true}
+        renderSummary={() => <Broken />}
+      />,
+    );
+    await layout(700);
+
+    const page = screen.getByTestId('feed-page-1', HIDDEN);
+    const body = within(page).getByTestId('card-frame-body', HIDDEN);
+    expect(viewStyleOf(body).backgroundColor).toBe(cardTheme.summary.bg);
+    expect(page).toHaveTextContent("DAY 1 COMPLETEThis card couldn't be shown.", { exact: true });
+    expect(logError).toHaveBeenCalledWith('render_failed', cardBroke, { boundary: 'summary' });
+    await pressNext(0);
+    expect(shownIndex()).toBe(1);
+  });
+
   it('counts the failed card as answered: swipe past it, or press Next card', async () => {
     await renderSet([concept, quiz, concept], breakPageOne);
 
