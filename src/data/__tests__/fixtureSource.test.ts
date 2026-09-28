@@ -1,8 +1,22 @@
+import extra from '../__fixtures__/cards.extra.fixture.json';
 import fixture from '../__fixtures__/cards.fixture.json';
 import { createFixtureSource } from '../fixtureSource';
-import { cardSource, type CardSource } from '../index';
+import { cardSource, type CardSource, type FeedSet } from '../index';
 
 const FIXTURE_PATH = '../__fixtures__/cards.fixture.json';
+/** The cards of each demo set in serving order: set 1 from the design fixture, then 2 to 4. */
+const DEMO_CARDS = [fixture.cards, ...extra.sets.map((set) => set.cards)];
+const LOOP_CALLS = 50;
+
+/** The sets from `count` calls to one new source, made one after another. */
+async function serve(count: number): Promise<(FeedSet | null)[]> {
+  const source = createFixtureSource();
+  const sets: (FeedSet | null)[] = [];
+  for (let call = 0; call < count; call += 1) {
+    sets.push(await source.getNextSet());
+  }
+  return sets;
+}
 
 /**
  * A fixture source reading `content` in place of the real fixture. The module registry is reset
@@ -30,11 +44,43 @@ describe('createFixtureSource', () => {
     expect(set?.cards).toEqual(fixture.cards);
   });
 
-  it('resolves to null once the fixture set has been served', async () => {
-    const source = createFixtureSource();
-    await source.getNextSet();
+  it('serves sets 1, 2, 3 and 4, then set 1 cards again as set 5, all with the one topic', async () => {
+    const sets = await serve(5);
 
-    await expect(source.getNextSet()).resolves.toBeNull();
+    expect(sets.map((set) => set?.setNumber)).toEqual([1, 2, 3, 4, 5]);
+    expect(sets.map((set) => set?.cards)).toEqual([...DEMO_CARDS, fixture.cards]);
+    expect(sets.map((set) => set?.summary)).toEqual([
+      fixture.summary,
+      ...extra.sets.map((set) => set.summary),
+      fixture.summary,
+    ]);
+    sets.forEach((set) => {
+      expect(set?.topic).toEqual(fixture.topic);
+    });
+  });
+
+  it('never resolves to null: set numbers count up while the cards cycle every four', async () => {
+    const sets = await serve(LOOP_CALLS);
+
+    expect(sets.map((set) => set?.setNumber)).toEqual(
+      Array.from({ length: LOOP_CALLS }, (_, call) => call + 1),
+    );
+    sets.forEach((set, call) => {
+      expect(set?.cards).toEqual(DEMO_CARDS[call % DEMO_CARDS.length]);
+    });
+  });
+
+  it('returns new objects on every call, so no two served sets share a reference', async () => {
+    const [first, , , , fifth] = await serve(5);
+
+    expect(fifth?.cards).toEqual(first?.cards);
+    expect(fifth).not.toBe(first);
+    expect(fifth?.topic).not.toBe(first?.topic);
+    expect(fifth?.summary).not.toBe(first?.summary);
+    expect(fifth?.cards).not.toBe(first?.cards);
+    fifth?.cards.forEach((card, at) => {
+      expect(card).not.toBe(first?.cards[at]);
+    });
   });
 
   it('keeps a separate position for each source', async () => {
@@ -43,7 +89,7 @@ describe('createFixtureSource', () => {
     await first.getNextSet();
 
     await expect(second.getNextSet()).resolves.toMatchObject({ setNumber: 1 });
-    await expect(first.getNextSet()).resolves.toBeNull();
+    await expect(first.getNextSet()).resolves.toMatchObject({ setNumber: 2 });
   });
 
   it('rejects with FeedLoadError naming the path of a wrongly typed field', async () => {

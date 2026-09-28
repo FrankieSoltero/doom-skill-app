@@ -1,0 +1,14 @@
+{
+  "exercise": [
+    "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*8\")\n)",
+    "stack(\n  s(\"bd ~ sd ~\"),\n  note(\"c3,e3,g3\")\n)",
+    "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*2 cp hh\").every(2, rev)\n)",
+    "stack(\n  s(\"bd ~ bd ~\").lpf(800),\n  s(\"~ sd ~ sd\").room(0.5),\n  s(\"hh*8\").gain(0.5)\n)"
+  ],
+  "checkpoint": [
+    "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))",
+    "stack(\n  s(\"bd(3,8), hh*8\"),\n  note(\"c2 ~ c2 g2, [c3,e3,g3]\")\n)",
+    "stack(\n  s(\"bd ~ sd ~, hh*4\").every(4, fast(2)),\n  note(\"c3 e3 g3 b3\").slow(2).rev()\n)",
+    "stack(\n  s(\"bd ~ sd ~, hh*8\").jux(rev),\n  note(\"c3 e3 g3 e3\").off(1/8, x=>x.add(note(12))).lpf(1200).room(0.5)\n)"
+  ]
+}
