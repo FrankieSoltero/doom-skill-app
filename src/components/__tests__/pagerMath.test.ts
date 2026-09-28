@@ -166,7 +166,8 @@ describe('clampIndex', () => {
     { index: 9, pageCount: 7, expected: 6 },
     { index: 2.6, pageCount: 7, expected: 3 },
     { index: Number.NaN, pageCount: 7, expected: 0 },
-    { index: Number.POSITIVE_INFINITY, pageCount: 7, expected: 0 },
+    { index: Number.POSITIVE_INFINITY, pageCount: 7, expected: 6 },
+    { index: Number.NEGATIVE_INFINITY, pageCount: 7, expected: 0 },
     { index: 4, pageCount: 0, expected: 0 },
   ])('shows index $index of $pageCount pages as $expected', ({ index, pageCount, expected }) => {
     expect(Object.is(clampIndex(index, pageCount), expected)).toBe(true);

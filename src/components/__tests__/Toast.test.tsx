@@ -15,8 +15,12 @@ beforeEach(() => {
   });
 });
 
+// Runs even when a test failed first. React Native's Jest setup already makes the announce call a
+// `jest.fn`, so the spy is that function and `mockRestore` clears its calls; `restoreAllMocks`
+// puts back any replaced `Platform.OS`.
 afterEach(() => {
   announce.mockRestore();
+  jest.restoreAllMocks();
 });
 
 describe('Toast', () => {
@@ -74,11 +78,16 @@ describe('Toast', () => {
   });
 
   it('leaves Android to the live region, so the message is not read twice', () => {
-    const os = jest.replaceProperty(Platform, 'OS', 'android');
+    jest.replaceProperty(Platform, 'OS', 'android');
 
     render(<Toast message={MESSAGE} visible />);
 
     expect(announce).not.toHaveBeenCalled();
-    os.restore();
+  });
+});
+
+describe('Toast test isolation', () => {
+  it('runs on iOS again after the Android case', () => {
+    expect(Platform.OS).toBe('ios');
   });
 });

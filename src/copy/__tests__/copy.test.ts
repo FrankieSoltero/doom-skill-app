@@ -33,9 +33,11 @@ describe('copy', () => {
     expect(copy.answerToContinue).toBe('Answer this card to continue');
   });
 
-  it('labels the pager accessibility actions', () => {
+  it('labels the Next card button and speaks the pager position, with no previous-card label', () => {
     expect(copy.nextCard).toBe('Next card');
-    expect(copy.previousCard).toBe('Previous card');
+    expect(copy.cardPosition(1, 7)).toBe('Card 1 of 7');
+    expect(copy.cardPosition(4, 7)).toBe('Card 4 of 7');
+    expect(Object.keys(copy)).not.toContain('previousCard');
   });
 
   it('titles the Today screen', () => {

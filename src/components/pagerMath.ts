@@ -71,11 +71,11 @@ export function pagerOutcome({
 }
 
 /**
- * The page to show for a requested `index`: rounded and limited to the pages there are. A value
- * that is not finite shows the first page.
+ * The page to show for a requested `index`: rounded and limited to the pages there are, so
+ * `Infinity` shows the last page and `-Infinity` the first. `NaN` shows the first page.
  */
 export function clampIndex(index: number, pageCount: number): number {
-  if (!Number.isFinite(index)) return 0;
+  if (Number.isNaN(index)) return 0;
   return Math.max(0, Math.min(Math.round(index), pageCount - 1));
 }
 
