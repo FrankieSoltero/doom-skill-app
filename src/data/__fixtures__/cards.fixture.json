@@ -1,0 +1,50 @@
+{
+  "topic": { "slug": "strudel", "title": "Strudel", "day": 4, "horizonDays": 14, "streak": 12, "progress": 0.34 },
+  "cards": [
+    { "type": "concept", "node": "Mini-notation", "estSeconds": 40,
+      "title": "Alternate with angle brackets",
+      "body": "Wrap steps in < > and Strudel plays one of them per cycle, moving to the next each time round. It is the simplest way to make a pattern change over time.",
+      "snippet": "note(\"<c3 e3 g3>\")", "snippetComment": "// cycle 1 → c3 · 2 → e3 · 3 → g3",
+      "cycles": ["c3", "e3", "g3"] },
+    { "type": "quiz", "node": "Speed", "estSeconds": 30,
+      "title": "Which pattern plays four kicks in every cycle?",
+      "options": ["s(\"bd/4\")", "s(\"bd*4\")", "s(\"bd ~ bd ~\")", "s(\"<bd bd>\")"], "correct": 1,
+      "explanation": "*4 repeats a step four times inside one cycle. /4 does the opposite and stretches it across four cycles." },
+    { "type": "predict", "node": "Alternation", "estSeconds": 45,
+      "title": "What plays in cycles 1 and 2?", "code": "note(\"c3 <e3 g3>\")",
+      "options": ["c3 e3, then c3 g3", "c3 g3, then c3 e3", "e3, then g3", "c3 e3 g3, twice"], "correct": 0,
+      "explanation": "c3 plays every cycle. The bracket alternates e3, g3, e3, g3… so odd cycles get e3." },
+    { "type": "exercise", "lang": "strudel", "node": "REPL", "estSeconds": 90,
+      "title": "Double the hi-hats to eight per cycle",
+      "starterCode": "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*4\")\n)",
+      "checks": [{ "kind": "contains", "value": "hh*8", "ignoreWhitespace": true }],
+      "passMsg": "The hi-hat now plays eight times per cycle.",
+      "failMsg": "Change how many times hh repeats inside the cycle." },
+    { "type": "review", "node": "Rests ~", "lastSeenDays": 3, "estSeconds": 20,
+      "prompt": "What does ~ mean in mini-notation?",
+      "answer": "A rest. It keeps a step silent while holding its place in the cycle.",
+      "snippet": "s(\"bd ~ sd ~\")",
+      "ratings": [["Again", "<1 min"], ["Hard", "2 days"], ["Good", "4 days"], ["Easy", "9 days"]] },
+    { "type": "checkpoint", "milestone": 1, "milestoneCount": 4, "estSeconds": 180,
+      "title": "Build a 4-bar drum loop",
+      "starterCode": "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))",
+      "passThreshold": 3,
+      "rubric": [
+        { "label": "Kick drum (bd) present", "regex": "bd" },
+        { "label": "Snare or clap (sd / cp) present", "regex": "\\b(sd|cp)\\b" },
+        { "label": "Hi-hats keep time (hh)", "regex": "hh" },
+        { "label": "Pattern changes across bars (< > or .every)", "regex": "<[^>]+>|\\.every\\(" }
+      ] }
+  ],
+  "summary": {
+    "title": "Six cards. Nine minutes.", "progressDelta": 3,
+    "moved": [["Alternation < >", 0.42, 0.61], ["Speed * and /", 0.55, 0.70], ["Rests ~", 0.80, 0.88]],
+    "tomorrow": "Euclidean rhythms", "reminder": "8:30 pm"
+  },
+  "tree": [
+    { "n": 1, "title": "First sounds", "status": "Checkpoint due", "nodes": [["The REPL", 1], ["sound() and samples", 1], ["note()", 0.9], ["Cycles and setcps", 0.8]] },
+    { "n": 2, "title": "Mini-notation", "status": "In progress", "nodes": [["Rests ~", 0.88], ["Speed * and /", 0.7], ["Alternation < >", 0.61], ["Polyphony ,", 0.2], ["Euclid ( , )", 0, "locked"]] },
+    { "n": 3, "title": "Transformation", "status": "Locked", "nodes": [[".fast / .slow", 0, "locked"], [".rev and .every", 0, "locked"], [".jux and .off", 0, "locked"]] },
+    { "n": 4, "title": "Sound design", "status": "Capstone", "nodes": [["Effects chain", 0, "locked"], ["Envelopes", 0, "locked"], ["arrange", 0, "locked"]] }
+  ]
+}

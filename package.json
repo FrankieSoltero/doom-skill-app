@@ -7,7 +7,7 @@
     "start": "expo start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "jest --ci"
+    "test": "jest --ci --coverage"
   },
   "dependencies": {
     "expo": "~57.0.25",
@@ -20,7 +20,8 @@
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.2"
+    "react-native-screens": "~4.26.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@testing-library/react-native": "^13.3.3",
