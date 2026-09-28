@@ -1,4 +1,4 @@
-import { copy } from '../index';
+import { copy, deepFreeze } from '../index';
 
 describe('copy', () => {
   it('names the app LearnLoop', () => {
@@ -22,5 +22,23 @@ describe('copy', () => {
     // A frozen object throws a TypeError in strict mode and ignores the write otherwise.
     expect(thrown === null || thrown instanceof TypeError).toBe(true);
     expect(copy.appName).toBe('LearnLoop');
+  });
+
+  it('speaks an answered option with its verdict', () => {
+    expect(copy.optionCorrect('s("bd*4")')).toBe('s("bd*4"). Correct answer.');
+    expect(copy.optionWrong('s("bd/4")')).toBe('s("bd/4"). Not correct.');
+  });
+});
+
+describe('deepFreeze', () => {
+  it('freezes every nested object and leaves functions callable', () => {
+    const shout = (text: string) => `${text}!`;
+    const frozen = deepFreeze({ group: { inner: { word: 'a' } }, shout, empty: null });
+
+    expect(Object.isFrozen(frozen)).toBe(true);
+    expect(Object.isFrozen(frozen.group)).toBe(true);
+    expect(Object.isFrozen(frozen.group.inner)).toBe(true);
+    expect(frozen.shout('hey')).toBe('hey!');
+    expect(frozen.empty).toBeNull();
   });
 });

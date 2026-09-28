@@ -19,7 +19,7 @@ function freezeChildren(value: object): void {
 }
 
 /** Freezes `value` and every object nested in it, so no level can be changed at run time. */
-function deepFreeze<T extends object>(value: T): Readonly<T> {
+export function deepFreeze<T extends object>(value: T): Readonly<T> {
   freezeChildren(value);
   return Object.freeze(value);
 }
@@ -28,4 +28,8 @@ export const copy = deepFreeze({
   appName: 'LearnLoop',
   gotIt: 'Got it',
   nextCard: 'Next card',
+  /** Spoken label of an answer option shown as the correct answer. */
+  optionCorrect: (label: string) => `${label}. Correct answer.`,
+  /** Spoken label of an answer option the learner picked that is not correct. */
+  optionWrong: (label: string) => `${label}. Not correct.`,
 } as const);
