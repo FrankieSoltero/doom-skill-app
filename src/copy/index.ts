@@ -26,4 +26,6 @@ function deepFreeze<T extends object>(value: T): Readonly<T> {
 
 export const copy = deepFreeze({
   appName: 'LearnLoop',
+  gotIt: 'Got it',
+  nextCard: 'Next card',
 } as const);

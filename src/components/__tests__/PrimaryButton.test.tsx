@@ -1,0 +1,149 @@
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+
+import { copy } from '../../copy';
+import { colors, hardShadow, type } from '../../theme';
+import { PrimaryButton } from '../PrimaryButton';
+import { textStyleOf, viewStyleOf } from '../testing/styles';
+import type { Element } from '../testing/styles';
+
+type Variant = 'ink' | 'paper' | 'lime';
+
+// Fill and text per variant, README.md:49. The lime text color is the prototype's ink.
+const VARIANTS: readonly { variant: Variant; fill: string; text: string }[] = [
+  { variant: 'ink', fill: colors.ink, text: colors.paper },
+  { variant: 'paper', fill: colors.paper, text: colors.ink },
+  { variant: 'lime', fill: colors.lime, text: colors.ink },
+];
+
+function renderButton(props: { variant?: Variant; disabled?: boolean } = {}) {
+  const onPress = jest.fn();
+  render(<PrimaryButton label={copy.gotIt} onPress={onPress} {...props} />);
+  return { onPress, button: screen.getByRole('button', { name: 'Got it' }) };
+}
+
+/** The button's shadow view, or null when it is not rendered. */
+function shadowOf(button: Element): Element | null {
+  return within(button).queryByTestId('primary-button-shadow');
+}
+
+/** A touch at the origin, shaped like the responder events React Native sends. */
+function touchEvent() {
+  const touch = { identifier: 0, locationX: 0, locationY: 0, pageX: 0, pageY: 0, target: 0 };
+  return {
+    persist: () => undefined,
+    currentTarget: { measure: () => undefined },
+    nativeEvent: { ...touch, timestamp: Date.now(), touches: [], changedTouches: [touch] },
+  };
+}
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('PrimaryButton look', () => {
+  it('shows its label and calls onPress once when pressed', () => {
+    const { onPress, button } = renderButton();
+
+    fireEvent.press(button);
+
+    expect(within(button).getByText('Got it')).toBeOnTheScreen();
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(VARIANTS)('fills the $variant variant and colors its text', ({ variant, fill, text }) => {
+    renderButton({ variant });
+
+    expect(viewStyleOf(screen.getByTestId('primary-button-face')).backgroundColor).toBe(fill);
+    expect(textStyleOf(screen.getByText('Got it'))).toMatchObject({
+      ...type.button,
+      color: text,
+    });
+  });
+
+  it('defaults to the ink variant', () => {
+    renderButton();
+
+    expect(viewStyleOf(screen.getByTestId('primary-button-face')).backgroundColor).toBe(colors.ink);
+    expect(textStyleOf(screen.getByText('Got it')).color).toBe(colors.paper);
+  });
+
+  it('is full width, 50 points tall and at least 44, with an ink hard shadow at rest', () => {
+    const { button } = renderButton();
+    const offset = hardShadow.small;
+
+    expect(viewStyleOf(button)).toMatchObject({ alignSelf: 'stretch', height: 50 });
+    expect(viewStyleOf(button).height).toBeGreaterThanOrEqual(44);
+    expect(viewStyleOf(button).transform).toBeUndefined();
+    const shadow = shadowOf(button);
+    expect(shadow).not.toBeNull();
+    expect(shadow === null ? null : viewStyleOf(shadow)).toStrictEqual({
+      position: 'absolute',
+      top: offset,
+      left: offset,
+      right: -offset,
+      bottom: -offset,
+      backgroundColor: colors.ink,
+    });
+  });
+
+  it('has four corner marks, hidden from accessibility', () => {
+    const { button } = renderButton();
+    const hidden = { includeHiddenElements: true };
+
+    expect(within(button).getAllByTestId('corner-mark', hidden)).toHaveLength(4);
+    expect(within(button).queryAllByTestId('corner-mark')).toHaveLength(0);
+  });
+});
+
+describe('PrimaryButton behavior', () => {
+  it('moves 2 points right and down and drops its shadow while pressed', () => {
+    jest.useFakeTimers();
+    const { onPress, button } = renderButton();
+
+    // Pressable tracks `pressed` through the responder events on its host view, the same events
+    // userEvent.press sends; fireEvent(button, 'pressIn') would only call an onPressIn prop.
+    fireEvent(button, 'responderGrant', touchEvent());
+
+    expect(viewStyleOf(button).transform).toStrictEqual([{ translateX: 2 }, { translateY: 2 }]);
+    expect(shadowOf(button)).toBeNull();
+
+    fireEvent(button, 'responderRelease', touchEvent());
+    // Pressability holds pressOut until a press has lasted its 130 ms minimum.
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(viewStyleOf(button).transform).toBeUndefined();
+    expect(shadowOf(button)).not.toBeNull();
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('when disabled: 45% opacity, onPress not called, accessibilityState.disabled true', () => {
+    const { onPress, button } = renderButton({ disabled: true });
+
+    fireEvent.press(button);
+
+    expect(onPress).not.toHaveBeenCalled();
+    expect(viewStyleOf(button).opacity).toBe(0.45);
+    expect(button.props).toMatchObject({ accessibilityState: { disabled: true } });
+    expect(button).toBeDisabled();
+  });
+
+  it('when enabled: full opacity and accessibilityState.disabled false', () => {
+    const { button } = renderButton();
+
+    expect(viewStyleOf(button).opacity).toBeUndefined();
+    expect(button.props).toMatchObject({ accessibilityState: { disabled: false } });
+    expect(button).toBeEnabled();
+  });
+
+  it('exposes the button role and its label as the accessibility label', () => {
+    render(<PrimaryButton label={copy.nextCard} onPress={jest.fn()} />);
+    const button = screen.getByRole('button', { name: 'Next card' });
+
+    expect(button.props).toMatchObject({
+      accessibilityRole: 'button',
+      accessibilityLabel: 'Next card',
+    });
+  });
+});
