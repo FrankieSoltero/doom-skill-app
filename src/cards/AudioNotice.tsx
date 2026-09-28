@@ -58,6 +58,14 @@ function noticeOf(audio: AudioStatus): Notice | null {
   return null;
 }
 
+/**
+ * Whether `AudioNotice` draws a notice for `audio`. The exercise card shows one message at a
+ * time, so it draws no result badge while this is true.
+ */
+export function hasAudioNotice(audio: AudioStatus): boolean {
+  return noticeOf(audio) !== null;
+}
+
 /** The small action that loads a fresh player. */
 function ResetButton({ onPress }: { onPress: () => void }) {
   return (

@@ -22,6 +22,10 @@ import { resetStrudelDouble, useStrudelDouble } from './strudelDouble';
 /** The text of the demo card's two check badges, as `badges` reads them. */
 export const PASS = 'Spec met: The hi-hat now plays eight times per cycle.';
 export const FAIL = 'Not yet: Change how many times hh repeats inside the cycle.';
+/** What a screen reader hears when the demo card fails its check. */
+export const FAIL_SPOKEN = 'Not yet. Change how many times hh repeats inside the cycle.';
+/** Code that passes the demo card's check. */
+export const PASSING = 'stack(\n  s("bd ~ sd ~"),\n  s("hh * 8")\n)';
 
 /**
  * The shared setup of the exercise card tests: reads the demo card once, and before each test

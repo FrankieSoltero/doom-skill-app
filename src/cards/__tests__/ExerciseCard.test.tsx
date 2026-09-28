@@ -11,11 +11,13 @@ import {
   button,
   editor,
   FAIL,
+  FAIL_SPOKEN,
   focusedInputs,
   gridProps,
   INDEX,
   isDisabled,
   PASS,
+  PASSING,
   press,
   renderExerciseCard,
   setUpExerciseCardTests,
@@ -31,7 +33,6 @@ jest.mock('../../strudel/useStrudel', () => ({
 
 const HIDDEN = { includeHiddenElements: true };
 /** The demo code with the hi-hat doubled: it passes the demo check. */
-const PASSING = 'stack(\n  s("bd ~ sd ~"),\n  s("hh * 8")\n)';
 const announce = jest.mocked(AccessibilityInfo).announceForAccessibility;
 
 const demo = setUpExerciseCardTests();
@@ -169,9 +170,7 @@ describe('ExerciseCard editing and checking', () => {
       code: demo().starterCode,
       result: 'fail',
     });
-    expect(announce.mock.calls).toStrictEqual([
-      ['Not yet. Change how many times hh repeats inside the cycle.'],
-    ]);
+    expect(announce.mock.calls).toStrictEqual([[FAIL_SPOKEN]]);
     expect(isDisabled('Next card')).toBe(true);
     press('Next card');
     expect(onNext).not.toHaveBeenCalled();

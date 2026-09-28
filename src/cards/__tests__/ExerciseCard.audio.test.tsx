@@ -2,7 +2,7 @@ import { act, screen, userEvent, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 import { renderRouter } from 'expo-router/testing-library';
-import { AppState, Keyboard, Text } from 'react-native';
+import { AccessibilityInfo, AppState, Keyboard, Text } from 'react-native';
 
 import { viewStyleOf } from '../../components/testing/styles';
 import { pagePosts, sentToPage } from '../../strudel/testing/webview';
@@ -12,6 +12,7 @@ import {
   badges,
   button,
   FAIL,
+  FAIL_SPOKEN,
   gridProps,
   INDEX,
   isDisabled,
@@ -30,6 +31,7 @@ jest.mock('../../strudel/useStrudel', () => ({
 
 const HIDDEN = { includeHiddenElements: true };
 const { play, stop, clearError, reset } = strudelActions;
+const announce = jest.mocked(AccessibilityInfo).announceForAccessibility;
 
 const demo = setUpExerciseCardTests();
 
@@ -130,13 +132,15 @@ describe('ExerciseCard audio notices', () => {
     expect(gridProps().step).toBe(4);
   });
 
-  it('says audio is unavailable, and Check still works beside it', () => {
+  it('says audio is unavailable; Check stores and speaks its result under the notice', () => {
     renderExerciseCard(demo());
     setAudio({ status: 'unavailable' });
 
     press('Check');
 
-    expect(badges()).toStrictEqual(['Audio unavailable', FAIL]);
+    expect(badges()).toStrictEqual(['Audio unavailable']);
+    expect(storedAnswer()).toMatchObject({ result: 'fail' });
+    expect(announce).toHaveBeenLastCalledWith(FAIL_SPOKEN);
   });
 
   it('checks while playing without stopping', () => {

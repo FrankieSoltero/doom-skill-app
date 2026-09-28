@@ -16,7 +16,7 @@ import { checkExercise, parseGrid } from '../feed/exercise';
 import { useFeedStore } from '../feed/store';
 import { useStrudel } from '../strudel/useStrudel';
 import { border, colors } from '../theme';
-import { AudioNotice } from './AudioNotice';
+import { AudioNotice, hasAudioNotice } from './AudioNotice';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardTitle } from './CardText';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
@@ -81,8 +81,9 @@ type ExerciseCardProps = {
 
 /**
  * The exercise card (README.md:86-112): kicker row, title, the code editor over its beat grid, Play
- * or Stop and Check, the audio notice and the check result, a flex spacer, then Next card (paper),
- * enabled after a pass.
+ * or Stop and Check, one message (the audio notice if there is one, else the check result), a flex
+ * spacer, then Next card (paper), enabled after a pass. Check clears an audio error, so its result
+ * shows; a notice that comes later covers the result until it goes.
  *
  * A tap on the card outside the editor and the buttons, and every button, dismisses the keyboard.
  *
@@ -112,6 +113,8 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
   // Each button dismisses the keyboard first: it would cover the result and the notices.
   const onCheck = () => {
     Keyboard.dismiss();
+    // The badge and an audio notice share one slot: clearing the error lets the badge show.
+    if (strudel.error !== null) strudel.clearError();
     const checked = codeNow();
     const passed = checkExercise(checked, card.checks);
     setAnswer(index, { kind: 'exercise', code: checked, result: passed ? 'pass' : 'fail' });
@@ -133,6 +136,9 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
     strudel.clearError();
   };
   const canPlay = strudel.status === 'ready' && strudel.error === null && code.trim() !== '';
+  // One message at a time: the card is too short for a notice and a badge together. A notice
+  // covers the badge; the stored result, and so Next card, do not change.
+  const badge = result === null || hasAudioNotice(strudel) ? null : resultBadge(result, card);
 
   return (
     <>
@@ -156,7 +162,7 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
             onCheck={onCheck}
           />
           <AudioNotice audio={strudel} onReset={onReset} />
-          {result === null ? null : <ResultBadge {...resultBadge(result, card)} />}
+          {badge === null ? null : <ResultBadge {...badge} />}
           <View testID="exercise-spacer" style={styles.spacer} />
           <PrimaryButton
             label={copy.nextCard}
