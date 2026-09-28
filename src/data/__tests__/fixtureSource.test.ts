@@ -4,6 +4,7 @@ import { createFixtureSource } from '../fixtureSource';
 import { cardSource, type CardSource, type FeedSet } from '../index';
 
 const FIXTURE_PATH = '../__fixtures__/cards.fixture.json';
+const EXTRA_PATH = '../__fixtures__/cards.extra.fixture.json';
 /** The cards of each demo set in serving order: set 1 from the design fixture, then 2 to 4. */
 const DEMO_CARDS = [fixture.cards, ...extra.sets.map((set) => set.cards)];
 const LOOP_CALLS = 50;
@@ -19,12 +20,13 @@ async function serve(count: number): Promise<(FeedSet | null)[]> {
 }
 
 /**
- * A fixture source reading `content` in place of the real fixture. The module registry is reset
- * first, so FeedLoadError must come from the same fresh registry for `instanceof` to hold.
+ * A fixture source reading `content` in place of the fixture at `path` (the design fixture unless
+ * given). The module registry is reset first, so FeedLoadError must come from the same fresh
+ * registry for `instanceof` to hold.
  */
-function sourceOver(content: unknown) {
+function sourceOver(content: unknown, path = FIXTURE_PATH) {
   jest.resetModules();
-  jest.doMock(FIXTURE_PATH, () => content);
+  jest.doMock(path, () => content);
   const fresh = jest.requireActual<typeof import('../fixtureSource')>('../fixtureSource');
   const { FeedLoadError } = jest.requireActual<typeof import('../source')>('../source');
   return { source: fresh.createFixtureSource(), FeedLoadError };
@@ -32,6 +34,7 @@ function sourceOver(content: unknown) {
 
 afterEach(() => {
   jest.dontMock(FIXTURE_PATH);
+  jest.dontMock(EXTRA_PATH);
 });
 
 describe('createFixtureSource', () => {
@@ -120,6 +123,21 @@ describe('createFixtureSource', () => {
     const { source } = sourceOver({ ...fixture, cards });
 
     await expect(source.getNextSet()).resolves.toMatchObject({ cards: fixture.cards });
+  });
+});
+
+// The source takes only `cards` and `summary` from an extra set; the rest is its own.
+describe('createFixtureSource over an extra set with stray keys', () => {
+  it('serves an extra set with the counted number and shared topic, whatever keys it carries', async () => {
+    const [second] = extra.sets;
+    const stray = { ...second, setNumber: 99, topic: { ...fixture.topic, title: 'Stray topic' } };
+    const { source } = sourceOver({ sets: [stray] }, EXTRA_PATH);
+    await source.getNextSet();
+    const served = await source.getNextSet();
+
+    expect(served?.setNumber).toBe(2);
+    expect(served?.topic).toEqual(fixture.topic);
+    expect(served?.cards).toEqual(second?.cards);
   });
 });
 

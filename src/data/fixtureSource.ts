@@ -7,15 +7,18 @@ import fixture from './__fixtures__/cards.fixture.json';
 import { feedSetSchema, type FeedSet } from './schema';
 import { FeedLoadError, type CardSource } from './source';
 
+/** The two parts of a demo set that come from a fixture. The source adds the rest. */
+type DemoSet = { cards: unknown; summary: unknown };
+
 /**
- * The demo sets in serving order, each its cards and summary: set 1 from the design fixture, then
- * sets 2 to 4 from the extra fixture. All share the design fixture's topic, and none carries a set
- * number: the source adds both. See `__fixtures__/README.md`.
+ * The demo sets in serving order, each only its cards and summary: set 1 from the design fixture,
+ * then sets 2 to 4 from the extra fixture. Picking the two keys means no other key in the JSON
+ * reaches a served set: the topic is always the design fixture's and the set number the source's
+ * own count. See `__fixtures__/README.md`.
  */
-const DEMO_SETS: readonly { cards: unknown; summary: unknown }[] = [
-  { cards: fixture.cards, summary: fixture.summary },
-  ...extra.sets,
-];
+const DEMO_SETS: readonly DemoSet[] = [fixture, ...extra.sets].map(
+  ({ cards, summary }): DemoSet => ({ cards, summary }),
+);
 
 /** One entry per issue, each led by the dotted path of the field at fault. */
 function describeIssues(error: z.ZodError): string {
@@ -50,7 +53,7 @@ export function createFixtureSource(): CardSource {
       const demo = DEMO_SETS[(setNumber - 1) % DEMO_SETS.length];
       // Parsing inside `then` turns a validation throw into a rejected promise.
       return Promise.resolve().then(() =>
-        parseFeedSet({ topic: fixture.topic, setNumber, ...demo }),
+        parseFeedSet({ ...demo, topic: fixture.topic, setNumber }),
       );
     },
   };

@@ -123,6 +123,13 @@ function sharesAFragment(explanation: string, sources: string[]): boolean {
     .some((fragment) => explanation.includes(fragment));
 }
 
+/** Every node the sets before set `setNumber` taught or moved. */
+function touchedBefore(setNumber: number): string[] {
+  return sets
+    .slice(0, setNumber - 1)
+    .flatMap((before) => [...nodesOf(before), ...before.summary.moved.map(([name]) => name)]);
+}
+
 describe.each(NEW_SETS)('demo set $setNumber', ({ setNumber, topics, milestone, starterScore }) => {
   const set = () => setAt(setNumber);
 
@@ -142,15 +149,11 @@ describe.each(NEW_SETS)('demo set $setNumber', ({ setNumber, topics, milestone, 
     expect(TREE_NODES).toEqual(expect.arrayContaining(set().summary.moved.map(([name]) => name)));
   });
 
-  it('reviews a node an earlier set touched, seen a few whole days ago', () => {
-    const earlier = sets
-      .slice(0, setNumber - 1)
-      .flatMap((before) => [...nodesOf(before), ...before.summary.moved.map(([name]) => name)]);
+  it('reviews a node an earlier set touched, with the ratings of set 1', () => {
     const review = cardOf(set(), 'review');
 
-    expect(earlier).toContain(review.node);
+    expect(touchedBefore(setNumber)).toContain(review.node);
     expect(TREE_NODES).toContain(review.node);
-    expect(Number.isInteger(review.lastSeenDays) && review.lastSeenDays <= 7).toBe(true);
     expect(review.ratings).toEqual(cardOf(setAt(1), 'review').ratings);
   });
 
@@ -218,6 +221,20 @@ describe.each(NEW_SETS)('demo set $setNumber', ({ setNumber, topics, milestone, 
     expect(summary.reminder).toBe(fixture.summary.reminder);
     expect(summary.title).toBe(summaryTitle(cards.length, seconds));
   });
+});
+
+// Every set is served on the one topic day (the topic's `day`, 4), so a node an earlier set taught
+// was last seen today: its review card shows "Seen today".
+describe('review cards of sets 2 to 4', () => {
+  it.each(NEW_SETS)(
+    'set $setNumber reviews a node an earlier set taught today, as seen 0 days ago',
+    ({ setNumber }) => {
+      const review = cardOf(setAt(setNumber), 'review');
+
+      expect(touchedBefore(setNumber)).toContain(review.node);
+      expect(review.lastSeenDays).toBe(0);
+    },
+  );
 });
 
 describe('all four demo sets', () => {

@@ -54,10 +54,37 @@ async function hostStrudel() {
   });
 }
 
+/** How long one check may run. A query that never ends would otherwise hang the run. */
+const CHECK_TIMEOUT_MS = 30_000;
+
+/**
+ * Runs `fn` and fails it after CHECK_TIMEOUT_MS, stopping the worker, which may be stuck in a
+ * query: the test process can then exit, and every later query fails at once. The runner's own
+ * timeout fails the test but does not stop the worker, and a test's `signal` aborts when the test
+ * ends in any way, so neither can decide when to stop it.
+ */
+async function withinTimeout(fn) {
+  let timer;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      void worker.terminate();
+      reject(new Error(`Timed out after ${CHECK_TIMEOUT_MS} ms; the Strudel worker was stopped`));
+    }, CHECK_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([fn(), expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // On the main thread the tests run and a worker hosts Strudel; in the worker, `check` defines
 // nothing, so the tests run once.
-const check = isMainThread ? test : () => undefined;
+const check = isMainThread
+  ? (name, fn) => test(name, { timeout: CHECK_TIMEOUT_MS }, () => withinTimeout(fn))
+  : () => undefined;
 const worker = isMainThread ? startWorker() : undefined;
+let workerStopped = false;
 let lastId = 0;
 
 /** Starts the Strudel worker, with its console output captured and dropped. */
@@ -65,21 +92,27 @@ function startWorker() {
   const started = new Worker(new URL(import.meta.url), { stdout: true, stderr: true });
   started.stdout.resume();
   started.stderr.resume();
+  started.once('exit', () => {
+    workerStopped = true;
+  });
   after(() => started.terminate());
   return started;
 }
 
-/** Sends `message` to the worker and resolves to its reply. */
+/** Sends `message` to the worker and resolves to its reply. Rejects once the worker has stopped. */
 function ask(message) {
+  const stopped = () => new Error('The Strudel worker has stopped');
+  if (workerStopped) return Promise.reject(stopped());
   lastId += 1;
   const id = lastId;
   const reply = new Promise((resolve, reject) => {
+    const onExit = () => reject(stopped());
     const onMessage = (answer) => {
       if (answer.id !== id) return;
-      worker.off('message', onMessage).off('error', reject);
+      worker.off('message', onMessage).off('error', reject).off('exit', onExit);
       resolve(answer);
     };
-    worker.on('message', onMessage).once('error', reject);
+    worker.on('message', onMessage).once('error', reject).once('exit', onExit);
   });
   worker.postMessage({ id, ...message });
   return reply;
