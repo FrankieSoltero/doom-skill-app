@@ -29,6 +29,8 @@ jest.mock('react-native-reanimated', () => ({
 /** The page the card sits on in these tests: not 0, so an index mix-up shows. */
 const INDEX = 3;
 const HIDDEN = { includeHiddenElements: true };
+/** The demo answer as read, its bold markers removed (README.md:118). */
+const ANSWER = 'A rest. It keeps a step silent while holding its place in the cycle.';
 const accessibility = jest.mocked(AccessibilityInfo);
 
 let demo: ReviewCardData;
@@ -124,7 +126,8 @@ describe('ReviewCard reveal', () => {
       'review-spacer',
       'rating-row',
     ]);
-    expect(screen.getByTestId('review-answer-text')).toHaveTextContent(demo.answer);
+    expect(screen.getByTestId('review-answer-text')).toHaveTextContent(ANSWER, { exact: true });
+    expect(screen.getByTestId('bold-span')).toHaveTextContent('rest', { exact: true });
     expect(screen.getByTestId('code-block-code')).toHaveTextContent('s("bd ~ sd ~")');
     expect(screen.getByText('How well did you remember?')).toBeOnTheScreen();
     const ratings = within(screen.getByTestId('rating-buttons')).getAllByRole('button');
@@ -165,7 +168,7 @@ describe('ReviewCard reveal', () => {
   it('shows an answer already revealed, without announcing it', () => {
     renderCard(demo, { [INDEX]: { kind: 'review', revealed: true, rating: null } });
 
-    expect(screen.getByTestId('review-answer-text')).toHaveTextContent(demo.answer);
+    expect(screen.getByTestId('review-answer-text')).toHaveTextContent(ANSWER, { exact: true });
     expect(screen.getByRole('button', { name: 'Good, next review in 4 days' })).toBeEnabled();
     expect(accessibility.announceForAccessibility).not.toHaveBeenCalled();
   });

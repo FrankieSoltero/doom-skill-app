@@ -22,7 +22,7 @@
       "failMsg": "Change how many times hh repeats inside the cycle." },
     { "type": "review", "node": "Rests ~", "lastSeenDays": 3, "estSeconds": 20,
       "prompt": "What does ~ mean in mini-notation?",
-      "answer": "A rest. It keeps a step silent while holding its place in the cycle.",
+      "answer": "A **rest**. It keeps a step silent while holding its place in the cycle.",
       "snippet": "s(\"bd ~ sd ~\")",
       "ratings": [["Again", "<1 min"], ["Hard", "2 days"], ["Good", "4 days"], ["Easy", "9 days"]] },
     { "type": "checkpoint", "milestone": 1, "milestoneCount": 4, "estSeconds": 180,
