@@ -191,6 +191,21 @@ describe('FeedScreen next, bound to the page that calls it', () => {
     expect(shownIndex()).toBe(0);
     expect(screen.queryByTestId('toast')).toBeNull();
   });
+
+  it('a late onNext from a card of the set before does nothing in the new set', async () => {
+    await renderSet([quiz, concept], answeringCard(550));
+
+    await pressNext(0);
+    // A new set starts before the timer fires; its page 0 is answered, so only the round stops it.
+    act(() => {
+      useFeedStore.getState().startSet({ ...makeSet(12, [concept, concept]), setNumber: 2 });
+    });
+    await settle();
+    advance(550);
+
+    expect(shownIndex()).toBe(0);
+    expect(screen.getByText(stubText('concept', 0, true))).toBeOnTheScreen();
+  });
 });
 
 describe('FeedScreen card failure', () => {

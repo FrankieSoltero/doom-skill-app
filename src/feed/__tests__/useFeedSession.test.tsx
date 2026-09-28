@@ -188,7 +188,7 @@ describe('useFeedSession: the gate at the moment of the move', () => {
     const lateNext = result.current.nextFrom;
 
     step(result.current.goTo, 0);
-    step(lateNext, 1);
+    step(lateNext, 1, result.current.setRound);
 
     expect(result.current).toMatchObject({ index: 0, toastVisible: false });
   });
@@ -196,7 +196,7 @@ describe('useFeedSession: the gate at the moment of the move', () => {
   it('nextFrom and next on the current card move on through the gate, or show the toast', async () => {
     const { result } = await renderSession(scriptedSource(firstSet));
 
-    step(result.current.nextFrom, 0);
+    step(result.current.nextFrom, 0, result.current.setRound);
     expect(result.current).toMatchObject({ index: 1, toastVisible: false });
     step(result.current.next);
     expect(result.current).toMatchObject({ index: 1, toastVisible: true });
@@ -207,7 +207,7 @@ describe('useFeedSession: the gate at the moment of the move', () => {
     step(result.current.goTo, 1);
 
     step(result.current.next);
-    step(result.current.nextFrom, 1);
+    step(result.current.nextFrom, 1, result.current.setRound);
 
     expect(result.current).toMatchObject({ index: 1, toastVisible: false });
   });

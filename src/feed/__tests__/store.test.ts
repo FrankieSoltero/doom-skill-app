@@ -25,6 +25,7 @@ describe('the initial state and pageCount', () => {
       totals: { cards: 0, seconds: 0 },
       streak: 0,
       streakCounted: false,
+      round: 0,
     });
   });
 
@@ -56,6 +57,37 @@ describe('startSet', () => {
       totals: { cards: 2, seconds: 50 },
       streak: 4,
     });
+  });
+});
+
+describe('startSet and the round', () => {
+  it('raises the round in the same update that replaces the set', () => {
+    // Every state the store publishes, as a subscriber sees it: a set never shows under the
+    // round of the set before it.
+    const seen: [unknown, number][] = [];
+    const unsubscribe = useFeedStore.subscribe((state) => {
+      seen.push([state.set, state.round]);
+    });
+
+    store().startSet(firstSet);
+    store().startSet(secondSet);
+    store().startSet(firstSet);
+    unsubscribe();
+
+    expect(seen).toStrictEqual([
+      [firstSet, 1],
+      [secondSet, 2],
+      [firstSet, 3],
+    ]);
+  });
+
+  it('keeps the round when anything else changes', () => {
+    store().startSet(firstSet);
+    store().setIndex(2);
+    store().setAnswer(1, { kind: 'choice', picked: 0 });
+    store().reachSummary();
+
+    expect(store().round).toBe(1);
   });
 });
 
@@ -193,10 +225,12 @@ describe('reset', () => {
     store().setIndex(1);
     store().setAnswer(1, { kind: 'choice', picked: 0 });
     store().reachSummary();
+    expect(store().round).toBe(1);
 
     store().reset();
 
     expect(store()).toEqual(useFeedStore.getInitialState());
+    expect(store().round).toBe(0);
   });
 
   it('takes the topic streak again for the first set after a reset', () => {

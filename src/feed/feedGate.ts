@@ -5,7 +5,16 @@ import type { CardAnswer } from './answers';
 import { isAnswered } from './gating';
 
 /** The parts of the feed store the gate reads. The store's own state fits it. */
-export type GateState = { set: FeedSet | null; index: number; answers: Record<number, CardAnswer> };
+export type GateState = {
+  set: FeedSet | null;
+  index: number;
+  answers: Record<number, CardAnswer>;
+  /** Which set this is, counted from 1; see the store's `round`. */
+  round: number;
+};
+
+/** Where a card's "next" comes from: its page, and the round of the set it was drawn for. */
+type NextFrom = { page: number; round: number };
 
 /**
  * True when the learner may move on from the current page: a card that is answered, or that
@@ -18,15 +27,18 @@ export function canAdvanceFrom(state: GateState, failed: ReadonlySet<number>): b
 }
 
 /**
- * What a card's "next" on `page` does: `go` one page on, `blocked` (the toast), or `none` when
- * `page` is not the current page (a late timer on a page the learner has left) or is not a card.
+ * What a card's "next" from `from.page` does: `go` one page on, `blocked` (the toast), or `none`
+ * when it comes from another round's set (a late timer on a card of the set before), from a page
+ * that is not the current one (a page the learner has left), or from a page that is not a card.
  */
 export function nextMove(
   state: GateState,
   failed: ReadonlySet<number>,
-  page: number,
+  from: NextFrom,
 ): 'go' | 'blocked' | 'none' {
-  if (page !== state.index || state.set?.cards[page] === undefined) return 'none';
+  const { page, round } = from;
+  if (round !== state.round || page !== state.index) return 'none';
+  if (state.set?.cards[page] === undefined) return 'none';
   return canAdvanceFrom(state, failed) ? 'go' : 'blocked';
 }
 

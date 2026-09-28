@@ -19,6 +19,12 @@ type FeedState = {
    * real work that adds to the totals again (the streak still rises only once).
    */
   setCounted: boolean;
+  /**
+   * Counts the sets started since the store was created or reset, from 1 (0 before the first).
+   * It changes in the same update as `set`, so the screen's page keys, which include it, never
+   * show a new set under the keys of the set before it.
+   */
+  round: number;
 };
 
 type FeedActions = {
@@ -37,6 +43,7 @@ const initialState: FeedState = {
   streak: 0,
   streakCounted: false,
   setCounted: false,
+  round: 0,
 };
 
 /** The pages of a set: one per card, then the Summary page. */
@@ -56,10 +63,13 @@ function nextIndex(state: FeedState, index: number): number {
   return Math.min(Math.max(Math.round(index), 0), pageCount(state.set) - 1);
 }
 
-/** The state after a new set starts. The first set of the session brings its topic's streak. */
+/**
+ * The state after a new set starts, in the next round. The first set of the session brings its
+ * topic's streak.
+ */
 function started(state: FeedState, set: FeedSet): Partial<FeedState> {
   const streak = state.set === null ? set.topic.streak : state.streak;
-  return { set, index: 0, answers: {}, streak, setCounted: false };
+  return { set, index: 0, answers: {}, streak, setCounted: false, round: state.round + 1 };
 }
 
 /** The state after the Summary is reached: the set joins the totals once, the streak once a day. */

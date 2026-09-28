@@ -63,7 +63,14 @@ function FailedCard({ card, onNext, onShown }: FailedCardProps) {
   );
 }
 
-type CardPageProps = { card: Card; index: number; session: FeedSession; drawCard: CardDrawer };
+type CardPageProps = {
+  card: Card;
+  index: number;
+  /** The set round the page was drawn for; its key includes it, so it never changes. */
+  round: number;
+  session: FeedSession;
+  drawCard: CardDrawer;
+};
 
 type DrawnCardProps = { card: Card; slot: Parameters<CardDrawer>[1]; drawCard: CardDrawer };
 
@@ -74,11 +81,12 @@ function DrawnCard({ card, slot, drawCard }: DrawnCardProps) {
 
 /**
  * One card's page: the card, or its fallback if it fails to render. Its `onNext` is bound to this
- * page: called while another page is current (a late timer), it does nothing.
+ * page and this round: called while another page is current, or after a new set has started (a
+ * late timer), it does nothing.
  */
-function CardPage({ card, index, session, drawCard }: CardPageProps) {
+function CardPage({ card, index, round, session, drawCard }: CardPageProps) {
   const onNext = () => {
-    session.nextFrom(index);
+    session.nextFrom(index, round);
   };
   const slot = { index, active: index === session.index, onNext };
   const fallback = (
@@ -113,6 +121,7 @@ function ReadyFeed({ set, session, drawCard }: ReadyFeedProps) {
         key={`${round}-${String(index)}`}
         card={card}
         index={index}
+        round={session.setRound}
         session={session}
         drawCard={drawCard}
       />

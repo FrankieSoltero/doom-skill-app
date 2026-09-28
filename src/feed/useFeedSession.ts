@@ -140,26 +140,30 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
   };
 }
 
+/** Pages of one round's set that failed to render. */
+type FailedPages = { round: number; pages: ReadonlySet<number> };
+
 /**
- * Which set of pages is shown (a count of sets started), and which of its pages failed to render.
- * The failed pages are also kept in a ref, so a move reads them as they are when it happens.
+ * The pages that failed to render, kept per round: a new set (a new round in the store) starts
+ * with none, however it was started. They are also kept in a ref, so a move reads them as they
+ * are when it happens.
  */
-function usePageState() {
-  const [pages, setPages] = useState({ round: 0, failed: NO_FAILED_PAGES });
-  const failedNow = useRef(NO_FAILED_PAGES);
+function useFailedPages(round: number) {
+  const [failed, setFailed] = useState<FailedPages>({ round: 0, pages: NO_FAILED_PAGES });
+  const failedNow = useRef(failed);
+  const pagesOf = (entry: FailedPages, current: number) =>
+    entry.round === current ? entry.pages : NO_FAILED_PAGES;
 
   return {
-    ...pages,
-    failedNow: () => failedNow.current,
-    restart: () => {
-      failedNow.current = NO_FAILED_PAGES;
-      setPages((current) => ({ round: current.round + 1, failed: NO_FAILED_PAGES }));
-    },
+    failed: pagesOf(failed, round),
+    failedNow: () => pagesOf(failedNow.current, useFeedStore.getState().round),
     markFailed: (page: number) => {
-      if (failedNow.current.has(page)) return;
-      const failed = new Set([...failedNow.current, page]);
-      failedNow.current = failed;
-      setPages((current) => ({ ...current, failed }));
+      const current = useFeedStore.getState().round;
+      const pages = pagesOf(failedNow.current, current);
+      if (pages.has(page)) return;
+      const entry = { round: current, pages: new Set([...pages, page]) };
+      failedNow.current = entry;
+      setFailed(entry);
     },
   };
 }
@@ -196,63 +200,71 @@ function moveTo(index: number): void {
   if (shown === set?.cards.length) store.reachSummary();
 }
 
+/** The session's status: `ready` whenever the store holds a set, else the first load's status. */
+function sessionStatus(set: FeedSet | null, loaded: SessionStatus): SessionStatus {
+  return set === null ? loaded : 'ready';
+}
+
 /**
  * The Today feed's session over `source`. On mount it resumes the set the store holds, or asks
  * `source` for the first set. Each loaded set
  * keeps only the cards `canRender` accepts (default: all), so the store, the header and the pager
  * all see the same cards; a set with none left counts as no set.
  *
- * - `status`: the first set's load. `retry` asks the source again after an error.
+ * - `status`: `ready` whenever the store holds a set; otherwise the first set's load (`loading`,
+ *   `error` or `empty`). `retry` asks the source again after an error.
  * - `set`, `index`: the store's set and page. The last page is the Summary.
  * - `canAdvance`: the gate for moving on from the current page.
  * - `goTo(index)`: shows a page: any page back, or the next one through an open gate; anything
  *   else is ignored.
- * - `nextFrom(page)`: what a card on `page` calls to move on. When `page` is the current card page
- *   it moves one page on through an open gate, or acts as `blocked()`; otherwise (a page the
- *   learner has left, or the Summary) it does nothing. `next()` is `nextFrom` the current page.
+ * - `nextFrom(page, round)`: what a card on `page` of round `round`'s set calls to move on. When
+ *   that is the current card page of the current round it moves one page on through an open
+ *   gate, or acts as `blocked()`; otherwise (a card of an earlier set, a page the learner has
+ *   left, or the Summary) it does nothing. `next()` is `nextFrom` the current page and round.
  * - `blocked()`: shows the toast (`toastVisible`) for 1.4 s.
  * - Every move reads the store when it is made, so answering and moving on in one handler works.
  * - `loadNextSet()`: loads and starts the next set; `nextSetStatus` reports it. It never rejects.
  * - `markFailed(index)`: a page's card failed to render; it then counts as answered.
- * - `setRound`: counts the sets started, from 1; it changes with each new set, so the screen can
- *   give the new set's pages fresh keys.
+ * - `setRound`: the store's `round`, which counts the sets started, from 1. It changes in the same
+ *   store update as `set`, so the screen can give the new set's pages fresh keys.
  */
 export function useFeedSession(source: CardSource, canRender: CardFilter = acceptAll) {
   const set = useFeedStore((state) => state.set);
   const index = useFeedStore((state) => state.index);
   const answers = useFeedStore((state) => state.answers);
-  const pages = usePageState();
+  const round = useFeedStore((state) => state.round);
+  const failed = useFailedPages(round);
   const toast = useToast();
   const loads = useSetLoads(source, canRender, (loaded) => {
     useFeedStore.getState().startSet(loaded);
-    pages.restart();
   });
   // Moves read the store and the failed pages when they happen, not as this render saw them: a
   // card may answer and move on in one handler, or move on from a timer.
-  const nextFrom = (page: number) => {
-    const move = nextMove(useFeedStore.getState(), pages.failedNow(), page);
+  const nextFrom = (page: number, pageRound: number) => {
+    const move = nextMove(useFeedStore.getState(), failed.failedNow(), { page, round: pageRound });
     if (move === 'go') moveTo(page + 1);
     if (move === 'blocked') toast.show();
   };
 
   return {
-    status: loads.status,
+    status: sessionStatus(set, loads.status),
     set,
     index,
-    canAdvance: canAdvanceFrom({ set, index, answers }, pages.failed),
+    canAdvance: canAdvanceFrom({ set, index, answers, round }, failed.failed),
     toastVisible: toast.visible,
     goTo: (target: number) => {
-      if (canGoTo(useFeedStore.getState(), pages.failedNow(), target)) moveTo(target);
+      if (canGoTo(useFeedStore.getState(), failed.failedNow(), target)) moveTo(target);
     },
     next: () => {
-      nextFrom(useFeedStore.getState().index);
+      const now = useFeedStore.getState();
+      nextFrom(now.index, now.round);
     },
     nextFrom,
     blocked: toast.show,
     retry: loads.retry,
     loadNextSet: loads.loadNextSet,
     nextSetStatus: loads.nextSetStatus,
-    markFailed: pages.markFailed,
-    setRound: pages.round,
+    markFailed: failed.markFailed,
+    setRound: round,
   };
 }
