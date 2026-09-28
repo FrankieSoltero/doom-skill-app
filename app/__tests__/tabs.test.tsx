@@ -4,6 +4,9 @@ import type { ComponentType } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { textStyleOf, viewStyleOf } from '../../src/components/testing/styles';
+import { cardSource } from '../../src/data';
+import { useFeedStore } from '../../src/feed/store';
+import { cardsByType, makeSet } from '../../src/feed/testing/sets';
 import { colors, type } from '../../src/theme';
 import TabsLayout from '../(tabs)/_layout';
 import ExploreScreen from '../(tabs)/explore';
@@ -16,6 +19,20 @@ import TreeScreen from '../(tabs)/tree';
 jest.mock('react-native-safe-area-context', () => {
   const mock = jest.requireActual<{ default: object }>('react-native-safe-area-context/jest/mock');
   return mock.default;
+});
+
+// The shell tests do not need cards. The shared source's answer never arrives, so the Today tab
+// stays in its loading state and nothing updates after a test ends; the test that looks at the
+// loaded Today screen gives it a set.
+let getNextSet: jest.SpiedFunction<typeof cardSource.getNextSet>;
+
+beforeEach(() => {
+  useFeedStore.setState(useFeedStore.getInitialState(), true);
+  getNextSet = jest.spyOn(cardSource, 'getNextSet').mockReturnValue(new Promise(() => undefined));
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 /** The tab routes as Expo Router reads them from `app/`. */
@@ -49,12 +66,15 @@ function renderWithTopInset(Screen: ComponentType) {
 }
 
 describe('tab routes', () => {
-  it('renders the Today screen at /', () => {
+  it('renders the Today screen at /', async () => {
+    getNextSet.mockResolvedValueOnce(makeSet(12, [cardsByType.concept]));
     const router = renderRouter(ROUTES, { initialUrl: '/' });
 
     expect(router.getPathname()).toBe('/');
+    const header = await screen.findByTestId('feed-header');
     const today = screen.getByTestId('today-screen');
     expect(within(today).getByText('Today')).toBeOnTheScreen();
+    expect(within(today).getByTestId('feed-header')).toBe(header);
   });
 
   it('draws the tab bar with no navigation header above the screen', () => {

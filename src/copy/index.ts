@@ -40,8 +40,18 @@ export const copy = deepFreeze({
   optionCorrect: (label: string) => `${label}. Correct answer.`,
   /** Spoken label of an answer option the learner picked that is not correct. */
   optionWrong: (label: string) => `${label}. Not correct.`,
-  /** The Today screen's text until the feed replaces it, and the feed header's title. */
+  /** The feed header's title on the Today screen. */
   today: 'Today',
+  /** The Today screen while its first set loads. */
+  loading: 'Loading…',
+  /** The button that asks the card source again after a failed load. */
+  retry: 'Retry',
+  /** The Today screen when its first set failed to load. */
+  loadFailed: "Couldn't load your cards.",
+  /** The Today screen when the card source has no set to give. */
+  nothingYet: 'Nothing to learn yet.',
+  /** The fallback card shown in place of a card that failed to render. */
+  cardFailed: "This card couldn't be shown.",
   /** The feed header's kicker on a day's first set, docs/design/card-feed/README.md:28. */
   kicker: (topic: string, day: number, horizon: number) =>
     `${topic.toUpperCase()} · DAY ${String(day)} OF ${String(horizon)}`,

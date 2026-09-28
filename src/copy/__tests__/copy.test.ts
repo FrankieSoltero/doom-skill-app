@@ -97,6 +97,16 @@ describe('copy', () => {
   });
 });
 
+describe('copy for the Today screen', () => {
+  it('words the loading, failure and empty states and the failed card', () => {
+    expect(copy.loading).toBe('Loading…');
+    expect(copy.retry).toBe('Retry');
+    expect(copy.loadFailed).toBe("Couldn't load your cards.");
+    expect(copy.nothingYet).toBe('Nothing to learn yet.');
+    expect(copy.cardFailed).toBe("This card couldn't be shown.");
+  });
+});
+
 describe('copy for cards', () => {
   it('names each card type for the card kicker', () => {
     expect(copy.cardTypes).toStrictEqual({
