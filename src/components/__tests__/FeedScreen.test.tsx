@@ -83,14 +83,13 @@ describe('FeedScreen pages', () => {
     ]);
   });
 
-  it('ends with the Summary page, a placeholder with no text', async () => {
+  it('ends with the Summary card, after the last card', async () => {
     await renderSet([concept, quiz]);
 
-    const summary = within(screen.getByTestId('feed-page-2', HIDDEN)).getByTestId(
-      'summary-page',
-      HIDDEN,
-    );
-    expect(summary).toHaveTextContent('', { exact: true });
+    const summary = screen.getByTestId('feed-page-2', HIDDEN);
+    expect(within(summary).getByText('DAY 1 COMPLETE', HIDDEN)).toBeOnTheScreen();
+    expect(within(summary).getByText('Keep going', HIDDEN)).toBeOnTheScreen();
+    expect(screen.queryByTestId('feed-page-3', HIDDEN)).toBeNull();
   });
 
   it('gives active only to the page at the index, and follows the index', async () => {

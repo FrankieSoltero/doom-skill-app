@@ -1,8 +1,9 @@
 import { render } from '@testing-library/react-native';
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import type { ComponentType } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { openSkillTree } from '../../src/components/FeedScreen';
 import { textStyleOf, viewStyleOf } from '../../src/components/testing/styles';
 import { cardSource } from '../../src/data';
 import { useFeedStore } from '../../src/feed/store';
@@ -104,6 +105,18 @@ describe('tab routes', () => {
     expect(router.getPathname()).toBe(path);
     expect(screen.getByRole('tab', { name: tab })).toBeSelected();
     expect(screen.getByTestId('placeholder-screen')).toHaveTextContent(title);
+  });
+
+  it("the Summary's View skill tree action switches to the Tree tab", () => {
+    const router = renderRouter(ROUTES, { initialUrl: '/' });
+
+    act(() => {
+      openSkillTree();
+    });
+
+    expect(router.getPathname()).toBe('/tree');
+    expect(screen.getByRole('tab', { name: 'Tree' })).toBeSelected();
+    expect(screen.getByTestId('placeholder-screen')).toHaveTextContent('Skill tree');
   });
 
   it('pressing the Today tab from another tab renders /', () => {

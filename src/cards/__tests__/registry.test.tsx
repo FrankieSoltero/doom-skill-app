@@ -8,8 +8,10 @@ import { ConceptCard } from '../ConceptCard';
 import { ExerciseCard } from '../ExerciseCard';
 import { PredictCard } from '../PredictCard';
 import { QuizCard } from '../QuizCard';
-import { canRenderCard, renderCard } from '../registry';
+import { canRenderCard, renderCard, renderSummary } from '../registry';
 import { ReviewCard } from '../ReviewCard';
+import { SummaryCard } from '../SummaryCard';
+import { summarySet } from '../testing/summarySets';
 
 const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 
@@ -156,6 +158,44 @@ describe('renderCard for the checkpoint card', () => {
     expect(screen.getByLabelText('Code editor')).toHaveDisplayValue(checkpoint.starterCode);
     expect(screen.getAllByRole('checkbox')).toHaveLength(checkpoint.rubric.length);
     expect(screen.getByRole('button', { name: 'Submit for grading' })).toBeOnTheScreen();
+  });
+});
+
+describe('renderSummary', () => {
+  it('renders the Summary card with exactly the props it is given', () => {
+    const props = {
+      set: summarySet(),
+      active: false,
+      onKeepGoing: jest.fn<undefined, []>(),
+      onViewTree: jest.fn<undefined, []>(),
+      nextSetStatus: 'loading' as const,
+    };
+
+    const element = renderSummary(props);
+
+    expect(isValidElement(element) && element.type).toBe(SummaryCard);
+    expect(isValidElement<object>(element) && element.props).toStrictEqual(props);
+  });
+
+  it('draws the Summary card, and Keep going calls onKeepGoing', () => {
+    const onKeepGoing = jest.fn<undefined, []>();
+    const set = summarySet();
+
+    render(
+      <>
+        {renderSummary({
+          set,
+          active: true,
+          onKeepGoing,
+          onViewTree: jest.fn(),
+          nextSetStatus: 'idle',
+        })}
+      </>,
+    );
+    fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
+
+    expect(screen.getByText('DAY 4 COMPLETE')).toBeOnTheScreen();
+    expect(onKeepGoing).toHaveBeenCalledTimes(1);
   });
 });
 

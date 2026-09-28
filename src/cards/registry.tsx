@@ -1,5 +1,6 @@
-// The card registry: which component draws each card type. The Today screen draws every card
-// through `renderCard`, and skips the types `canRenderCard` rejects.
+// The card registry: which component draws each card type, and the Summary page. The Today screen
+// draws every card through `renderCard`, skips the types `canRenderCard` rejects, and draws the
+// Summary through `renderSummary`.
 import type { ReactNode } from 'react';
 
 import type { Card } from '../data';
@@ -9,6 +10,8 @@ import { ExerciseCard } from './ExerciseCard';
 import { PredictCard } from './PredictCard';
 import { QuizCard } from './QuizCard';
 import { ReviewCard } from './ReviewCard';
+import { SummaryCard } from './SummaryCard';
+import type { SummaryCardProps } from './SummaryCard';
 
 /** What the screen gives every card: its page, whether it is on screen, and how to move on. */
 type CardSlot = {
@@ -56,4 +59,9 @@ export function canRenderCard(card: Card): boolean {
 export function renderCard(card: Card, slot: CardSlot): ReactNode | null {
   const render = rendererFor(card.type);
   return render === undefined ? null : render(card, slot);
+}
+
+/** The Summary card, the last page of every set, with the props it is given. */
+export function renderSummary(props: SummaryCardProps): ReactNode {
+  return <SummaryCard {...props} />;
 }

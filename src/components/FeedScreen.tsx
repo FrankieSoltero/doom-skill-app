@@ -1,10 +1,11 @@
-import { useEffect, useEffectEvent } from 'react';
+import { router } from 'expo-router';
+import { Fragment, useEffect, useEffectEvent } from 'react';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
-import { canRenderCard, renderCard } from '../cards/registry';
+import { canRenderCard, renderCard, renderSummary } from '../cards/registry';
 import { copy } from '../copy';
 import type { Card, CardSource, FeedSet } from '../data';
 import { useFeedStore } from '../feed/store';
@@ -106,13 +107,17 @@ function CardPage({ card, index, round, session, drawCard }: CardPageProps) {
   );
 }
 
-type ReadyFeedProps = { set: FeedSet; session: FeedSession; drawCard: CardDrawer };
+/** How the ready feed draws a card, and what the Summary's `View skill tree` does. */
+type ScreenActions = { drawCard: CardDrawer; onViewTree: () => void };
+
+type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
 
 /**
- * The feed header over the pager, which fills the rest. Each card is a page, then the Summary. A
- * new set's pages get new keys, so every card of it starts fresh.
+ * The feed header over the pager, which fills the rest. Each card is a page, then the Summary,
+ * whose `Keep going` loads the next set. A new set's pages get new keys (the store's round), so
+ * every card of it starts fresh and the old set's cards unmount.
  */
-function ReadyFeed({ set, session, drawCard }: ReadyFeedProps) {
+function ReadyFeed({ set, session, drawCard, onViewTree }: ReadyFeedProps) {
   const streak = useFeedStore((state) => state.streak);
   const round = String(session.setRound);
   const pages: ReactNode[] = [
@@ -126,8 +131,17 @@ function ReadyFeed({ set, session, drawCard }: ReadyFeedProps) {
         drawCard={drawCard}
       />
     )),
-    // The Summary card is Task 28; until then its page is an empty placeholder.
-    <View key={`${round}-summary`} testID="summary-page" style={styles.fill} />,
+    <Fragment key={`${round}-summary`}>
+      {renderSummary({
+        set,
+        active: session.index === set.cards.length,
+        onKeepGoing: () => {
+          void session.loadNextSet();
+        },
+        onViewTree,
+        nextSetStatus: session.nextSetStatus,
+      })}
+    </Fragment>,
   ];
 
   return (
@@ -146,7 +160,7 @@ function ReadyFeed({ set, session, drawCard }: ReadyFeedProps) {
 }
 
 /** The screen's body for the session's state. */
-function FeedBody({ session, drawCard }: { session: FeedSession; drawCard: CardDrawer }) {
+function FeedBody({ session, ...actions }: ScreenActions & { session: FeedSession }) {
   if (session.status === 'error') {
     return (
       <ErrorScreen message={copy.loadFailed} actionLabel={copy.retry} onAction={session.retry} />
@@ -154,7 +168,12 @@ function FeedBody({ session, drawCard }: { session: FeedSession; drawCard: CardD
   }
   if (session.status === 'empty') return <ErrorScreen message={copy.nothingYet} />;
   if (session.set === null) return <FeedLoading />;
-  return <ReadyFeed set={session.set} session={session} drawCard={drawCard} />;
+  return <ReadyFeed set={session.set} session={session} {...actions} />;
+}
+
+/** Switches to the Tree tab: what the Summary's `View skill tree` does in the app. */
+export function openSkillTree(): void {
+  router.navigate('/tree');
 }
 
 type FeedScreenProps = {
@@ -164,6 +183,8 @@ type FeedScreenProps = {
   renderCard?: CardDrawer;
   /** Which cards `renderCard` can draw; the others are left out of the set. The registry's by default. */
   canRenderCard?: (card: Card) => boolean;
+  /** What the Summary's `View skill tree` does. `openSkillTree` unless a test passes its own. */
+  onViewTree?: () => void;
 };
 
 /**
@@ -183,13 +204,14 @@ export function FeedScreen({
   source,
   renderCard: drawCard = renderCard,
   canRenderCard: canDraw = canRenderCard,
+  onViewTree = openSkillTree,
 }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useFeedSession(source, canDraw);
 
   return (
     <View testID="today-screen" style={[styles.root, { paddingTop: insets.top }]}>
-      <FeedBody session={session} drawCard={drawCard} />
+      <FeedBody session={session} drawCard={drawCard} onViewTree={onViewTree} />
     </View>
   );
 }

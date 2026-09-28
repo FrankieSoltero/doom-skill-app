@@ -262,3 +262,75 @@ describe('deepFreeze', () => {
     expect(frozen.empty).toBeNull();
   });
 });
+
+describe('copy for the Summary card', () => {
+  it('words its buttons and its next-set states', () => {
+    expect(copy.keepGoing).toBe('Keep going');
+    expect(copy.viewSkillTree).toBe('View skill tree');
+    expect(copy.loadingMore).toBe('Loading…');
+    expect(copy.thatsEverything).toBe("That's everything for now.");
+    expect(copy.couldNotLoadMore).toBe("Couldn't load more cards.");
+  });
+
+  it('writes the kicker, the stat labels and the mastery heading', () => {
+    expect(copy.dayComplete(4)).toBe('DAY 4 COMPLETE');
+    expect(copy.dayStreak).toBe('day streak');
+    expect(copy.masteryMoved).toBe('Mastery moved');
+    expect(copy.percent(34)).toBe('34%');
+  });
+
+  it.each([
+    [3, 'topic progress, +3'],
+    [0, 'topic progress, +0'],
+    [-2, 'topic progress, -2'],
+  ])('writes a progress delta of %p as %p', (delta, expected) => {
+    expect(copy.topicProgress(delta)).toBe(expected);
+  });
+
+  it('writes a mastery change with two decimals and an arrow, and names its bar', () => {
+    expect(copy.masteryDelta(0.42, 0.61)).toBe('0.42 → 0.61');
+    expect(copy.masteryDelta(0.55, 0.7)).toBe('0.55 → 0.70');
+    expect(copy.masteryDelta(0, 1)).toBe('0.00 → 1.00');
+    expect(copy.masteryOf('Rests ~')).toBe('Rests ~ mastery');
+  });
+
+  it('writes the footer with the node in bold markers and a middle dot', () => {
+    expect(copy.tomorrow('Euclidean rhythms', '8:30 pm')).toBe(
+      'Tomorrow: **Euclidean rhythms** · reminder at 8:30 pm',
+    );
+  });
+
+  it('holds the number words one to twenty, the nouns, and the title templates', () => {
+    expect(copy.numberWords).toStrictEqual([
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+      'six',
+      'seven',
+      'eight',
+      'nine',
+      'ten',
+      'eleven',
+      'twelve',
+      'thirteen',
+      'fourteen',
+      'fifteen',
+      'sixteen',
+      'seventeen',
+      'eighteen',
+      'nineteen',
+      'twenty',
+    ]);
+    expect(Object.isFrozen(copy.numberWords)).toBe(true);
+    expect(copy.summaryNouns).toStrictEqual({
+      card: 'card',
+      cards: 'cards',
+      minute: 'minute',
+      minutes: 'minutes',
+    });
+    expect(copy.counted('Six', 'cards')).toBe('Six cards');
+    expect(copy.summaryTitle('Six cards', 'Nine minutes')).toBe('Six cards. Nine minutes.');
+  });
+});

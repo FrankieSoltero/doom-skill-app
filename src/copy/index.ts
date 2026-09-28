@@ -172,6 +172,70 @@ export const copy = deepFreeze({
     if (state === 'failed') return `${label}. Not met.`;
     return `${label}. Not graded yet.`;
   },
+  /** The Summary card's kicker, README.md:145 ("DAY 4 COMPLETE"). */
+  dayComplete: (day: number) => `DAY ${String(day)} COMPLETE`,
+  /**
+   * The words the Summary title spells a count with, `one` to `twenty` in order (the word for n
+   * is at n - 1). Larger counts are written in digits. Lower case; the title capitalizes.
+   */
+  numberWords: [
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+    'ten',
+    'eleven',
+    'twelve',
+    'thirteen',
+    'fourteen',
+    'fifteen',
+    'sixteen',
+    'seventeen',
+    'eighteen',
+    'nineteen',
+    'twenty',
+  ],
+  /** The nouns the Summary title counts, singular for one. */
+  summaryNouns: { card: 'card', cards: 'cards', minute: 'minute', minutes: 'minutes' },
+  /** A count and its noun, as the Summary title writes them: "Six cards". */
+  counted: (count: string, noun: string) => `${count} ${noun}`,
+  /** The Summary title, README.md:146: two sentences, the cards, then the minutes. */
+  summaryTitle: (cards: string, minutes: string) => `${cards}. ${minutes}.`,
+  /** The label of the Summary's streak tile, README.md:148. */
+  dayStreak: 'day streak',
+  /** A whole percent, as the Summary's progress tile shows it, README.md:149 ("34%"). */
+  percent: (n: number) => `${String(n)}%`,
+  /**
+   * The label of the Summary's progress tile, README.md:149 ("topic progress, +3"): the change in
+   * whole percent points, with a plus sign unless it is negative.
+   */
+  topicProgress: (delta: number) => `topic progress, ${delta < 0 ? '' : '+'}${String(delta)}`,
+  /** The heading over the Summary's mastery rows, README.md:151. */
+  masteryMoved: 'Mastery moved',
+  /** A mastery row's change, README.md:151 ("0.42 → 0.61"): two decimals each. */
+  masteryDelta: (from: number, to: number) => `${from.toFixed(2)} → ${to.toFixed(2)}`,
+  /** Spoken label of a mastery row's bar. */
+  masteryOf: (name: string) => `${name} mastery`,
+  /**
+   * The Summary's footer, README.md:152. The node is in bold markers (rule SS-11), drawn through
+   * `BoldText`.
+   */
+  tomorrow: (node: string, time: string) => `Tomorrow: **${node}** · reminder at ${time}`,
+  /** The Summary's button that loads the next set (spec section 1a). */
+  keepGoing: 'Keep going',
+  /** The Summary's button that switches to the Tree tab, README.md:152. */
+  viewSkillTree: 'View skill tree',
+  /** The Keep going button while the next set loads. */
+  loadingMore: 'Loading…',
+  /** Shown in place of Keep going when the source has no more sets (spec section 1a). */
+  thatsEverything: "That's everything for now.",
+  /** Shown over Retry when the next set failed to load (spec section 1a). */
+  couldNotLoadMore: "Couldn't load more cards.",
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',
