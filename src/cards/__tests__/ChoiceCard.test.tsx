@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import { Text } from 'react-native';
 
@@ -125,6 +125,22 @@ describe.each<Case>([QUIZ, PREDICT])('ChoiceCard, $card.type card', (item) => {
       [INDEX]: { kind: 'choice', picked: item.card.options.indexOf(item.wrong) },
     });
     expect(useFeedStore.getState().answers).toBe(answers);
+  });
+
+  it('keeps the first of two picks made before it re-renders', () => {
+    renderCase(item);
+
+    // One act around both picks: the card does not re-render between them, so its options are
+    // still unlocked for the second.
+    act(() => {
+      pickOption(item.wrong);
+      pickOption(item.right);
+    });
+
+    expect(answerAt(INDEX)).toStrictEqual({
+      kind: 'choice',
+      picked: item.card.options.indexOf(item.wrong),
+    });
   });
 
   it('keeps Next card disabled until a pick, then calls onNext once per press', () => {

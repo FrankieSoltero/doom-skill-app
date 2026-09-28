@@ -1,5 +1,6 @@
 // Test support: fake card sources for the feed session and Today screen tests, so no test depends
-// on the shared `cardSource`, which serves the fixture set once per module registry. Not app code.
+// on the shared `cardSource`, which serves the next demo set on every call and keeps its place for
+// the module registry. Not app code.
 import type { FeedSet } from '../../data';
 
 /** What a scripted call answers: a set, `null` for "no more sets", or an Error to reject with. */

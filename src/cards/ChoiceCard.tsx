@@ -44,7 +44,8 @@ export function ChoiceCard({ card, index, onNext, layout, mono, children }: Choi
   const setAnswer = useFeedStore((state) => state.setAnswer);
 
   const onPick = (option: number) => {
-    if (picked !== null) return;
+    // Read the store, not this render: a second pick may come before the card re-renders.
+    if (pickedOf(useFeedStore.getState().answers[index]) !== null) return;
     setAnswer(index, { kind: 'choice', picked: option });
   };
 

@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { border, type } from '../theme';
 import { useCardTextColor } from './cardTextColor';
 
-// Values shared with `PrimaryButton`, which keeps its own private; the theme has none of them.
+// Values equal to `PrimaryButton`'s, which exports its height and keeps the other two private;
+// the theme has none of them.
 /** Height, docs/design/card-feed/README.md:49. Above the 44pt minimum touch target. */
 export const BUTTON_HEIGHT = 50;
 /**

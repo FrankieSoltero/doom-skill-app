@@ -28,9 +28,8 @@ type CardOfType = { [Each in Card as Each['type']]: Each };
 type CardTypeName = keyof CardOfType;
 type Renderer<Name extends CardTypeName> = (card: CardOfType[Name], slot: CardSlot) => ReactNode;
 
-// One entry per card type that has a component. A type with no entry is not rendered: the
-// session drops its cards before the set starts. Tasks 17, 18, 19, 26, 27 and 28 each add one.
-const renderers: { [Name in CardTypeName]?: Renderer<Name> } = {
+// One entry per card type in the schema: a new type fails to compile until it has a component.
+const renderers: { [Name in CardTypeName]: Renderer<Name> } = {
   concept: (card, { active, onNext }) => (
     <ConceptCard card={card} active={active} onNext={onNext} />
   ),
@@ -46,19 +45,21 @@ const renderers: { [Name in CardTypeName]?: Renderer<Name> } = {
 };
 
 /** The renderer for `type`, typed so it accepts exactly the cards of that type. */
-function rendererFor<Name extends CardTypeName>(type: Name): Renderer<Name> | undefined {
+function rendererFor<Name extends CardTypeName>(type: Name): Renderer<Name> {
   return renderers[type];
 }
 
-/** True when a component exists for the card's type. */
+/**
+ * True when a component exists for the card's type. Every schema type has one, so this guards
+ * against bad data only: a card whose `type` the types say it cannot have.
+ */
 export function canRenderCard(card: Card): boolean {
-  return rendererFor(card.type) !== undefined;
+  return Object.hasOwn(renderers, card.type);
 }
 
-/** The card's component, or `null` for a type with no component yet. */
+/** The card's component, or `null` for a card of a type with no component (bad data). */
 export function renderCard(card: Card, slot: CardSlot): ReactNode | null {
-  const render = rendererFor(card.type);
-  return render === undefined ? null : render(card, slot);
+  return canRenderCard(card) ? rendererFor(card.type)(card, slot) : null;
 }
 
 /** The Summary card, the last page of every set, with the props it is given. */

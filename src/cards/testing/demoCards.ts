@@ -1,8 +1,9 @@
 /**
  * Test support: the demo card of one type, read through the app's card source (rule SS-6), so a
  * card test can check the content the design shows. It lives outside `__tests__/` because Jest
- * runs every file there as a suite. The source serves its one set once per module registry, so
- * the set is read on the first call and kept: any number of calls in one test file work.
+ * runs every file there as a suite. The shared source serves the next demo set on every call and
+ * keeps its place for the module registry, so the first set, the design's, is read on the first
+ * call and kept: any number of calls in one test file get cards of set 1.
  */
 import { cardSource } from '../../data';
 import type { Card, FeedSet } from '../../data';
