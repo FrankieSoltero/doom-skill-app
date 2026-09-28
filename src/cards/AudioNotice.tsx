@@ -69,11 +69,13 @@ function noticeOf(audio: AudioStatus): Notice | null {
 }
 
 /**
- * Whether `AudioNotice` draws a notice for `audio`. The exercise card shows one message at a
- * time, so it draws no result badge while this is true.
+ * Which notice `AudioNotice` draws for `audio`, as a key that changes when the notice changes:
+ * its label and message, or `null` for no notice. The exercise card shows one message at a time
+ * and watches this key to tell when the audio state brings a new notice.
  */
-export function hasAudioNotice(audio: AudioStatus): boolean {
-  return noticeOf(audio) !== null;
+export function noticeKey(audio: AudioStatus): string | null {
+  const notice = noticeOf(audio);
+  return notice === null ? null : `${notice.label}: ${notice.message}`;
 }
 
 /** The small action that loads a fresh player. */

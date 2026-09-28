@@ -16,12 +16,13 @@ import { checkExercise, parseGrid } from '../feed/exercise';
 import { useFeedStore } from '../feed/store';
 import { useStrudel } from '../strudel/useStrudel';
 import { border, colors } from '../theme';
-import { AudioNotice, hasAudioNotice } from './AudioNotice';
+import { AudioNotice } from './AudioNotice';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardTitle } from './CardText';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
 import { ExerciseControls } from './ExerciseControls';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
+import { isClearableError, useMessageSlot } from './useMessageSlot';
 import { useStopWhenAway } from './useStopWhenAway';
 
 // Exercise card values from docs/design/card-feed/README.md:86-112 that the theme does not hold.
@@ -81,9 +82,8 @@ type ExerciseCardProps = {
 
 /**
  * The exercise card (README.md:86-112): kicker row, title, the code editor over its beat grid, Play
- * or Stop and Check, one message (the audio notice if there is one, else the check result), a flex
- * spacer, then Next card (paper), enabled after a pass. Check clears an audio error, so its result
- * shows; a notice that comes later covers the result until it goes.
+ * or Stop and Check, one message (the check result or the audio notice, whichever happened last;
+ * see useMessageSlot), a flex spacer, then Next card (paper), enabled after a pass.
  *
  * A tap on the card outside the editor and the buttons, and every button, dismisses the keyboard.
  *
@@ -99,6 +99,7 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
   const code = useFeedStore((state) => exerciseOf(state.answers[index])?.code ?? card.starterCode);
   const result = useFeedStore((state) => exerciseOf(state.answers[index])?.result ?? null);
   const setAnswer = useFeedStore((state) => state.setAnswer);
+  const slot = useMessageSlot(strudel, result !== null);
   useStopWhenAway({ active, stop: strudel.stop });
   useDismissKeyboardWhenLeft(active);
 
@@ -108,13 +109,14 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
 
   const onChange = (next: string) => {
     setAnswer(index, { kind: 'exercise', code: next, result: null });
-    if (strudel.error !== null) strudel.clearError();
+    if (isClearableError(strudel.error)) strudel.clearError();
   };
   // Each button dismisses the keyboard first: it would cover the result and the notices.
   const onCheck = () => {
     Keyboard.dismiss();
-    // The badge and an audio notice share one slot: clearing the error lets the badge show.
-    if (strudel.error !== null) strudel.clearError();
+    // The result takes the message slot from any audio notice; an ordinary error is cleared.
+    if (isClearableError(strudel.error)) strudel.clearError();
+    slot.checked();
     const checked = codeNow();
     const passed = checkExercise(checked, card.checks);
     setAnswer(index, { kind: 'exercise', code: checked, result: passed ? 'pass' : 'fail' });
@@ -136,9 +138,9 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
     strudel.clearError();
   };
   const canPlay = strudel.status === 'ready' && strudel.error === null && code.trim() !== '';
-  // One message at a time: the card is too short for a notice and a badge together. A notice
-  // covers the badge; the stored result, and so Next card, do not change.
-  const badge = result === null || hasAudioNotice(strudel) ? null : resultBadge(result, card);
+  // One message at a time, whichever happened last (see useMessageSlot). The stored result, and
+  // so Next card, do not change when a notice covers the badge.
+  const badge = result !== null && slot.badgeShown ? resultBadge(result, card) : null;
 
   return (
     <>
@@ -161,8 +163,11 @@ export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
             onStop={onStop}
             onCheck={onCheck}
           />
-          <AudioNotice audio={strudel} onReset={onReset} />
-          {badge === null ? null : <ResultBadge {...badge} />}
+          {badge === null ? (
+            <AudioNotice audio={strudel} onReset={onReset} />
+          ) : (
+            <ResultBadge {...badge} />
+          )}
           <View testID="exercise-spacer" style={styles.spacer} />
           <PrimaryButton
             label={copy.nextCard}

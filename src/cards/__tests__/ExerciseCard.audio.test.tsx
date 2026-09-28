@@ -132,13 +132,13 @@ describe('ExerciseCard audio notices', () => {
     expect(gridProps().step).toBe(4);
   });
 
-  it('says audio is unavailable; Check stores and speaks its result under the notice', () => {
+  it('says audio is unavailable; Check shows, stores and speaks its result in its place', () => {
     renderExerciseCard(demo());
     setAudio({ status: 'unavailable' });
 
     press('Check');
 
-    expect(badges()).toStrictEqual(['Audio unavailable']);
+    expect(badges()).toStrictEqual([FAIL]);
     expect(storedAnswer()).toMatchObject({ result: 'fail' });
     expect(announce).toHaveBeenLastCalledWith(FAIL_SPOKEN);
   });

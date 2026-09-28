@@ -4,7 +4,7 @@ import { CardFrame } from '../../components/CardFrame';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import { STRUDEL_ERROR } from '../../strudel/useStrudel';
 import { colors, fonts } from '../../theme';
-import { AudioNotice, hasAudioNotice, type AudioStatus } from '../AudioNotice';
+import { AudioNotice, noticeKey, type AudioStatus } from '../AudioNotice';
 
 const QUIET: AudioStatus = { status: 'ready', playing: false, error: null, needsNetwork: false };
 
@@ -38,19 +38,21 @@ describe('AudioNotice: which notice', () => {
     ['a playing player', { playing: true }],
     ['a starting player', { status: 'starting' }],
     ['no connection after playing stopped', { needsNetwork: true, playing: false }],
-  ])('shows nothing for %s, and says it has none', (_, change) => {
+  ])('shows nothing for %s, and has no key', (_, change) => {
     renderNotice(change);
 
     expect(screen.queryByTestId('audio-notice')).toBeNull();
-    expect(hasAudioNotice({ ...QUIET, ...change })).toBe(false);
+    expect(noticeKey({ ...QUIET, ...change })).toBeNull();
   });
 
-  it.each<[string, Partial<AudioStatus>]>([
-    ['an error', { error: 'boom' }],
-    ['an unavailable player', { status: 'unavailable' }],
-    ['playing without samples', { needsNetwork: true, playing: true }],
-  ])('says it has a notice for %s', (_, change) => {
-    expect(hasAudioNotice({ ...QUIET, ...change })).toBe(true);
+  it('keys each notice by what it shows: its label and its message', () => {
+    const keyOf = (change: Partial<AudioStatus>) => noticeKey({ ...QUIET, ...change });
+
+    expect(keyOf({ error: 'boom' })).toBe('Audio error: boom');
+    expect(keyOf({ error: 'bang' })).toBe('Audio error: bang');
+    expect(keyOf({ status: 'unavailable' })).toBe('Audio unavailable: ');
+    expect(keyOf({ error: STRUDEL_ERROR.pageSilent })).toBe('Audio unavailable: ');
+    expect(keyOf({ needsNetwork: true, playing: true })).toBe('Audio needs a connection: ');
   });
 
   it('says audio needs a connection while playing without samples, in yellow, no Reset', () => {

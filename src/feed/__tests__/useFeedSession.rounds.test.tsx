@@ -1,6 +1,6 @@
 // The session across sets: the round the store counts, the status once a set is held, moves
-// that come from a card of an earlier set, and a set that arrives after unmount. Kept apart from useFeedSession.test.tsx, which is at
-// the file size limit.
+// that come from a card of an earlier set, and a set that arrives after unmount. Kept apart from
+// useFeedSession.test.tsx, which is at the file size limit.
 import { act } from '@testing-library/react-native';
 
 import type { FeedSet } from '../../data';
