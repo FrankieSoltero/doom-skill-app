@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  The page inside the hidden WebView that plays the learner's Strudel code. It is a template:
+  scripts/build-strudel.mjs replaces the placeholder comment in the script element below with
+  player.js and @strudel/web, bundled into one script, and writes the page into
+  src/strudel/generated/strudelHtml.ts. Run `pnpm --filter mobile run build:strudel`.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Content-Security-Policy. The page loads no remote script: everything it runs is inline.
+      - script-src 'unsafe-inline': the bundle is inlined, because the WebView loads the page from
+        a string and has no origin to serve a script file from.
+      - script-src 'unsafe-eval': Strudel evaluates the code the learner types.
+      - script-src data: @strudel/web 1.3.0 loads its AudioWorklet modules from data: URLs.
+      - connect-src: the one host the page fetches from. raw.githubusercontent.com serves the
+        sample map the page loads (github:tidalcycles/dirt-samples) and every sample in it.
+      Media, workers, images, styles, fonts and frames fall to default-src 'none'. The sample
+      files are fetched and decoded by Web Audio, which media-src does not govern.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; connect-src https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'"
+    />
+  </head>
+  <body>
+    <script>
+      /* STRUDEL_BUNDLE */
+    </script>
+  </body>
+</html>
