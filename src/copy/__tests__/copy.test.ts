@@ -168,6 +168,22 @@ describe('copy for the review card', () => {
   });
 });
 
+describe('copy for the beat grid', () => {
+  it.each([
+    ['bd', 0, 'bd: 0 hits'],
+    ['bd', 1, 'bd: 1 hit'],
+    ['hh', 2, 'hh: 2 hits'],
+    ['hh', 16, 'hh: 16 hits'],
+  ])('speaks row %s with %i hits as %s', (name, hits, expected) => {
+    expect(copy.gridRow(name, hits)).toBe(expected);
+  });
+
+  it('speaks the grid as its row strings, each ending a sentence', () => {
+    expect(copy.gridLabel(['bd: 1 hit', 'hh: 4 hits'])).toBe('Beat grid. bd: 1 hit. hh: 4 hits');
+    expect(copy.gridLabel(['sd: 0 hits'])).toBe('Beat grid. sd: 0 hits');
+  });
+});
+
 describe('deepFreeze', () => {
   it('freezes every nested object and leaves functions callable', () => {
     const shout = (text: string) => `${text}!`;

@@ -106,6 +106,11 @@ export const copy = deepFreeze({
   },
   /** Spoken label of a review rating button: its label and next interval, as the card gives them. */
   ratingLabel: (label: string, interval: string) => `${label}, next review in ${interval}`,
+  /** One beat grid row as a screen reader says it: its sample name and its number of hits. */
+  gridRow: (name: string, hits: number) =>
+    hits === 1 ? `${name}: 1 hit` : `${name}: ${String(hits)} hits`,
+  /** Spoken label of the beat grid, README.md:97-102. `rows` are `gridRow` strings, in order. */
+  gridLabel: (rows: string[]) => `Beat grid. ${rows.join('. ')}`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',
