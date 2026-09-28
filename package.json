@@ -4,9 +4,9 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/build-strudel.mjs && expo start",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/build-strudel.mjs && tsc --noEmit",
     "test": "jest --ci --coverage && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/__tests__/*.test.mjs",
     "build:strudel": "node scripts/build-strudel.mjs",
     "postinstall": "node scripts/build-strudel.mjs --postinstall"
@@ -31,6 +31,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
+    "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1",
     "zod": "4.6.5",
     "zustand": "5.0.15"

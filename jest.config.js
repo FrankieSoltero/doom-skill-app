@@ -11,6 +11,10 @@ module.exports = {
     // such as `./generated/strudelHtml` or `../strudel/generated/strudelHtml`) gets the stub
     // instead, so tests need no build.
     '(^|/)generated/strudelHtml$': '<rootDir>/src/strudel/__mocks__/strudelHtml.ts',
+    // react-native-webview is a native view Jest cannot render, and the library ships no Jest
+    // setup. The package name (not its subpaths) maps to a stand-in that records its props and
+    // the scripts injected through its ref; see the file.
+    '^react-native-webview$': '<rootDir>/src/strudel/__mocks__/webview.tsx',
   },
   // react-native-gesture-handler's documented Jest setup: it mocks the native module and the
   // native buttons (docs.swmansion.com/react-native-gesture-handler/docs/guides/testing).
@@ -24,5 +28,7 @@ module.exports = {
   coverageThreshold: {
     './src/data/': { branches: 90, functions: 90, lines: 90, statements: 90 },
     './src/feed/': { branches: 90, functions: 90, lines: 90, statements: 90 },
+    // The trust boundary between the app and the WebView page (rule SS-9's one home).
+    './src/strudel/bridge.ts': { branches: 90, functions: 90, lines: 90, statements: 90 },
   },
 };
