@@ -1,10 +1,10 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 
 import { canRenderCard, renderCard } from '../../cards/registry';
-import type { Card } from '../../data';
+import type { Card, CardSource } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
-import { scriptedSource } from '../../feed/testing/sources';
+import { controlledSource, scriptedSource } from '../../feed/testing/sources';
 import { logError, logWarning } from '../../log';
 import { cardTheme, colors } from '../../theme';
 import { FeedScreen } from '../FeedScreen';
@@ -207,7 +207,11 @@ describe('FeedScreen next, bound to the page that calls it', () => {
   });
 });
 
-describe('FeedScreen card failure', () => {
+/**
+ * Registers hooks in the calling `describe` that keep React's reports of a boundary catching
+ * `Broken`'s error off the console, and fail the test on any other console error or warning.
+ */
+function expectOnlyBrokenReports() {
   let consoleError: jest.SpiedFunction<typeof console.error>;
 
   beforeEach(() => {
@@ -215,8 +219,6 @@ describe('FeedScreen card failure', () => {
     consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
-  // Only React's reports of the boundary catching `Broken`'s error may reach the console; any other
-  // error or warning fails the test.
   afterEach(() => {
     const reports: unknown[][] = consoleError.mock.calls;
     consoleError.mockRestore();
@@ -226,6 +228,10 @@ describe('FeedScreen card failure', () => {
       expect(report[2]).toBe('The above error occurred in the <Broken> component.');
     }
   });
+}
+
+describe('FeedScreen card failure', () => {
+  expectOnlyBrokenReports();
 
   /** Draws every card as `stubCard`, except that the card at page 1 throws while rendering. */
   const breakPageOne: typeof stubCard = (card, slot) =>
@@ -252,27 +258,6 @@ describe('FeedScreen card failure', () => {
     expect(viewStyleOf(face).backgroundColor).toBe(colors.paper);
   });
 
-  it('shows a fallback Summary with no button when the Summary fails; the cards still work', async () => {
-    const source = scriptedSource(makeSet(12, [concept]));
-    await renderWithInsets(
-      <FeedScreen
-        source={source}
-        renderCard={stubCard}
-        canRenderCard={() => true}
-        renderSummary={() => <Broken />}
-      />,
-    );
-    await layout(700);
-
-    const page = screen.getByTestId('feed-page-1', HIDDEN);
-    const body = within(page).getByTestId('card-frame-body', HIDDEN);
-    expect(viewStyleOf(body).backgroundColor).toBe(cardTheme.summary.bg);
-    expect(page).toHaveTextContent("DAY 1 COMPLETEThis card couldn't be shown.", { exact: true });
-    expect(logError).toHaveBeenCalledWith('render_failed', cardBroke, { boundary: 'summary' });
-    await pressNext(0);
-    expect(shownIndex()).toBe(1);
-  });
-
   it('counts the failed card as answered: swipe past it, or press Next card', async () => {
     await renderSet([concept, quiz, concept], breakPageOne);
 
@@ -285,5 +270,108 @@ describe('FeedScreen card failure', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Next card' }));
     await settle();
     expect(shownIndex()).toBe(2);
+  });
+});
+
+/**
+ * Renders the feed over `source` with a Summary that always throws, runs `arrive` (for a source
+ * whose first set the test delivers), and lays the pager out.
+ */
+async function renderBrokenSummary(source: CardSource, arrive?: () => Promise<void>) {
+  await renderWithInsets(
+    <FeedScreen
+      source={source}
+      renderCard={stubCard}
+      canRenderCard={() => true}
+      renderSummary={() => <Broken />}
+    />,
+  );
+  await arrive?.();
+  await layout(700);
+}
+
+/** The failed Summary's one button, on page 1 of a one-card set. */
+const failedSummaryButton = () =>
+  within(screen.getByTestId('feed-page-1', HIDDEN)).getByRole('button', HIDDEN);
+
+describe('FeedScreen failed Summary', () => {
+  expectOnlyBrokenReports();
+
+  it('shows a fallback Summary with Keep going when the Summary fails; the cards still work', async () => {
+    await renderBrokenSummary(scriptedSource(makeSet(12, [concept])));
+
+    const page = screen.getByTestId('feed-page-1', HIDDEN);
+    const body = within(page).getByTestId('card-frame-body', HIDDEN);
+    expect(viewStyleOf(body).backgroundColor).toBe(cardTheme.summary.bg);
+    expect(page).toHaveTextContent("DAY 1 COMPLETEThis card couldn't be shown.Keep going", {
+      exact: true,
+    });
+    expect(failedSummaryButton()).toHaveAccessibleName('Keep going');
+    expect(failedSummaryButton()).toBeEnabled();
+    expect(logError).toHaveBeenCalledWith('render_failed', cardBroke, { boundary: 'summary' });
+    await pressNext(0);
+    expect(shownIndex()).toBe(1);
+  });
+
+  it("the failed Summary's Keep going loads and starts the next set", async () => {
+    const next = { ...makeSet(12, [quiz, concept]), setNumber: 2 };
+    const source = scriptedSource(makeSet(12, [concept]), next);
+    await renderBrokenSummary(source);
+    await pressNext(0);
+
+    fireEvent.press(failedSummaryButton());
+    await settle();
+
+    expect(source.getNextSet).toHaveBeenCalledTimes(2);
+    expect(useFeedStore.getState()).toMatchObject({ index: 0, round: 2 });
+    expect(useFeedStore.getState().set?.setNumber).toBe(2);
+    expect(screen.getByText(stubText('quiz', 0, true))).toBeOnTheScreen();
+  });
+
+  it('the failed Summary button is disabled while the next set loads', async () => {
+    const source = controlledSource();
+    await renderBrokenSummary(source, async () => {
+      source.resolve(makeSet(12, [concept]));
+      await settle();
+    });
+    await pressNext(0);
+
+    fireEvent.press(failedSummaryButton());
+    await settle();
+
+    expect(failedSummaryButton()).toBeDisabled();
+    expect(failedSummaryButton()).toHaveAccessibleName('Keep going');
+    fireEvent.press(failedSummaryButton());
+    await settle();
+    expect(source.getNextSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('the failed Summary button reads Retry after a failed load, and retries', async () => {
+    const next = { ...makeSet(12, [quiz]), setNumber: 2 };
+    const source = scriptedSource(makeSet(12, [concept]), new Error('offline'), next);
+    await renderBrokenSummary(source);
+    await pressNext(0);
+
+    fireEvent.press(failedSummaryButton());
+    await settle();
+    expect(failedSummaryButton()).toHaveAccessibleName('Retry');
+    expect(failedSummaryButton()).toBeEnabled();
+
+    fireEvent.press(failedSummaryButton());
+    await settle();
+    expect(useFeedStore.getState().set?.setNumber).toBe(2);
+  });
+
+  it('the failed Summary shows no button once the source has no more sets', async () => {
+    const source = scriptedSource(makeSet(12, [concept]));
+    await renderBrokenSummary(source);
+    await pressNext(0);
+
+    fireEvent.press(failedSummaryButton());
+    await settle();
+
+    const page = screen.getByTestId('feed-page-1', HIDDEN);
+    expect(within(page).queryByRole('button', HIDDEN)).toBeNull();
+    expect(page).toHaveTextContent("DAY 1 COMPLETEThis card couldn't be shown.", { exact: true });
   });
 });

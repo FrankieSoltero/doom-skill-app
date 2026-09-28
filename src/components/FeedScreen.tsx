@@ -121,14 +121,34 @@ function DrawnSummary({ drawSummary, props }: DrawnSummaryProps) {
   return drawSummary(props);
 }
 
+type FailedSummaryProps = {
+  set: FeedSet;
+  status: FeedSession['nextSetStatus'];
+  /** Loads the next set; also what Retry does. */
+  onKeepGoing: () => void;
+};
+
 /**
- * Drawn in place of a Summary that threw while rendering: the Summary's ink frame and kicker, and a
- * line saying it could not be shown. It has no button: there is no page after the Summary.
+ * Drawn in place of a Summary that threw while rendering: the Summary's ink frame and kicker, a
+ * line saying it could not be shown, and one lime button that loads the next set, so the learner
+ * can go on without losing the day. The button reads `Keep going`, is disabled while the set
+ * loads, reads `Retry` after a failed load, and is gone when the source has no more sets. It is
+ * drawn here rather than through `SummaryActions`, which may be what threw.
  */
-function FailedSummary({ set }: { set: FeedSet }) {
+function FailedSummary({ set, status, onKeepGoing }: FailedSummaryProps) {
+  const label = status === 'error' ? copy.retry : copy.keepGoing;
   return (
     <CardFrame type="summary" kicker={copy.dayComplete(set.topic.day)}>
       <CardBody text={copy.cardFailed} />
+      <View style={styles.fill} />
+      {status === 'none' ? null : (
+        <PrimaryButton
+          label={label}
+          onPress={onKeepGoing}
+          disabled={status === 'loading'}
+          variant="lime"
+        />
+      )}
     </CardFrame>
   );
 }
@@ -143,6 +163,12 @@ type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
 function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFeedProps) {
   const streak = useFeedStore((state) => state.streak);
   const round = String(session.setRound);
+  const onKeepGoing = () => {
+    void session.loadNextSet();
+  };
+  const failedSummary = (
+    <FailedSummary set={set} status={session.nextSetStatus} onKeepGoing={onKeepGoing} />
+  );
   const pages: ReactNode[] = [
     ...set.cards.map((card, index) => (
       <CardPage
@@ -154,15 +180,13 @@ function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFee
         drawCard={drawCard}
       />
     )),
-    <ErrorBoundary key={`${round}-summary`} name="summary" fallback={<FailedSummary set={set} />}>
+    <ErrorBoundary key={`${round}-summary`} name="summary" fallback={failedSummary}>
       <DrawnSummary
         drawSummary={drawSummary}
         props={{
           set,
           active: session.index === set.cards.length,
-          onKeepGoing: () => {
-            void session.loadNextSet();
-          },
+          onKeepGoing,
           onViewTree,
           nextSetStatus: session.nextSetStatus,
         }}
