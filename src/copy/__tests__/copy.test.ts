@@ -33,6 +33,31 @@ describe('copy', () => {
     expect(copy.today).toBe('Today');
   });
 
+  it.each([
+    { topic: 'Strudel', day: 4, horizon: 14, expected: 'STRUDEL · DAY 4 OF 14' },
+    { topic: 'Rust ownership', day: 1, horizon: 21, expected: 'RUST OWNERSHIP · DAY 1 OF 21' },
+    { topic: 'SQL', day: 10, horizon: 10, expected: 'SQL · DAY 10 OF 10' },
+  ])(
+    'writes the feed kicker for $topic, day $day of $horizon',
+    ({ topic, day, horizon, expected }) => {
+      expect(copy.kicker(topic, day, horizon)).toBe(expected);
+    },
+  );
+
+  it.each([
+    { topic: 'Strudel', set: 2, expected: 'STRUDEL · DAY 4 OF 14 · SET 2' },
+    { topic: 'Rust ownership', set: 3, expected: 'RUST OWNERSHIP · DAY 4 OF 14 · SET 3' },
+    { topic: 'SQL', set: 12, expected: 'SQL · DAY 4 OF 14 · SET 12' },
+  ])('writes the feed kicker for $topic with set $set', ({ topic, set, expected }) => {
+    expect(copy.kickerWithSet(topic, 4, 14, set)).toBe(expected);
+  });
+
+  it('speaks the feed progress and the streak', () => {
+    expect(copy.progressLabel(3, 6)).toBe('3 of 6 cards done');
+    expect(copy.progressLabel(0, 1)).toBe('0 of 1 cards done');
+    expect(copy.streakLabel(12)).toBe('12 day streak');
+  });
+
   it('labels the four tabs in the tab bar', () => {
     expect(copy.tabs).toStrictEqual({
       today: 'Today',

@@ -32,8 +32,18 @@ export const copy = deepFreeze({
   optionCorrect: (label: string) => `${label}. Correct answer.`,
   /** Spoken label of an answer option the learner picked that is not correct. */
   optionWrong: (label: string) => `${label}. Not correct.`,
-  /** The Today screen's text until the feed replaces it. */
+  /** The Today screen's text until the feed replaces it, and the feed header's title. */
   today: 'Today',
+  /** The feed header's kicker on a day's first set, docs/design/card-feed/README.md:28. */
+  kicker: (topic: string, day: number, horizon: number) =>
+    `${topic.toUpperCase()} · DAY ${String(day)} OF ${String(horizon)}`,
+  /** The feed header's kicker on a later set of the same day. */
+  kickerWithSet: (topic: string, day: number, horizon: number, set: number) =>
+    `${topic.toUpperCase()} · DAY ${String(day)} OF ${String(horizon)} · SET ${String(set)}`,
+  /** Spoken label of the feed header's progress bar. */
+  progressLabel: (done: number, total: number) => `${String(done)} of ${String(total)} cards done`,
+  /** Spoken label of the feed header's streak chip. */
+  streakLabel: (days: number) => `${String(days)} day streak`,
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',
