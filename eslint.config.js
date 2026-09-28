@@ -227,7 +227,9 @@ module.exports = [
     files: ['src/log.ts'],
     rules: { 'no-console': 'off' },
   },
+  // The generated Strudel bundle, written by the build script into src/strudel/generated/: tool
+  // mechanics (docs/standards.md, scope paragraph), not an SS-9 exception.
   {
-    ignores: ['.expo/', 'dist/', 'expo-env.d.ts'],
+    ignores: ['.expo/', 'dist/', 'expo-env.d.ts', 'src/strudel/generated/'],
   },
 ];

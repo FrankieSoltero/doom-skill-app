@@ -6,6 +6,11 @@ module.exports = {
     // jest-expo does not transform. Node's require.resolve here takes the `require` condition, so
     // Jest loads the package's CommonJS build. Metro is unaffected.
     '^lucide-react-native$': require.resolve('lucide-react-native'),
+    // src/strudel/generated/strudelHtml is written by the build script and is git-ignored, so it
+    // does not exist on a fresh clone or in CI. Any import that resolves to it (relative paths
+    // such as `./generated/strudelHtml` or `../strudel/generated/strudelHtml`) gets the stub
+    // instead, so tests need no build.
+    '(^|/)generated/strudelHtml$': '<rootDir>/src/strudel/__mocks__/strudelHtml.ts',
   },
   // react-native-gesture-handler's documented Jest setup: it mocks the native module and the
   // native buttons (docs.swmansion.com/react-native-gesture-handler/docs/guides/testing).
