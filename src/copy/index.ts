@@ -139,6 +139,37 @@ export const copy = deepFreeze({
    */
   badgeSpoken: (label: string, message: string) =>
     message === '' ? label : `${label}. ${message}`,
+  /** The node part of a checkpoint card's kicker, README.md:124 ("MILESTONE 1 OF 4" by style). */
+  milestoneOf: (n: number, total: number) => `Milestone ${String(n)} of ${String(total)}`,
+  /** The checkpoint card's button before a grade, README.md:136. */
+  submitForGrading: 'Submit for grading',
+  /** The checkpoint card's button while it grades, README.md:137. */
+  grading: 'Grading against rubric…',
+  /** The checkpoint card's button after a passing grade, README.md:140. */
+  finishToday: 'Finish today',
+  /** The checkpoint card's button after a failing grade, README.md:140. */
+  resubmit: 'Resubmit',
+  /** The checkpoint score line of a passing grade, README.md:139. */
+  passedOf: (n: number, total: number) => `Passed · ${String(n)} of ${String(total)}`,
+  /** The checkpoint score line of a failing grade, README.md:139. */
+  notYetOf: (n: number, total: number) => `Not yet · ${String(n)} of ${String(total)}`,
+  /**
+   * The checkpoint feedback for each grade outcome, the prototype's `cpFeedback`
+   * (reference/LearnLoop Card Feed v2.dc.html:588). `fail` names a threshold of 3 of 4, true only
+   * of the demo card; it must follow each card's own threshold and rubric size before cards with
+   * other values exist.
+   */
+  checkpointFeedback: {
+    all: 'Solid loop. The alternating bar gives it movement. Milestone 2 is unlocked.',
+    pass: 'Passes the threshold. Add the missing element to make it a stronger loop.',
+    fail: 'Needs at least 3 of 4. Check the struck-out items and resubmit.',
+  },
+  /** Spoken label of a checkpoint rubric row: its label, then whether it was met. */
+  rubricItem: (label: string, state: 'passed' | 'failed' | 'notGraded') => {
+    if (state === 'passed') return `${label}. Passed.`;
+    if (state === 'failed') return `${label}. Not met.`;
+    return `${label}. Not graded yet.`;
+  },
   /** Tab bar labels, docs/design/card-feed/README.md:32. */
   tabs: {
     today: 'Today',

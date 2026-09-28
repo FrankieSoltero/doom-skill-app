@@ -1,5 +1,10 @@
 import { cardsByType } from '../../feed/testing/sets';
-import { cardKickerText, cardMetaText, reviewKickerText } from '../cardLabels';
+import {
+  cardKickerText,
+  cardMetaText,
+  checkpointKickerText,
+  reviewKickerText,
+} from '../cardLabels';
 
 describe('cardKickerText', () => {
   it('writes the demo concept kicker, README.md:52 (uppercase comes from the style)', () => {
@@ -48,6 +53,24 @@ describe('reviewKickerText', () => {
       reviewKickerText({ ...cardsByType.quiz, lastSeenDays: 3 });
 
     expect(quizKicker).toBeInstanceOf(Function);
+  });
+});
+
+describe('checkpointKickerText', () => {
+  it('names the demo checkpoint by its milestone, README.md:124 (uppercase comes from the style)', () => {
+    expect(checkpointKickerText({ type: 'checkpoint', milestone: 1, milestoneCount: 4 })).toBe(
+      'Checkpoint · Milestone 1 of 4',
+    );
+    expect(checkpointKickerText(cardsByType.checkpoint)).toBe('Checkpoint · Milestone 1 of 3');
+  });
+
+  it('accepts only a checkpoint card: tsc fails if another type-checks', () => {
+    // Never called: the check is the compiler's.
+    const exerciseKicker = () =>
+      // @ts-expect-error -- only a checkpoint card has a milestone.
+      checkpointKickerText({ ...cardsByType.exercise, milestone: 1, milestoneCount: 4 });
+
+    expect(exerciseKicker).toBeInstanceOf(Function);
   });
 });
 

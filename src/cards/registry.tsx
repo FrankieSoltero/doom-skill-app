@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import type { Card } from '../data';
+import { CheckpointCard } from './CheckpointCard';
 import { ConceptCard } from './ConceptCard';
 import { ExerciseCard } from './ExerciseCard';
 import { PredictCard } from './PredictCard';
@@ -35,6 +36,9 @@ const renderers: { [Name in CardTypeName]?: Renderer<Name> } = {
   review: (card, { index, onNext }) => <ReviewCard card={card} index={index} onNext={onNext} />,
   exercise: (card, { index, active, onNext }) => (
     <ExerciseCard card={card} index={index} active={active} onNext={onNext} />
+  ),
+  checkpoint: (card, { index, active, onNext }) => (
+    <CheckpointCard card={card} index={index} active={active} onNext={onNext} />
   ),
 };
 

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { isValidElement } from 'react';
 
+import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
+import { CheckpointCard } from '../CheckpointCard';
 import { ConceptCard } from '../ConceptCard';
 import { ExerciseCard } from '../ExerciseCard';
 import { PredictCard } from '../PredictCard';
@@ -11,8 +13,9 @@ import { ReviewCard } from '../ReviewCard';
 
 const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
 
-// The card types no task has registered yet. Each later task moves its type out of this list.
-const UNREGISTERED = [checkpoint];
+// A card of a type the registry does not know, as a newer server could send. The cast is the
+// only way to build one: the schema's types allow no such card.
+const UNKNOWN = { ...concept, type: 'flashcard' } as unknown as Card;
 
 describe('renderCard', () => {
   it('renders a concept card with the card, its active flag and onNext', () => {
@@ -100,8 +103,8 @@ describe('renderCard', () => {
     expect(screen.getByRole('button', { name: 'Recall it, then tap to reveal' })).toBeOnTheScreen();
   });
 
-  it.each(UNREGISTERED)('returns null for $type, which has no component yet', (card) => {
-    expect(renderCard(card, { index: 0, active: true, onNext: jest.fn() })).toBeNull();
+  it('returns null for a card of a type it does not know', () => {
+    expect(renderCard(UNKNOWN, { index: 0, active: true, onNext: jest.fn() })).toBeNull();
   });
 });
 
@@ -131,12 +134,40 @@ describe('renderCard for the exercise card', () => {
   });
 });
 
-describe('canRenderCard', () => {
-  it.each([concept, quiz, predict, exercise, review])('accepts a $type card', (card) => {
-    expect(canRenderCard(card)).toBe(true);
+describe('renderCard for the checkpoint card', () => {
+  it('renders a checkpoint card with the card, its index, its active flag and onNext', () => {
+    const onNext = jest.fn<undefined, []>();
+
+    const element = renderCard(checkpoint, { index: 5, active: false, onNext });
+
+    expect(isValidElement(element) && element.type).toBe(CheckpointCard);
+    expect(isValidElement<object>(element) && element.props).toStrictEqual({
+      card: checkpoint,
+      index: 5,
+      active: false,
+      onNext,
+    });
   });
 
-  it.each(UNREGISTERED)('rejects $type', (card) => {
-    expect(canRenderCard(card)).toBe(false);
+  it('draws the checkpoint card, with its editor, rubric and Submit for grading', () => {
+    render(<>{renderCard(checkpoint, { index: 0, active: true, onNext: jest.fn() })}</>);
+
+    expect(screen.getByText(checkpoint.title)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Code editor')).toHaveDisplayValue(checkpoint.starterCode);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(checkpoint.rubric.length);
+    expect(screen.getByRole('button', { name: 'Submit for grading' })).toBeOnTheScreen();
+  });
+});
+
+describe('canRenderCard', () => {
+  it.each([concept, quiz, predict, exercise, review, checkpoint])(
+    'accepts a $type card',
+    (card) => {
+      expect(canRenderCard(card)).toBe(true);
+    },
+  );
+
+  it('rejects a card of a type it does not know', () => {
+    expect(canRenderCard(UNKNOWN)).toBe(false);
   });
 });

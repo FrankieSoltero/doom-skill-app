@@ -210,6 +210,42 @@ describe('copy for the exercise card', () => {
   });
 });
 
+describe('copy for the checkpoint card', () => {
+  it('labels the button in each state, README.md:135-140', () => {
+    expect(copy.submitForGrading).toBe('Submit for grading');
+    expect(copy.grading).toBe('Grading against rubric…');
+    expect(copy.finishToday).toBe('Finish today');
+    expect(copy.resubmit).toBe('Resubmit');
+  });
+
+  it('writes the score line with a middle dot, README.md:139', () => {
+    expect(copy.passedOf(3, 4)).toBe('Passed · 3 of 4');
+    expect(copy.notYetOf(1, 4)).toBe('Not yet · 1 of 4');
+  });
+
+  it("holds the prototype's feedback texts, one per grade outcome", () => {
+    expect(copy.checkpointFeedback).toStrictEqual({
+      all: 'Solid loop. The alternating bar gives it movement. Milestone 2 is unlocked.',
+      pass: 'Passes the threshold. Add the missing element to make it a stronger loop.',
+      fail: 'Needs at least 3 of 4. Check the struck-out items and resubmit.',
+    });
+    expect(Object.isFrozen(copy.checkpointFeedback)).toBe(true);
+  });
+
+  it('speaks a rubric row as its label and its state', () => {
+    expect(copy.rubricItem('Kick drum (bd) present', 'passed')).toBe(
+      'Kick drum (bd) present. Passed.',
+    );
+    expect(copy.rubricItem('Hi-hats', 'failed')).toBe('Hi-hats. Not met.');
+    expect(copy.rubricItem('Hi-hats', 'notGraded')).toBe('Hi-hats. Not graded yet.');
+  });
+
+  it('names a milestone and the number of milestones, README.md:124', () => {
+    expect(copy.milestoneOf(1, 4)).toBe('Milestone 1 of 4');
+    expect(copy.milestoneOf(3, 3)).toBe('Milestone 3 of 3');
+  });
+});
+
 describe('deepFreeze', () => {
   it('freezes every nested object and leaves functions callable', () => {
     const shout = (text: string) => `${text}!`;

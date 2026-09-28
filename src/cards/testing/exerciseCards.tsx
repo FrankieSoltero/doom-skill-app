@@ -5,6 +5,7 @@
  * input focus store in `beforeEach`.
  */
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
 
 import { BeatGrid } from '../../components/BeatGrid';
 import type { Element } from '../../components/testing/styles';
@@ -47,24 +48,36 @@ export function setUpExerciseCardTests(): () => ExerciseCardData {
 /** The page the card sits on in these tests: not 0, so an index mix-up shows. */
 export const INDEX = 2;
 
-type DrawOptions = { active?: boolean; answers?: Record<number, CardAnswer> };
+export type DrawOptions = { active?: boolean; answers?: Record<number, CardAnswer> };
+
+/**
+ * Puts `answers` in the store and draws the card `draw` returns, active unless asked. Returns the
+ * mock `onNext` it passed to `draw`, a way to change `active` without remounting, and `unmount`.
+ * Shared by the cards with a code editor.
+ */
+export function renderCardWithEditor(
+  draw: (active: boolean, onNext: () => void) => ReactElement,
+  options: DrawOptions = {},
+) {
+  const { active = true, answers = {} } = options;
+  useFeedStore.setState({ answers });
+  const onNext = jest.fn<undefined, []>();
+  const view = render(draw(active, onNext));
+  const setActive = (next: boolean) => {
+    view.rerender(draw(next, onNext));
+  };
+  return { onNext, setActive, unmount: view.unmount };
+}
 
 /**
  * Puts `answers` in the store and draws `card` at INDEX, active unless asked. Returns the mock
  * `onNext`, a way to change `active` without remounting, and `unmount`.
  */
 export function renderExerciseCard(card: ExerciseCardData, options: DrawOptions = {}) {
-  const { active = true, answers = {} } = options;
-  useFeedStore.setState({ answers });
-  const onNext = jest.fn<undefined, []>();
-  const draw = (isActive: boolean) => (
-    <ExerciseCard card={card} index={INDEX} active={isActive} onNext={onNext} />
+  return renderCardWithEditor(
+    (active, onNext) => <ExerciseCard card={card} index={INDEX} active={active} onNext={onNext} />,
+    options,
   );
-  const view = render(draw(active));
-  const setActive = (next: boolean) => {
-    view.rerender(draw(next));
-  };
-  return { onNext, setActive, unmount: view.unmount };
 }
 
 /** The card's code editor. */

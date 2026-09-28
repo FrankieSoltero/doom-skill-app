@@ -1,12 +1,21 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 
+import { canRenderCard, renderCard } from '../../cards/registry';
 import type { Card } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { scriptedSource } from '../../feed/testing/sources';
 import { logError, logWarning } from '../../log';
 import { cardTheme, colors } from '../../theme';
-import { answeringCard, renderFeed, stubCard, stubNext, stubText } from '../testing/feed';
+import { FeedScreen } from '../FeedScreen';
+import {
+  answeringCard,
+  renderFeed,
+  renderWithInsets,
+  stubCard,
+  stubNext,
+  stubText,
+} from '../testing/feed';
 import { advance, HIDDEN, layout, settle, swipe } from '../testing/pager';
 import { viewStyleOf } from '../testing/styles';
 
@@ -54,7 +63,12 @@ async function pressNext(index: number) {
 
 describe('FeedScreen pages', () => {
   it('skips a card type with no component: not a page, not a segment', async () => {
-    await renderFeed(scriptedSource(makeSet(12, [quiz, concept, checkpoint])));
+    // Every type is registered now, so the screen gets a registry that lacks the checkpoint.
+    const lacksCheckpoint = (card: Card) => card.type !== 'checkpoint' && canRenderCard(card);
+    const source = scriptedSource(makeSet(12, [quiz, concept, checkpoint]));
+    await renderWithInsets(
+      <FeedScreen source={source} renderCard={renderCard} canRenderCard={lacksCheckpoint} />,
+    );
     await layout(700);
 
     expect(screen.getAllByTestId('progress-segment')).toHaveLength(2);
