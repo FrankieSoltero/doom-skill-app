@@ -12,6 +12,11 @@ of them. Only `src/data/` reads these files (rule SS-6), through `createFixtureS
   (`apps/mobile/scripts/__tests__/demoContent.eval.test.mjs`). No person has reviewed them for
   teaching quality.
 
+`feed_response.json` is not demo data. It is a copy of the API's `GET /feed/today` response from
+the API's tests (`services/api/tests/fixtures/feed_response.json`), a set with all six card
+types, in the API's snake_case. `../__tests__/apiContract.test.ts` holds it to the app's card
+schema, and `services/api/tests/test_feed_fixture_sync.py` fails when the two copies differ.
+
 ## Shape of `cards.extra.fixture.json`
 
 `{ "sets": [ { "cards": [...], "summary": {...} }, ... ] }`, one entry per set, in serving

@@ -1,0 +1,168 @@
+{
+  "topic": {
+    "slug": "strudel",
+    "title": "Strudel",
+    "day": 4,
+    "horizon_days": 14,
+    "streak": 2,
+    "progress": 0.2380952380952381
+  },
+  "set_number": 1,
+  "cards": [
+    {
+      "id": "00000000-0000-4000-8000-000000000302",
+      "node": "Alternation < >",
+      "est_seconds": 45,
+      "type": "concept",
+      "title": "Alternate with angle brackets",
+      "body": "Wrap steps in **< >** and Strudel plays one of them per cycle.",
+      "snippet": "note(\"<c3 e3 g3>\")",
+      "snippet_comment": "cycle 1 → c3 · 2 → e3 · 3 → g3",
+      "cycles": [
+        "c3",
+        "e3",
+        "g3"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000303",
+      "node": "Alternation < >",
+      "est_seconds": 40,
+      "type": "quiz",
+      "title": "Which pattern plays four kicks in every cycle?",
+      "options": [
+        "s(\"bd/4\")",
+        "s(\"bd*4\")",
+        "s(\"bd ~ bd ~\")",
+        "s(\"<bd bd>\")"
+      ],
+      "correct": 1,
+      "explanation": "*4 repeats a step four times inside one cycle."
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000304",
+      "node": "Alternation < >",
+      "est_seconds": 40,
+      "type": "predict",
+      "title": "What plays in cycles 1 and 2?",
+      "code": "note(\"c3 <e3 g3>\")",
+      "options": [
+        "c3 e3, then c3 g3",
+        "c3 g3, then c3 e3"
+      ],
+      "correct": 0,
+      "explanation": "c3 plays every cycle. The bracket alternates e3 and g3."
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000305",
+      "node": "Speed * and /",
+      "est_seconds": 45,
+      "type": "concept",
+      "title": "Repeat a step with *",
+      "body": "A number after a star plays that step that many times inside **one cycle**.",
+      "snippet": "s(\"bd*4, hh*8\")",
+      "snippet_comment": "four kicks and eight hi-hats in every cycle",
+      "cycles": [
+        "bd bd bd bd",
+        "bd bd bd bd"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000306",
+      "node": "Speed * and /",
+      "est_seconds": 90,
+      "type": "exercise",
+      "lang": "strudel",
+      "title": "Double the hi-hats to eight per cycle",
+      "starter_code": "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*4\")\n)",
+      "checks": [
+        {
+          "kind": "contains",
+          "value": "hh*8",
+          "ignore_whitespace": true
+        }
+      ],
+      "pass_msg": "The hi-hat now plays eight times per cycle.",
+      "fail_msg": "Change how many times hh repeats inside the cycle."
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000301",
+      "node": "Rests ~",
+      "est_seconds": 30,
+      "type": "review",
+      "last_seen_days": 11,
+      "prompt": "What does ~ mean in mini-notation?",
+      "answer": "A **rest**. It keeps a step silent while holding its place in the cycle.",
+      "snippet": "s(\"bd ~ sd ~\")",
+      "ratings": [
+        [
+          "Again",
+          "10 min"
+        ],
+        [
+          "Hard",
+          "12 d"
+        ],
+        [
+          "Good",
+          "25 d"
+        ],
+        [
+          "Easy",
+          "33 d"
+        ]
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000201",
+      "type": "checkpoint",
+      "est_seconds": 180,
+      "milestone": 1,
+      "milestone_count": 2,
+      "title": "First sounds",
+      "starter_code": "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))",
+      "pass_threshold": 3,
+      "rubric": [
+        {
+          "label": "Kick drum (bd) present",
+          "regex": "bd"
+        },
+        {
+          "label": "Snare or clap (sd / cp) present",
+          "regex": "\\b(sd|cp)\\b"
+        },
+        {
+          "label": "Hi-hats keep time (hh)",
+          "regex": "hh"
+        },
+        {
+          "label": "Pattern changes across bars (< > or .every)",
+          "regex": "<[^>]+>|\\.every\\("
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "title": "7 cards. 8 minutes.",
+    "progress_delta": 25,
+    "moved": [
+      [
+        "Alternation < >",
+        0.0,
+        0.42857142857142855
+      ],
+      [
+        "Speed * and /",
+        0.0,
+        0.03571428571428571
+      ],
+      [
+        "Rests ~",
+        0.7142857142857143,
+        1.0
+      ]
+    ],
+    "tomorrow": "1 node to review",
+    "reminder": "8:30 pm"
+  }
+}
