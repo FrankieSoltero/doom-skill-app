@@ -141,7 +141,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Me
+         * @description Update the signed-in user's profile; a field left out is not changed.
+         */
+        patch: operations["update_me"];
         trace?: never;
     };
     "/me/enrollments": {
@@ -594,6 +598,23 @@ export interface components {
             push_time: string | null;
             /** Timezone */
             timezone: string;
+        };
+        /**
+         * ProfileUpdate
+         * @description `PATCH /me`: the fields to change, one to four; a field left out is not changed.
+         */
+        ProfileUpdate: {
+            /** Daily Minutes */
+            daily_minutes?: number;
+            /** Display Name */
+            display_name?: string | null;
+            /** Push Time */
+            push_time?: string | null;
+            /**
+             * Timezone
+             * @description An IANA timezone name
+             */
+            timezone?: string;
         };
         /** @description Trimmed, 1 to 80 characters, no control character */
         QueryText: string;
@@ -1241,6 +1262,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service unavailable */
