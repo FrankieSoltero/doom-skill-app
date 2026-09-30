@@ -10,7 +10,7 @@ import { createElement, useLayoutEffect, useMemo, useState, type ReactElement } 
 import type { WebView } from 'react-native-webview';
 
 import { logWarning } from '../log';
-import { decode, MAX_CODE_LENGTH, type FromPage, type ToPage } from './bridge';
+import { createMessageGate, decode, MAX_CODE_LENGTH, type FromPage, type ToPage } from './bridge';
 import { registerPlayer, stopOtherPlayers } from './playerRegistry';
 import { StepClock } from './stepClock';
 import { sendToPage, StrudelPlayer, type UnavailableReason } from './StrudelPlayer';
@@ -94,6 +94,8 @@ class Session {
   /** Which load of the page this is; `reset` moves it on, which replaces the WebView. */
   private page = 0;
   private webView: WebView | null = null;
+  /** Drops what this load of the page sends beyond the bridge's rate and size limits. */
+  private gate = createMessageGate();
   /** Between mount and unmount. The actions do nothing outside it. */
   private mounted = false;
   /**
@@ -211,9 +213,12 @@ class Session {
     };
   };
 
-  /** A message from load `page` of the page; one from a page `reset` replaced is ignored. */
+  /**
+   * A message from load `page` of the page; one from a page `reset` replaced is ignored, and so
+   * is one the gate drops (a flood, or an oversized message), before it is decoded.
+   */
   readonly receive = (raw: unknown, page: number): void => {
-    if (page !== this.page) {
+    if (page !== this.page || !this.gate(raw)) {
       return;
     }
     const message = decode(raw);
@@ -285,6 +290,7 @@ class Session {
     }
     this.halt();
     this.page += 1;
+    this.gate = createMessageGate();
     this.update(INITIAL);
     this.waitForReady();
   };

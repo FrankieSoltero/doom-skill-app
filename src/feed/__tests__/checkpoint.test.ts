@@ -1,5 +1,5 @@
 import { cardSource, type CheckpointCard } from '../../data';
-import { gradeCheckpoint, MAX_CODE_LENGTH } from '../checkpoint';
+import { gradeCheckpoint, MAX_CODE_LENGTH, MAX_PATTERN_LENGTH } from '../checkpoint';
 import { patternSpeedMs } from '../testing/patternSpeed';
 
 type Rubric = CheckpointCard['rubric'];
@@ -62,6 +62,18 @@ describe('gradeCheckpoint', () => {
     expect(gradeCheckpoint('s("bd")', card(rubric)).results).toEqual([
       { label: 'Broken', passed: false },
       { label: 'Kick', passed: true },
+    ]);
+  });
+
+  it('marks a pattern longer than 80 characters as not met, without running it', () => {
+    const long = { label: 'Long', regex: `bd|${'x'.repeat(MAX_PATTERN_LENGTH - 2)}` };
+    const atLimit = { label: 'At limit', regex: `bd|${'x'.repeat(MAX_PATTERN_LENGTH - 3)}` };
+
+    expect(MAX_PATTERN_LENGTH).toBe(80);
+    expect(long.regex).toHaveLength(81);
+    expect(gradeCheckpoint('s("bd")', card([long, atLimit])).results).toEqual([
+      { label: 'Long', passed: false },
+      { label: 'At limit', passed: true },
     ]);
   });
 

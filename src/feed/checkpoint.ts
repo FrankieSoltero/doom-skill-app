@@ -1,17 +1,19 @@
 // Rules for the checkpoint card: grading the learner's code against the card's rubric. Pure
 // functions, no rendering.
 //
-// Rubric patterns come from card data as strings and are compiled with `new RegExp`. They are
-// trusted here because the repo authors them in the bundled fixtures, and a test times each one on
-// input built to provoke backtracking. The length cap below limits input size; it does not bound
-// backtracking time. Before rubric patterns arrive from a server, they must be vetted there or
-// matched with an engine that cannot backtrack.
+// Rubric patterns come from card data as strings and are compiled with `new RegExp`. The server
+// vets every pattern before it is stored (M2's `app.llm.patterns.safe_pattern`: no backreferences,
+// no lookaround, no unbounded repeats, a bounded choice product), and a test times each bundled
+// one on input built to provoke backtracking. As a second guard here, a pattern longer than 80
+// characters, or one that does not compile, is never run: its row is not met. The code length cap
+// limits input size; it does not bound backtracking time.
 import type { CheckpointCard } from '../data';
 
 /**
  * The outcome of grading code against a checkpoint rubric. `results` follow rubric order.
- * `feedback` is `'fail'` whenever `passed` is false, which includes a card whose `passThreshold`
- * is greater than its rubric size, even when every item passes.
+ * `feedback` is `'fail'` whenever `passed` is false. The schema refuses a card whose
+ * `passThreshold` is greater than its rubric size; given one anyway, the grade is `'fail'` even
+ * when every item passes.
  */
 export type CheckpointGrade = {
   results: { label: string; passed: boolean }[];
@@ -23,8 +25,15 @@ export type CheckpointGrade = {
 /** Only this many leading characters of the learner's code are graded. */
 export const MAX_CODE_LENGTH = 5000;
 
-/** True when `pattern` matches `code`. A pattern that does not compile matches nothing. */
+/** The longest rubric pattern that is run. A longer one marks its row as not met. */
+export const MAX_PATTERN_LENGTH = 80;
+
+/**
+ * True when `pattern` matches `code`. A pattern longer than `MAX_PATTERN_LENGTH`, or one that does
+ * not compile, matches nothing.
+ */
 function matches(pattern: string, code: string): boolean {
+  if (pattern.length > MAX_PATTERN_LENGTH) return false;
   try {
     return new RegExp(pattern).test(code);
   } catch {

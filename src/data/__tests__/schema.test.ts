@@ -1,3 +1,4 @@
+import { logWarning } from '../../log';
 import { cardTheme, type CardType } from '../../theme';
 import fixture from '../__fixtures__/cards.fixture.json';
 // The types come through the public entry, as the rest of the app imports them.
@@ -14,6 +15,8 @@ import type {
   Topic,
 } from '../index';
 import { cardSchema, feedSetSchema, summarySchema, topicSchema } from '../schema';
+
+jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 // True only when A and B are each assignable to the other. The consts below are typed with it,
 // so `pnpm typecheck` fails as soon as a schema and the type it must agree with drift apart.
@@ -139,6 +142,59 @@ describe('feedSetSchema', () => {
 
   it('rejects a set number below 1', () => {
     expect(issuePaths({ ...feedSetInput(), setNumber: 0 })).toEqual(['setNumber']);
+  });
+});
+
+describe('feedSetSchema: conditions for cards from a server', () => {
+  const ID = '00000000-0000-4000-8000-000000000302';
+  const CHECKPOINT_INDEX = fixture.cards.findIndex((card) => card.type === 'checkpoint');
+  const EXERCISE_INDEX = fixture.cards.findIndex((card) => card.type === 'exercise');
+  const checkpoint = fixture.cards[CHECKPOINT_INDEX];
+  const rubricSize =
+    checkpoint !== undefined && 'rubric' in checkpoint ? checkpoint.rubric.length : 0;
+
+  beforeEach(() => {
+    jest.mocked(logWarning).mockClear();
+  });
+
+  it('keeps an id on every card type', () => {
+    const cards = fixture.cards.map((card) => ({ ...card, id: ID }));
+    const set = feedSetSchema.parse(feedSetInput(cards));
+
+    expect(set.cards.map((card) => card.id)).toEqual(fixture.cards.map(() => ID));
+  });
+
+  it('parses a card with no id, as the fixture has none', () => {
+    const set = feedSetSchema.parse(feedSetInput());
+
+    expect(set.cards.every((card) => !('id' in card))).toBe(true);
+  });
+
+  it.each(['', 'card-1', `${ID}x`, ID.replaceAll('-', '')])('rejects the id %p', (id) => {
+    expect(issuePaths(feedSetInput(patchCard(QUIZ_INDEX, { id })))).toEqual(['cards.1.id']);
+  });
+
+  it('refuses a checkpoint whose threshold is above its rubric size', () => {
+    const patched = patchCard(CHECKPOINT_INDEX, { passThreshold: rubricSize + 1 });
+
+    expect(issuePaths(feedSetInput(patched))).toEqual([
+      `cards.${String(CHECKPOINT_INDEX)}.passThreshold`,
+    ]);
+  });
+
+  it('accepts a checkpoint whose threshold equals its rubric size', () => {
+    const patched = patchCard(CHECKPOINT_INDEX, { passThreshold: rubricSize });
+
+    expect(issuePaths(feedSetInput(patched))).toEqual([]);
+  });
+
+  it('drops an exercise in another language as an unknown kind, keeps the rest and logs it', () => {
+    const set = feedSetSchema.parse(feedSetInput(patchCard(EXERCISE_INDEX, { lang: 'python' })));
+
+    expect(set.cards.map((card) => card.type)).toEqual(
+      FIXTURE_CARD_TYPES.filter((type) => type !== 'exercise'),
+    );
+    expect(jest.mocked(logWarning).mock.calls).toEqual([['exercise_lang_unknown']]);
   });
 });
 

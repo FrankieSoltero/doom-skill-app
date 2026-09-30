@@ -55,6 +55,14 @@ function scoreLine(grade: CheckpointGrade): string {
     : copy.notYetOf(grade.passCount, total);
 }
 
+/** The feedback of a grade, written from the card's milestone, threshold and rubric size. */
+function feedbackText(grade: CheckpointGrade, card: CheckpointCardData): string {
+  const rows = card.rubric.length;
+  if (grade.feedback === 'all') return copy.checkpoint.all(card.milestone, card.milestoneCount);
+  if (grade.feedback === 'pass') return copy.checkpoint.pass(card.passThreshold, rows);
+  return copy.checkpoint.fail(card.passThreshold, rows);
+}
+
 /**
  * The card's answer in the feed store at `index`, and the two ways to change it. `edit` stores the
  * code, idle, with no grade, and cancels a grading under way. `submit` dismisses the keyboard and
@@ -94,7 +102,7 @@ function useCheckpointAnswer(card: CheckpointCardData, index: number) {
       timer.current = null;
       const grade = gradeCheckpoint(code, card);
       setAnswer(index, { kind: 'checkpoint', code, status: 'done', grade });
-      announce(copy.badgeSpoken(scoreLine(grade), copy.checkpointFeedback[grade.feedback]));
+      announce(copy.badgeSpoken(scoreLine(grade), feedbackText(grade, card)));
     }, GRADING_DELAY);
   };
 
@@ -124,7 +132,13 @@ function buttonState(
  * The score line and the feedback of a grade, README.md:139, in a polite live region that is
  * always there, so Android reads the grade when it appears. Nothing is drawn in it before a grade.
  */
-function CheckpointResult({ grade }: { grade: CheckpointGrade | null }) {
+function CheckpointResult({
+  grade,
+  card,
+}: {
+  grade: CheckpointGrade | null;
+  card: CheckpointCardData;
+}) {
   const color = useCardTextColor();
   return (
     <View testID="checkpoint-result" accessibilityLiveRegion="polite" style={styles.result}>
@@ -134,7 +148,7 @@ function CheckpointResult({ grade }: { grade: CheckpointGrade | null }) {
             {scoreLine(grade)}
           </Text>
           <Text testID="checkpoint-feedback" style={[styles.feedback, { color }]}>
-            {copy.checkpointFeedback[grade.feedback]}
+            {feedbackText(grade, card)}
           </Text>
         </>
       )}
@@ -190,7 +204,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
           />
         </View>
         <RubricList items={items} />
-        <CheckpointResult grade={grade} />
+        <CheckpointResult grade={grade} card={card} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
         <PrimaryButton
           label={button.label}

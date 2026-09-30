@@ -62,8 +62,9 @@ describe('the API feed response', () => {
     expect(parsed.summary.moved).toEqual(response.summary.moved);
   });
 
-  it('reads every key of each card but its id', () => {
-    expect(droppedKeys(sent.cards, parsed.cards)).toEqual(sent.cards.map(() => ['id']));
+  it('reads every key of each card, its id included', () => {
+    expect(droppedKeys(sent.cards, parsed.cards)).toEqual(sent.cards.map(() => []));
+    expect(parsed.cards.map((card) => card.id)).toEqual(response.cards.map((card) => card.id));
   });
 
   it('maps only object keys: arrays and their values stay as sent', () => {

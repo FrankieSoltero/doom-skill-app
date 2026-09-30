@@ -1,6 +1,8 @@
 // Splits a Strudel snippet into colored tokens for the code block
 // (docs/design/card-feed/README.md:21). A pure scanner: one pass, linear in the input length,
-// with no regex that can backtrack. Joining the tokens' text always gives the input back.
+// with no regex that can backtrack. Joining the tokens' text always gives the input back. Strings
+// (single-quoted, double-quoted and backtick) are plain text read whole, so `//` or a function
+// name inside one is neither a comment nor a call.
 
 export type CodeToken = { text: string; kind: 'fn' | 'comment' | 'plain' };
 
@@ -9,6 +11,15 @@ const FUNCTION_NAMES: readonly string[] = ['note', 's', 'stack', 'sound'];
 
 /** Starts a comment that runs to the end of the line. */
 const COMMENT_START = '//';
+
+/** The characters that open a string, and close the string they opened. */
+const QUOTES: ReadonlySet<string> = new Set(['"', "'", '`']);
+
+/** Escapes the character after it inside a string. */
+const ESCAPE = '\\';
+
+/** Opens and closes a template string, the one kind of string that may span lines. */
+const BACKTICK = '`';
 
 /** One character of an identifier. Tested one character at a time, so it cannot backtrack. */
 const WORD_CHAR = /^[\w$]$/;
@@ -33,6 +44,23 @@ function lineEnd(code: string, start: number): number {
   return end;
 }
 
+/**
+ * The index just past the string whose opening quote is at `start`: past its closing quote, or,
+ * for an unclosed string, at the end of its line (a quoted string) or of the code (a backtick
+ * string). A backslash escapes the character after it.
+ */
+function stringEnd(code: string, start: number): number {
+  const quote = code[start];
+  let end = start + 1;
+  while (end < code.length) {
+    const char = code[end];
+    if (char === quote) return end + 1;
+    if (quote !== BACKTICK && isLineBreak(char)) return end;
+    end += char === ESCAPE ? 2 : 1;
+  }
+  return code.length;
+}
+
 /** The index just past the identifier that starts at `start`. */
 function wordEnd(code: string, start: number): number {
   let end = start;
@@ -43,13 +71,16 @@ function wordEnd(code: string, start: number): number {
 }
 
 /**
- * Reads one run at `start`: a comment to the end of the line, a whole word (a known function
- * name directly followed by `(` is `fn`), or one plain character. The scanner only lands on a
- * word's first character, because it steps over whole words.
+ * Reads one run at `start`: a comment to the end of the line, a whole string (plain), a whole word
+ * (a known function name directly followed by `(` is `fn`), or one plain character. The scanner
+ * only lands on a word's or a string's first character, because it steps over each whole.
  */
 function scanAt(code: string, start: number): Span {
   if (code.startsWith(COMMENT_START, start)) {
     return { kind: 'comment', end: lineEnd(code, start) };
+  }
+  if (QUOTES.has(code[start] ?? '')) {
+    return { kind: 'plain', end: stringEnd(code, start) };
   }
   if (!isWordChar(code[start])) {
     return { kind: 'plain', end: start + 1 };

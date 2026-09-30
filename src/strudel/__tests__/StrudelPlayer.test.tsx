@@ -5,6 +5,7 @@ import type { WebView } from 'react-native-webview';
 import RNCWebViewModule from 'react-native-webview/lib/NativeRNCWebViewModule';
 import RealWebView from 'react-native-webview/lib/WebView';
 
+import { SILENCE_DIALOGS_SCRIPT } from '../dialogScript';
 import { STRUDEL_HTML } from '../generated/strudelHtml';
 import { sendToPage, StrudelPlayer } from '../StrudelPlayer';
 import { fireWebViewEvent, navigation, postRaw, webView } from '../testing/webview';
@@ -63,6 +64,10 @@ const WEBVIEW_PROPS = {
   geolocationEnabled: false,
   allowsBackForwardNavigationGestures: false,
   mediaCapturePermissionGrantType: 'deny',
+  // react-native-webview 13.16.1 has no prop that turns its native dialogs off: the page's own
+  // dialogs are replaced before any of its content runs, in every frame (see dialogScript.ts).
+  injectedJavaScriptBeforeContentLoaded: SILENCE_DIALOGS_SCRIPT,
+  injectedJavaScriptBeforeContentLoadedForMainFrameOnly: false,
 };
 
 const HANDLERS = [

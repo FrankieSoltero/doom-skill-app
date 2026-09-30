@@ -32,6 +32,22 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+/**
+ * Checks that a new page step is held back until `ms` after now: one posted a millisecond short
+ * leaves the step at `held`, and one posted at `ms` is taken.
+ */
+function expectNextStepAfter(ms: number, result: { current: Strudel }, held: number): void {
+  // The gates read performance.now(), which Jest's fake timers move with the time they fake.
+  const clock = performance.now();
+  advance(ms - 1);
+  expect(performance.now() - clock).toBe(ms - 1);
+  pagePosts({ type: 'step', step: 9 });
+  expect(result.current.step).toBe(held);
+  advance(1);
+  pagePosts({ type: 'step', step: 9 });
+  expect(result.current.step).toBe(9);
+}
+
 describe('useStrudel: a flood of step messages', () => {
   it('updates once for the same step twice', () => {
     const { result, renders } = playingPlayer();
@@ -43,7 +59,17 @@ describe('useStrudel: a flood of step messages', () => {
     expect(result.current.step).toBe(3);
   });
 
-  it('updates once for 1,000 different steps within one millisecond, then again 16 ms on', () => {
+  it('updates once for two different steps within one millisecond, then again 16 ms on', () => {
+    const { result, renders } = playingPlayer();
+    const before = renders();
+    pagePosts({ type: 'step', step: 0 });
+    pagePosts({ type: 'step', step: 1 });
+    expect(renders() - before).toBe(1);
+    expect(result.current.step).toBe(0);
+    expectNextStepAfter(STEP_GAP_MS, result, 0);
+  });
+
+  it('updates once for 1,000 different steps within one millisecond, then again a second on', () => {
     const { result, renders } = playingPlayer();
     const before = renders();
     for (let index = 0; index < 1000; index += 1) {
@@ -51,16 +77,8 @@ describe('useStrudel: a flood of step messages', () => {
     }
     expect(renders() - before).toBe(1);
     expect(result.current.step).toBe(0);
-
-    // The window reads performance.now(), which Jest's fake timers move with the time they fake.
-    const clock = performance.now();
-    advance(STEP_GAP_MS - 1);
-    expect(performance.now() - clock).toBe(STEP_GAP_MS - 1);
-    pagePosts({ type: 'step', step: 9 });
-    expect(result.current.step).toBe(0);
-    advance(1);
-    pagePosts({ type: 'step', step: 9 });
-    expect(result.current.step).toBe(9);
+    // The bridge's gate lets 60 messages through in a second (bridge.flood.test.ts).
+    expectNextStepAfter(1000, result, 0);
   });
 
   it('takes the first step after a new play at once', () => {

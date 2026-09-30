@@ -89,6 +89,34 @@ test('frames added anywhere in the document are removed', () => {
   assert.ok(!div.removed && !div.children[1].removed);
 });
 
+test("a frame's own window is silenced and loses WebRTC before the frame is removed", () => {
+  removeFrames({}, FakeObserver);
+  const { win: frameWindow, shown } = dialogWindow();
+  frameWindow.RTCPeerConnection = class {};
+  const iframe = element('iframe');
+  iframe.contentWindow = frameWindow;
+  const nested = element('iframe');
+  nested.contentWindow = null;
+  FakeObserver.last.callback([{ addedNodes: [iframe, element('div', [nested])] }]);
+  assert.ok(iframe.removed && nested.removed);
+  assert.equal(frameWindow.alert('from the frame'), undefined);
+  assert.equal(frameWindow.prompt('x'), null);
+  assert.throws(() => new frameWindow.RTCPeerConnection(), { message: 'WebRTC is not available' });
+  assert.deepEqual(shown, []);
+});
+
+test('a frame whose window cannot be read is still removed', () => {
+  removeFrames({}, FakeObserver);
+  const iframe = element('iframe');
+  Object.defineProperty(iframe, 'contentWindow', {
+    get() {
+      throw new Error('cross-origin');
+    },
+  });
+  FakeObserver.last.callback([{ addedNodes: [iframe] }]);
+  assert.ok(iframe.removed);
+});
+
 test('startPage installs the guards before Strudel starts and before it listens', async () => {
   const { win, shown } = dialogWindow();
   const order = [];

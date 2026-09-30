@@ -1,12 +1,14 @@
 // The hidden WebView that hosts the Strudel page (src/strudel/page/, built into the generated
 // module). The page evaluates code the learner types, so this view gives it as little as it can:
-// no navigation, no windows, no files, no cookies or storage, no link previews, no media capture.
+// no navigation, no windows, no files, no cookies or storage, no link previews, no media capture,
+// and no JavaScript dialogs (./dialogScript.ts).
 // It is 0 by 0, ignores touches, is hidden from assistive technology, and renders no text.
 import { useState, type ReactElement, type Ref } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewProps } from 'react-native-webview';
 
 import { pageScript, type ToPage } from './bridge';
+import { SILENCE_DIALOGS_SCRIPT } from './dialogScript';
 import { STRUDEL_HTML } from './generated/strudelHtml';
 
 type NavigationRequest = Parameters<NonNullable<WebViewProps['onShouldStartLoadWithRequest']>>[0];
@@ -134,6 +136,8 @@ function StrudelPage({ page, webViewRef, onMessage, onUnavailable }: PageProps):
       geolocationEnabled={false}
       allowsBackForwardNavigationGestures={false}
       mediaCapturePermissionGrantType="deny"
+      injectedJavaScriptBeforeContentLoaded={SILENCE_DIALOGS_SCRIPT}
+      injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
     />
   );
 }

@@ -100,6 +100,39 @@ describe('tokenizeCode: comments', () => {
   });
 });
 
+describe('tokenizeCode: strings', () => {
+  it.each<[string, string, CodeToken[]]>([
+    ['// in a double-quoted string', 's("bd // sd")', [fn('s'), plain('("bd // sd")')]],
+    ['// in a single-quoted string', "s('bd // sd')", [fn('s'), plain("('bd // sd')")]],
+    ['// in a backtick string', 's(`bd // sd`)', [fn('s'), plain('(`bd // sd`)')]],
+    ['a URL in a string', 'x("https://a.b")', [plain('x("https://a.b")')]],
+    [
+      'a comment after a string that holds //',
+      's("a//b") // kick',
+      [fn('s'), plain('("a//b") '), comment('// kick')],
+    ],
+    ['an escaped quote', 's("a\\"//b")', [fn('s'), plain('("a\\"//b")')]],
+    [
+      'an escaped backslash before the end',
+      's("a\\\\")//c',
+      [fn('s'), plain('("a\\\\")'), comment('//c')],
+    ],
+    ['a call inside a string', '"s(x)"', [plain('"s(x)"')]],
+    ['the other quotes inside a string', '"it\'s `x` // y"', [plain('"it\'s `x` // y"')]],
+    ['a quoted string ended by the line break', '"a\n// b', [plain('"a\n'), comment('// b')]],
+    ['a backtick string over two lines', '`a\n// b`', [plain('`a\n// b`')]],
+    ['an unclosed backtick string', '`a // b', [plain('`a // b')]],
+  ])('reads %s', (_case, code, expected) => {
+    expect(tokenizeCode(code)).toStrictEqual(expected);
+  });
+
+  it('reads 5,000 quotes in linear time as plain text', () => {
+    const code = '"'.repeat(5000);
+
+    expect(tokenizeCode(code)).toStrictEqual([plain(code)]);
+  });
+});
+
 describe('tokenizeCode: round trip and minimal tokens', () => {
   it('returns no tokens for the empty string', () => {
     expect(tokenizeCode('')).toStrictEqual([]);
@@ -151,8 +184,6 @@ describe('tokenizeCode: the bundled demo content', () => {
     }
   });
 
-  // No fixture snippet has // inside a string, so the tokenizer need not read strings. If one
-  // ever does, this test fails, because that // would read as a comment.
   it('finds one comment in the fixture: the concept card snippetComment, whole', () => {
     const comments = fixtureCards
       .flatMap(codeOf)

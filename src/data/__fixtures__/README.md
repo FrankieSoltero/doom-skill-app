@@ -27,9 +27,9 @@ adds the topic from `cards.fixture.json` and the set number, then validates the 
 The stated solutions to the exercises and checkpoints are not here, so the app cannot show them.
 They live with the tests, in `apps/mobile/scripts/__tests__/fixtures/demoSolutions.json`.
 
-## Fixed feedback copy
+## Checkpoint feedback copy
 
-The checkpoint feedback is fixed copy in `src/copy/`, not card data. "Needs at least 3 of 4"
-fits every set here, since every checkpoint passes at 3 of 4. The all-passed text, "Solid loop.
-The alternating bar gives it movement. Milestone 2 is unlocked.", fits only set 1, whose
-checkpoint is milestone 1. Sets 2 to 4 are milestones 2, 3 and 4.
+The checkpoint feedback is copy in `src/copy/` (`copy.checkpoint`), not card data. Each text is
+written from the card's own values: the all-passed text names the next milestone ("Milestone 2 is
+unlocked." for set 1's milestone 1 of 4), and the pass and fail texts name the card's threshold
+and rubric size ("Needs at least 3 of 4", true of every set here).

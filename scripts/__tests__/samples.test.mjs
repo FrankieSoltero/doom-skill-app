@@ -3,7 +3,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { SAMPLES_LIMIT_MS } from '../../src/strudel/page/audio.js';
+import { readFileSync } from 'node:fs';
+
+import { SAMPLES_LIMIT_MS, SAMPLE_MAPS } from '../../src/strudel/page/audio.js';
 import {
   LOAD,
   PLAY,
@@ -17,6 +19,9 @@ import {
 } from './fakes.mjs';
 
 const count = (log, name) => log.filter((entry) => entry === name).length;
+/** How many sample maps the page loads: one `samples` call each. */
+const MAPS = SAMPLE_MAPS.length;
+const FIRST_MAP = SAMPLE_MAPS[0];
 
 /** Starts a prepare and moves the clock to the sample limit, one millisecond short. */
 async function nearLimit(prep, clock) {
@@ -46,10 +51,36 @@ test('the sample limit is 5,000 ms', () => {
   assert.equal(SAMPLES_LIMIT_MS, 5000);
 });
 
+test('the page loads the default sample maps of strudel.cc, each from raw GitHub', () => {
+  assert.deepEqual(SAMPLE_MAPS, [
+    'github:tidalcycles/dirt-samples',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/Dirt-Samples.json',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/EmuSP12.json',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/vcsl.json',
+    'https://raw.githubusercontent.com/felixroos/dough-samples/main/mridangam.json',
+  ]);
+  assert.ok(Object.isFrozen(SAMPLE_MAPS));
+});
+
+test("every sample map's host is one the page's policy lets it fetch from", () => {
+  const html = readFileSync(new URL('../../src/strudel/page/index.html', import.meta.url), 'utf8');
+  const connect = /connect-src ([^;"]+)/.exec(html)?.[1].trim().split(/\s+/) ?? [];
+  // @strudel/web 1.3.0 reads `github:user/repo` from raw.githubusercontent.com (dist/index.mjs,
+  // the pseudo-URL resolver of samples()).
+  const hostOf = (map) =>
+    map.startsWith('github:') ? 'raw.githubusercontent.com' : new URL(map).host;
+  assert.deepEqual(connect, ['https://raw.githubusercontent.com']);
+  for (const map of SAMPLE_MAPS) {
+    assert.ok(connect.includes(`https://${hostOf(map)}`), map);
+  }
+});
+
 test('a sample map that loads before the limit plays with samples and clears the timer', async () => {
   const { prep, clock, log, failures } = preparer();
   assert.equal(await prep.prepare(), true);
-  assert.deepEqual(log, ['resume', 'initAudio', 'samples']);
+  assert.deepEqual(log, ['resume', 'initAudio', ...SAMPLE_MAPS.map(() => 'samples')]);
   assert.equal(failures.count, 0);
   assert.equal(clock.pending.size, 0);
   assert.deepEqual(clock.cleared, [1, 2]);
@@ -79,7 +110,7 @@ test('a load that finishes after the limit reports nothing and is not waited for
   assert.equal(failures.count, 1);
   // The next play finds the samples loaded: no new download, no wait, no failure.
   assert.equal(await prep.prepare(), true);
-  assert.equal(count(log, 'samples'), 1);
+  assert.equal(count(log, 'samples'), MAPS);
   assert.equal(failures.count, 1);
   assert.equal(clock.pending.size, 0);
 });
@@ -87,7 +118,9 @@ test('a load that finishes after the limit reports nothing and is not waited for
 test('a load that fails after the limit reports nothing and raises no rejection', async () => {
   const late = deferred();
   const answers = [late.promise, Promise.resolve()];
-  const { prep, clock, log, failures } = preparer({ samples: () => answers.shift() });
+  const { prep, clock, log, failures } = preparer({
+    samples: (map) => (map === FIRST_MAP ? answers.shift() : Promise.resolve()),
+  });
   const seen = await unhandledDuring(async () => {
     await nearLimit(prep, clock);
     clock.advance(1);
@@ -96,9 +129,9 @@ test('a load that fails after the limit reports nothing and raises no rejection'
   });
   assert.deepEqual(seen, []);
   assert.equal(failures.count, 1);
-  // The failed load is not kept: the next play downloads the map again.
+  // The failed map is not kept: the next play downloads that map again, and only that one.
   assert.equal(await prep.prepare(), true);
-  assert.equal(count(log, 'samples'), 2);
+  assert.equal(count(log, 'samples'), MAPS + 1);
   assert.equal(failures.count, 1);
   assert.equal(clock.pending.size, 0);
 });
@@ -110,6 +143,23 @@ test('a load that fails before the limit reports one network failure and plays',
   assert.equal(await prep.prepare(), true);
   assert.equal(failures.count, 1);
   assert.equal(clock.pending.size, 0);
+});
+
+test('one map that fails reports one network failure, and the next play loads only it', async () => {
+  const loads = [];
+  const answers = [Promise.reject(new Error('error loading "piano.json"')), Promise.resolve()];
+  const { prep, failures } = preparer({
+    samples: (map) => (loads.push(map), map === SAMPLE_MAPS[2] ? answers.shift() : undefined),
+  });
+  assert.equal(await prep.prepare(), true);
+  assert.equal(failures.count, 1);
+  assert.deepEqual(loads, SAMPLE_MAPS);
+  assert.equal(await prep.prepare(), true);
+  assert.equal(failures.count, 1);
+  assert.deepEqual(loads, [...SAMPLE_MAPS, SAMPLE_MAPS[2]]);
+  // Every map has loaded now: a third play loads nothing.
+  assert.equal(await prep.prepare(), true);
+  assert.equal(loads.length, MAPS + 1);
 });
 
 test('cancel during the sample wait ends it quietly and clears the timer', async () => {
@@ -145,7 +195,7 @@ test('a play while the load is still under way reuses it, with a fresh limit', a
   const third = track(prep.prepare());
   await settle();
   assert.deepEqual(third, { state: 'resolved', value: true });
-  assert.equal(count(log, 'samples'), 1);
+  assert.equal(count(log, 'samples'), MAPS);
   assert.equal(failures.count, 2);
   assert.equal(clock.pending.size, 0);
 });
@@ -161,7 +211,7 @@ test('a newer prepare ends the older sample wait and takes over the same load', 
   late.resolve();
   await settle();
   assert.deepEqual(newer, { state: 'resolved', value: true });
-  assert.equal(count(log, 'samples'), 1);
+  assert.equal(count(log, 'samples'), MAPS);
   assert.equal(failures.count, 0);
   assert.equal(clock.pending.size, 0);
 });

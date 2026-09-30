@@ -163,15 +163,20 @@ export const copy = deepFreeze({
   /** The checkpoint score line of a failing grade, README.md:139. */
   notYetOf: (n: number, total: number) => `Not yet · ${String(n)} of ${String(total)}`,
   /**
-   * The checkpoint feedback for each grade outcome, the prototype's `cpFeedback`
-   * (reference/LearnLoop Card Feed v2.dc.html:588). `fail` names a threshold of 3 of 4, true only
-   * of the demo card; it must follow each card's own threshold and rubric size before cards with
-   * other values exist.
+   * The checkpoint feedback for each grade outcome, after the prototype's `cpFeedback`
+   * (reference/LearnLoop Card Feed v2.dc.html:588), written from the card's own values: `all`
+   * from its milestone and the topic's milestone count, `pass` and `fail` from its threshold and
+   * its rubric's size.
    */
-  checkpointFeedback: {
-    all: 'Solid loop. The alternating bar gives it movement. Milestone 2 is unlocked.',
-    pass: 'Passes the threshold. Add the missing element to make it a stronger loop.',
-    fail: 'Needs at least 3 of 4. Check the struck-out items and resubmit.',
+  checkpoint: {
+    all: (milestone: number, milestoneCount: number) =>
+      milestone < milestoneCount
+        ? `Every item met. Milestone ${String(milestone + 1)} is unlocked.`
+        : 'Every item met. That was the last milestone.',
+    pass: (threshold: number, rows: number) =>
+      `Passes with ${String(threshold)} of ${String(rows)} needed. Meet the struck-out items to make it stronger.`,
+    fail: (threshold: number, rows: number) =>
+      `Needs at least ${String(threshold)} of ${String(rows)}. Check the struck-out items and resubmit.`,
   },
   /** Spoken label of a checkpoint rubric row: its label, then whether it was met. */
   rubricItem: (label: string, state: 'passed' | 'failed' | 'notGraded') => {

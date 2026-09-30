@@ -231,13 +231,20 @@ describe('copy for the checkpoint card', () => {
     expect(copy.notYetOf(1, 4)).toBe('Not yet · 1 of 4');
   });
 
-  it("holds the prototype's feedback texts, one per grade outcome", () => {
-    expect(copy.checkpointFeedback).toStrictEqual({
-      all: 'Solid loop. The alternating bar gives it movement. Milestone 2 is unlocked.',
-      pass: 'Passes the threshold. Add the missing element to make it a stronger loop.',
-      fail: 'Needs at least 3 of 4. Check the struck-out items and resubmit.',
-    });
-    expect(Object.isFrozen(copy.checkpointFeedback)).toBe(true);
+  it('writes the feedback of each grade outcome from the card, never fixed numbers', () => {
+    expect(copy.checkpoint.all(1, 4)).toBe('Every item met. Milestone 2 is unlocked.');
+    expect(copy.checkpoint.all(3, 4)).toBe('Every item met. Milestone 4 is unlocked.');
+    expect(copy.checkpoint.all(4, 4)).toBe('Every item met. That was the last milestone.');
+    expect(copy.checkpoint.pass(3, 4)).toBe(
+      'Passes with 3 of 4 needed. Meet the struck-out items to make it stronger.',
+    );
+    expect(copy.checkpoint.fail(3, 4)).toBe(
+      'Needs at least 3 of 4. Check the struck-out items and resubmit.',
+    );
+    expect(copy.checkpoint.fail(2, 5)).toBe(
+      'Needs at least 2 of 5. Check the struck-out items and resubmit.',
+    );
+    expect(Object.isFrozen(copy.checkpoint)).toBe(true);
   });
 
   it('speaks a rubric row as its label and its state', () => {

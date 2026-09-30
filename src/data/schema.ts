@@ -3,10 +3,27 @@
 // (such as the fixture's `tree`) are dropped rather than rejected.
 import { z } from 'zod';
 
+import { logWarning } from '../log';
+
 const text = z.string().min(1);
 const count = z.number().int().nonnegative();
 const seconds = z.number().int().positive();
 const fraction = z.number().min(0).max(1);
+
+/** A UUID as the API writes it: 8-4-4-4-12 hexadecimal digits. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The card's id on the server, which the app sends back with an attempt. A checkpoint's is its
+ * milestone's id. Optional: the bundled demo cards have none.
+ */
+const cardId = z.string().regex(UUID).optional();
+
+/** The only exercise language the app can play and check. */
+const EXERCISE_LANG = 'strudel';
+
+/** Just enough of an exercise to read its language before the card itself is parsed. */
+const exerciseLangSchema = z.object({ type: z.literal('exercise'), lang: z.string() });
 
 export const topicSchema = z.object({
   slug: text,
@@ -40,6 +57,7 @@ const correctOutOfRange = {
 // checkpoint rubric `label`s (short row labels, README.md:130-134), and every code field
 // (`snippet`, `snippetComment`, `code`, `starterCode`), where `*` is Strudel syntax.
 const conceptCardSchema = z.object({
+  id: cardId,
   type: z.literal('concept'),
   node: text,
   estSeconds: seconds,
@@ -52,6 +70,7 @@ const conceptCardSchema = z.object({
 
 const quizCardSchema = z
   .object({
+    id: cardId,
     type: z.literal('quiz'),
     node: text,
     estSeconds: seconds,
@@ -64,6 +83,7 @@ const quizCardSchema = z
 
 const predictCardSchema = z
   .object({
+    id: cardId,
     type: z.literal('predict'),
     node: text,
     estSeconds: seconds,
@@ -76,6 +96,7 @@ const predictCardSchema = z
   .refine(correctIsAnOption, correctOutOfRange);
 
 const exerciseCardSchema = z.object({
+  id: cardId,
   type: z.literal('exercise'),
   lang: text,
   node: text,
@@ -96,6 +117,7 @@ const exerciseCardSchema = z.object({
 });
 
 const reviewCardSchema = z.object({
+  id: cardId,
   type: z.literal('review'),
   node: text,
   lastSeenDays: count,
@@ -106,16 +128,23 @@ const reviewCardSchema = z.object({
   ratings: z.array(z.tuple([text, text])).min(1),
 });
 
-const checkpointCardSchema = z.object({
-  type: z.literal('checkpoint'),
-  milestone: z.number().int().positive(),
-  milestoneCount: z.number().int().positive(),
-  estSeconds: seconds,
-  title: text,
-  starterCode: z.string(),
-  passThreshold: z.number().int().positive(),
-  rubric: z.array(z.object({ label: text, regex: text })).min(1),
-});
+const checkpointCardSchema = z
+  .object({
+    id: cardId,
+    type: z.literal('checkpoint'),
+    milestone: z.number().int().positive(),
+    milestoneCount: z.number().int().positive(),
+    estSeconds: seconds,
+    title: text,
+    starterCode: z.string(),
+    passThreshold: z.number().int().positive(),
+    rubric: z.array(z.object({ label: text, regex: text })).min(1),
+  })
+  // A threshold above the rubric's size is a checkpoint nobody can pass.
+  .refine((card) => card.passThreshold <= card.rubric.length, {
+    message: '`passThreshold` must not be greater than the rubric size',
+    path: ['passThreshold'],
+  });
 
 export const cardSchema = z.discriminatedUnion('type', [
   conceptCardSchema,
@@ -146,11 +175,25 @@ function hasUnknownType(item: unknown): boolean {
   return typeof item.type === 'string' && !knownCardTypes.has(item.type);
 }
 
-// One card slot. A card of an unknown type becomes `null` and is filtered out below, so newer
-// content does not break an older app. Parsing slot by slot keeps each issue's path at the card's
-// original index.
+/**
+ * True for an exercise whose `lang` is a string other than `strudel`: the app cannot play or check
+ * it, so it is handled as a card of an unknown kind. Logged without the value, which is card data.
+ */
+function isForeignExercise(item: unknown): boolean {
+  const exercise = exerciseLangSchema.safeParse(item);
+  const foreign = exercise.success && exercise.data.lang !== EXERCISE_LANG;
+  if (foreign) {
+    logWarning('exercise_lang_unknown');
+  }
+  return foreign;
+}
+
+// One card slot. A card of an unknown type, or an exercise in a language the app does not know,
+// becomes `null` and is filtered out below, so newer content (or a set from another topic) does
+// not break an older app. Parsing slot by slot keeps each issue's path at the card's original
+// index.
 const cardSlotSchema = z.unknown().transform((item, ctx): Card | null => {
-  if (hasUnknownType(item)) {
+  if (hasUnknownType(item) || isForeignExercise(item)) {
     return null;
   }
   const result = cardSchema.safeParse(item);

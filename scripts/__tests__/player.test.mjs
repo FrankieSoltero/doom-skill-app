@@ -13,7 +13,7 @@ import {
   startPage,
   watchFetch,
 } from '../../src/strudel/page/player.js';
-import { SAMPLE_MAP } from '../../src/strudel/page/audio.js';
+import { SAMPLE_MAPS } from '../../src/strudel/page/audio.js';
 
 const load = (code) => JSON.stringify({ type: 'load', code });
 const PLAY = JSON.stringify({ type: 'play' });
@@ -188,7 +188,7 @@ test('Page: samples unavailable posts needsNetwork once per play and still plays
   await player.handle(load('s("bd")'));
   await player.handle(PLAY);
   await player.handle(PLAY);
-  assert.deepEqual(maps, [SAMPLE_MAP, SAMPLE_MAP]);
+  assert.deepEqual(maps, [...SAMPLE_MAPS, ...SAMPLE_MAPS]);
   assert.deepEqual(posted, [{ type: 'needsNetwork' }, { type: 'needsNetwork' }]);
   assert.equal(repl.calls.filter(([name]) => name === 'start').length, 2);
 });
@@ -229,7 +229,7 @@ test('audio starts and the sample map loads once, after they succeed', async () 
   await player.handle(load('s("bd")'));
   await player.handle(PLAY);
   await player.handle(PLAY);
-  assert.equal(loads, 1);
+  assert.equal(loads, SAMPLE_MAPS.length);
   assert.equal(audio.starts, 1);
 });
 

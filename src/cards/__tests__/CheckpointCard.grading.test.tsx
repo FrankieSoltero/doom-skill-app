@@ -30,8 +30,10 @@ const THREE = 's("bd sd").stack(s("hh*8"))';
 /** A kick drum only: one of the four demo items. */
 const ONE = 's("bd*4")';
 const GRADING = 'Grading against rubric…';
-const ALL = 'Solid loop. The alternating bar gives it movement. Milestone 2 is unlocked.';
-const PASS = 'Passes the threshold. Add the missing element to make it a stronger loop.';
+const kick = { label: 'Kick', regex: 'bd' };
+/** The demo card is milestone 1 of 4 and passes at 3 of its 4 rubric rows. */
+const ALL = 'Every item met. Milestone 2 is unlocked.';
+const PASS = 'Passes with 3 of 4 needed. Meet the struck-out items to make it stronger.';
 const FAIL = 'Needs at least 3 of 4. Check the struck-out items and resubmit.';
 
 const demo = setUpCheckpointCardTests();
@@ -272,5 +274,34 @@ describe('CheckpointCard announcements', () => {
     advance(GRADING_MS);
 
     expect(resultTexts()).toStrictEqual(['Passed · 1 of 1', ALL]);
+  });
+
+  it("writes the feedback from the card's own threshold, rubric size and milestone", () => {
+    const card = {
+      ...cardsByType.checkpoint,
+      milestone: 3,
+      milestoneCount: 3,
+      passThreshold: 2,
+      rubric: [kick, { label: 'Snare', regex: 'sd' }, { label: 'Hats', regex: 'hh' }],
+    };
+    renderCheckpointCard(card);
+
+    submitAndGrade('s("bd")');
+    expect(resultTexts()).toStrictEqual([
+      'Not yet · 1 of 3',
+      'Needs at least 2 of 3. Check the struck-out items and resubmit.',
+    ]);
+
+    submitAndGrade('s("bd sd")');
+    expect(resultTexts()).toStrictEqual([
+      'Passed · 2 of 3',
+      'Passes with 2 of 3 needed. Meet the struck-out items to make it stronger.',
+    ]);
+
+    submitAndGrade('s("bd sd hh")');
+    expect(resultTexts()).toStrictEqual([
+      'Passed · 3 of 3',
+      'Every item met. That was the last milestone.',
+    ]);
   });
 });

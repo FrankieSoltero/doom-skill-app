@@ -7,6 +7,8 @@
 //   Page to app: {type:'ready'}, {type:'error', message}, {type:'step', step}, {type:'needsNetwork'}
 import { z } from 'zod';
 
+import { logWarning } from '../log';
+
 /** A message the app sends to the page. */
 export type ToPage = { type: 'load'; code: string } | { type: 'play' } | { type: 'stop' };
 
@@ -19,6 +21,15 @@ export const MAX_CODE_LENGTH = 5000;
  * not from the page as built. The cap also bounds the work `JSON.parse` does on hostile input.
  */
 export const MAX_RAW_LENGTH = 4096;
+
+/** The most page messages the gate lets through in any one second; the rest are dropped. */
+export const MAX_MESSAGES_PER_SECOND = 60;
+
+/** The longest page message the gate lets through, in UTF-16 code units: 64 K. */
+export const MAX_MESSAGE_LENGTH = 64 * 1024;
+
+/** The span the gate counts messages over, in milliseconds. */
+const RATE_WINDOW_MS = 1000;
 
 /** The longest error text the app keeps from the page. */
 const MAX_ERROR_LENGTH = 500;
@@ -65,6 +76,42 @@ export function decode(raw: unknown): FromPage | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * A gate for one load of the page, which runs learner code that can post in a loop. It returns
+ * false, so the message is dropped before `decode` reads it, for a string longer than
+ * `MAX_MESSAGE_LENGTH`, and for any message once `MAX_MESSAGES_PER_SECOND` have gone through in
+ * the last second (a sliding second, by `now`, in milliseconds). Anything that is not a string
+ * goes through, for `decode` to refuse. The first drop is logged, once per gate, without the
+ * message: it can hold the learner's code. Make a new gate for each load of the page.
+ */
+export function createMessageGate(
+  now: () => number = () => performance.now(),
+): (raw: unknown) => boolean {
+  const admitted: number[] = [];
+  let logged = false;
+  const drop = (): false => {
+    if (!logged) {
+      logged = true;
+      logWarning('strudel_message_flood');
+    }
+    return false;
+  };
+  return (raw) => {
+    if (typeof raw === 'string' && raw.length > MAX_MESSAGE_LENGTH) {
+      return drop();
+    }
+    const at = now();
+    while (admitted.length > 0 && at - (admitted[0] ?? at) >= RATE_WINDOW_MS) {
+      admitted.shift();
+    }
+    if (admitted.length >= MAX_MESSAGES_PER_SECOND) {
+      return drop();
+    }
+    admitted.push(at);
+    return true;
+  };
 }
 
 /** U+2028 and U+2029, which JSON.stringify leaves raw, written as escapes. */

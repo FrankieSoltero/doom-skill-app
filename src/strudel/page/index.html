@@ -15,7 +15,8 @@
       - script-src 'unsafe-eval': Strudel evaluates the code the learner types.
       - script-src data: @strudel/web 1.3.0 loads its AudioWorklet modules from data: URLs.
       - connect-src: the one host the page fetches from. raw.githubusercontent.com serves the
-        sample map the page loads (github:tidalcycles/dirt-samples) and every sample in it.
+        sample maps the page loads (SAMPLE_MAPS in audio.js) and every sample in them.
+      WebRTC is outside CSP; the page's script blocks it (webrtc.js).
       - worker-src 'none': the page starts no worker. Without it, workers would fall back to
         script-src and could start from data: URLs. AudioWorklet modules are governed by
         script-src, not worker-src (CSP Level 3, "Get the effective directive for request":

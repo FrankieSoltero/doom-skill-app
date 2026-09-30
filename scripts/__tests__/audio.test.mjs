@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { AUDIO_DID_NOT_START, RESUME_LIMIT_MS } from '../../src/strudel/page/audio.js';
+import { AUDIO_DID_NOT_START, RESUME_LIMIT_MS, SAMPLE_MAPS } from '../../src/strudel/page/audio.js';
 import {
   LOAD,
   PLAY,
@@ -24,7 +24,7 @@ test('the limit is 3,000 ms and its message is fixed', () => {
 test('a resume before the limit starts audio and clears the timer', async () => {
   const { prep, clock, log } = preparer();
   assert.equal(await prep.prepare(), true);
-  assert.deepEqual(log, ['resume', 'initAudio', 'samples']);
+  assert.deepEqual(log, ['resume', 'initAudio', ...SAMPLE_MAPS.map(() => 'samples')]);
   assert.equal(clock.pending.size, 0);
   assert.deepEqual(clock.cleared, [1, 2]);
 });
