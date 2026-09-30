@@ -1,3 +1,6 @@
+// First, before any module can call it: `crypto.getRandomValues`, which React Native lacks and the
+// session storage (src/auth/secureSession.ts) uses for its keys.
+import 'react-native-get-random-values';
 import { BarlowCondensed_600SemiBold } from '@expo-google-fonts/barlow-condensed';
 import { Barlow_400Regular, Barlow_500Medium, Barlow_700Bold } from '@expo-google-fonts/barlow';
 import { useFonts } from 'expo-font';

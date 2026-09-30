@@ -15,6 +15,12 @@ module.exports = {
     // setup. The package name (not its subpaths) maps to a stand-in that records its props and
     // the scripts injected through its ref; see the file.
     '^react-native-webview$': '<rootDir>/src/strudel/__mocks__/webview.tsx',
+    // The session's two native stores (src/auth/secureSession.ts). The keychain maps to an
+    // in-memory stand-in; see the file. Async storage maps to the in-memory mock the library
+    // documents for Jest.
+    '^expo-secure-store$': '<rootDir>/src/auth/__mocks__/secureStore.ts',
+    '^@react-native-async-storage/async-storage$':
+      require.resolve('@react-native-async-storage/async-storage/jest/async-storage-mock'),
   },
   // react-native-gesture-handler's documented Jest setup: it mocks the native module and the
   // native buttons (docs.swmansion.com/react-native-gesture-handler/docs/guides/testing).
