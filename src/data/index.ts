@@ -1,8 +1,10 @@
-// The app's entry to card data. Screens import `cardSource` and the card types from here.
+// The app's entry to card data. Screens import `cardSource`, `loadSummary` and the card types from
+// here.
 import { api } from '../api/client';
 import { config } from '../config';
-import { createApiSource } from './apiSource';
+import { createApiSource, fetchSummary, type SummaryAsk } from './apiSource';
 import { createFixtureSource } from './fixtureSource';
+import type { Summary } from './schema';
 import type { CardSource } from './source';
 
 /**
@@ -12,15 +14,23 @@ import type { CardSource } from './source';
  */
 const noActiveTopic = (): string | null => null;
 
+/** The API client when the configuration names the API; `null` with the demo sets. */
+const client = config.dataSource === 'api' ? api : null;
+
 /**
  * The one place a card source is chosen, by `config.dataSource`: the API's feed for `api`, the
  * bundled demo sets otherwise (and in tests). `api` is null unless the configuration names the API
  * and is valid; with an invalid one the root layout shows its message instead of any screen.
  */
 export const cardSource: CardSource =
-  config.dataSource === 'api' && api !== null
-    ? createApiSource(api, noActiveTopic)
-    : createFixtureSource();
+  client === null ? createFixtureSource() : createApiSource(client, noActiveTopic);
+
+/**
+ * Reads the recorded summary of a set the API served (`GET /feed/summary`); `null` with the demo
+ * sets, which have no API and nothing recorded.
+ */
+export const loadSummary: ((asked: SummaryAsk) => Promise<Summary>) | null =
+  client === null ? null : (asked) => fetchSummary(client, asked);
 
 export type {
   Card,

@@ -2,12 +2,15 @@
 // one API client (rule SS-13), whose types come from the generated `schema.d.ts` (rule SS-2).
 // Every answer is untrusted: its keys are mapped (`mapFeed`) and it is parsed with the same
 // `feedSetSchema` as the demo sets before a screen sees it, which here also requires the set's
-// date (`apiSetSchema`).
+// date (`apiSetSchema`). The recorded summary of a stored set (`GET /feed/summary`) is read the
+// same way (`fetchSummary`).
+import type { ZodType } from 'zod';
+
 import type { createApiClient } from '../api/client';
 import { ApiError } from '../api/errors';
 import { logWarning } from '../log';
 import { mapFeed } from './mapFeed';
-import { feedSetSchema, type FeedSet } from './schema';
+import { feedSetSchema, summarySchema, type FeedSet, type Summary } from './schema';
 import { FeedLoadError, type CardSource } from './source';
 
 type ApiClient = ReturnType<typeof createApiClient>;
@@ -42,18 +45,43 @@ function loadErrorFrom(error: unknown): FeedLoadError {
   return new FeedLoadError('Feed request failed', { kind: 'unknown' });
 }
 
+/** How a refused answer is logged (`event`) and named in its error's message (`label`). */
+type Refusal = { event: string; label: string };
+
+const SET_REFUSED: Refusal = { event: 'feed_invalid', label: 'Card set' };
+const SUMMARY_REFUSED: Refusal = { event: 'summary_invalid', label: 'Summary' };
+
 /**
- * The served set, parsed. A set the schema refuses is a FeedLoadError of kind `schema`: the paths
- * of the fields at fault are logged and put in its message, never their content.
+ * An answer, its keys mapped, parsed with `schema`. An answer the schema refuses is a
+ * FeedLoadError of kind `schema`: the paths of the fields at fault are logged and put in its
+ * message, never their content.
  */
-function parseSet(data: unknown): ApiSet {
-  const result = apiSetSchema.safeParse(mapFeed(data));
+function parsed<T>(schema: ZodType<T>, data: unknown, refusal: Refusal): T {
+  const result = schema.safeParse(mapFeed(data));
   if (result.success) {
     return result.data;
   }
   const paths = [...new Set(result.error.issues.map((issue) => issue.path.join('.')))].join('; ');
-  logWarning('feed_invalid', { paths });
-  throw new FeedLoadError(`Card set failed validation at ${paths}`, { kind: 'schema' });
+  logWarning(refusal.event, { paths });
+  throw new FeedLoadError(`${refusal.label} failed validation at ${paths}`, { kind: 'schema' });
+}
+
+/** Which stored set's recorded summary to ask for: its topic, number and date. */
+export type SummaryAsk = { topic: string; setNumber: number; feedDate: string };
+
+/**
+ * The recorded summary of a stored set, from its attempts on the server (`GET /feed/summary`).
+ * Fails as `getNextSet` does: an ApiError's kind, or `schema` for an answer the schema refuses.
+ */
+export async function fetchSummary(api: ApiClient, asked: SummaryAsk): Promise<Summary> {
+  const query = { topic: asked.topic, set: asked.setNumber, date: asked.feedDate };
+  const data = await api
+    .GET('/feed/summary', { params: { query } })
+    .then((answer) => answer.data)
+    .catch((error: unknown) => {
+      throw loadErrorFrom(error);
+    });
+  return parsed(summarySchema, data, SUMMARY_REFUSED);
 }
 
 /**
@@ -106,7 +134,7 @@ export function createApiSource(
       if (data === undefined) {
         return null;
       }
-      const set = parseSet(data);
+      const set: ApiSet = parsed(apiSetSchema, data, SET_REFUSED);
       served = { topic, set: { feedDate: set.feedDate, setNumber: set.setNumber } };
       return set;
     },

@@ -5,7 +5,7 @@
 // on its own (`sendAttemptsTo`, src/feed/outbox.ts).
 import { create } from 'zustand';
 
-import type { Card, FeedSet } from '../data';
+import type { Card, FeedSet, Summary } from '../data';
 import type { CardAnswer } from './answers';
 import type { Attempt } from './outbox';
 
@@ -32,6 +32,11 @@ type FeedState = {
   shownAt: Record<number, number>;
   /** The concept pages of the set already handed to the outbox as seen. */
   seenSent: Record<number, true>;
+  /**
+   * The set's summary as the API recorded it (`useSummary`), shown in place of the projected
+   * `set.summary`; `null` until then. Set at most once per set, so the numbers change once.
+   */
+  recordedSummary: Summary | null;
 };
 
 type FeedActions = {
@@ -39,6 +44,11 @@ type FeedActions = {
   setIndex: (index: number) => void;
   setAnswer: (cardIndex: number, answer: CardAnswer) => void;
   reachSummary: () => void;
+  /**
+   * Keeps `summary` as the recorded summary of the set started in `round`; nothing when another
+   * set is current by now, or when one is already kept.
+   */
+  recordSummary: (round: number, summary: Summary) => void;
   reset: () => void;
 };
 
@@ -53,6 +63,7 @@ const initialState: FeedState = {
   round: 0,
   shownAt: {},
   seenSent: {},
+  recordedSummary: null,
 };
 
 /** Where the store hands each answered card: the attempt outbox, which installs itself. */
@@ -167,6 +178,7 @@ function started(state: FeedState, set: FeedSet): Partial<FeedState> {
     round: state.round + 1,
     shownAt: { 0: Date.now() },
     seenSent: {},
+    recordedSummary: null,
   };
 }
 
@@ -212,6 +224,13 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
   },
   reachSummary: () => {
     setState(summarized);
+  },
+  recordSummary: (round, summary) => {
+    setState((state) =>
+      state.round === round && state.set !== null && state.recordedSummary === null
+        ? { recordedSummary: summary }
+        : {},
+    );
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a
   // reset must not reuse the page keys of a set started before it.

@@ -9,6 +9,7 @@ import { copy } from '../copy';
 import type { FeedSet, Summary } from '../data';
 import { useFeedStore } from '../feed/store';
 import type { NextSetStatus } from '../feed/useFeedSession';
+import { useSummary } from '../feed/useSummary';
 import { colors, type } from '../theme';
 import { SummaryActions } from './SummaryActions';
 import { progressPercent, summaryTitle } from './summaryText';
@@ -31,8 +32,9 @@ export type SummaryCardProps = {
   /** The set just finished: its topic (day, progress) and its Summary data. */
   set: FeedSet;
   /**
-   * True while the Summary is the current page. Nothing here moves yet (the title, tiles and bars
-   * are static), so it is not read; the Summary's motion will start from it.
+   * True while the Summary is the current page: only then is the recorded summary asked for
+   * (`useSummary`). Nothing here moves yet (the title, tiles and bars are static); the Summary's
+   * motion will start from it too.
    */
   active: boolean;
   /** Loads the next set: `Keep going`, and `Retry` after a failure. */
@@ -80,12 +82,22 @@ function MasteryList({ moved }: { moved: Summary['moved'] }) {
  * rows; tomorrow's node and reminder; and the buttons. Everything is static: the title is lime,
  * with no gradient, shine or count-up, and the bars are drawn at their final values. The session
  * adds the set to the totals and raises the streak when this page is reached; this card only
- * reads them.
+ * reads them. The progress delta, the mastery rows and tomorrow come from the set's recorded
+ * summary once the store holds it (`useSummary`), else from the projected one the set came with.
  */
-export function SummaryCard({ set, onKeepGoing, onViewTree, nextSetStatus }: SummaryCardProps) {
+export function SummaryCard({
+  set,
+  active,
+  onKeepGoing,
+  onViewTree,
+  nextSetStatus,
+}: SummaryCardProps) {
   const totals = useFeedStore((state) => state.totals);
   const streak = useFeedStore((state) => state.streak);
-  const { topic, summary } = set;
+  const recorded = useFeedStore((state) => state.recordedSummary);
+  useSummary(active);
+  const { topic } = set;
+  const summary = recorded ?? set.summary;
 
   return (
     <CardFrame type="summary" kicker={copy.dayComplete(topic.day)}>

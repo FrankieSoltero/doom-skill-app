@@ -55,3 +55,32 @@ describe('cardSource', () => {
     expect('currentSet' in source).toBe(false);
   });
 });
+
+/** The `loadSummary` that src/data/index.ts exports under `dataSource`. */
+function loadSummaryFor(dataSource: 'api' | 'fixture') {
+  let load: typeof import('../index').loadSummary | undefined;
+  jest.isolateModules(() => {
+    jest.doMock('../../config', () => ({
+      config: { apiUrl: 'https://api.test', dataSource },
+      configError: null,
+    }));
+    load = jest.requireActual<typeof import('../index')>('../index').loadSummary;
+  });
+  return load;
+}
+
+describe('loadSummary', () => {
+  it('asks the API for a recorded summary with the api data source', async () => {
+    const send = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('offline'));
+    const load = loadSummaryFor('api');
+
+    await expect(
+      load?.({ topic: 'strudel', setNumber: 1, feedDate: '2026-10-01' }),
+    ).rejects.toMatchObject({ name: 'FeedLoadError', kind: 'offline' });
+    expect(send).toHaveBeenCalled();
+  });
+
+  it('is null with the fixture data source: there is no API to ask', () => {
+    expect(loadSummaryFor('fixture')).toBeNull();
+  });
+});

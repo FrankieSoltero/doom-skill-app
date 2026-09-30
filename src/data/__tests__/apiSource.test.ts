@@ -3,7 +3,6 @@
 // saved `GET /feed/today` response of M3 Task 13 (`__fixtures__/feed_response.json`).
 import { renderHook } from '@testing-library/react-native';
 
-import { createApiClient } from '../../api/client';
 import { useFeedStore } from '../../feed/store';
 import { useFeedSession } from '../../feed/useFeedSession';
 import { logWarning } from '../../log';
@@ -12,6 +11,7 @@ import { createApiSource } from '../apiSource';
 import { mapFeed } from '../mapFeed';
 import { feedSetSchema } from '../schema';
 import { FeedLoadError } from '../source';
+import { json, network, type Answer } from '../testing/network';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -19,38 +19,10 @@ const TOPIC = 'strudel';
 const TODAY = `/feed/today?topic=${TOPIC}`;
 const NEXT = `/feed/next?topic=${TOPIC}`;
 
-type Answer = Response | Error | Promise<Response>;
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const ok = (setNumber = 1, feedDate = response.feed_date) =>
   json(200, { ...response, set_number: setNumber, feed_date: feedDate });
 const noContent = () => new Response(null, { status: 204 });
 const failed = (status: number) => json(status, { detail: 'x' });
-
-/**
- * The API client over a network that gives `answers` in order, and the path and query of each
- * request it was sent. The waits between retries take no time.
- */
-function network(...answers: Answer[]) {
-  const requests: string[] = [];
-  const send = (request: Request): Promise<Response> => {
-    const url = new URL(request.url);
-    requests.push(`${url.pathname}${url.search}`);
-    const answer = answers.shift();
-    if (answer === undefined) throw new Error('no answer scripted');
-    return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
-  };
-  const api = createApiClient({
-    baseUrl: 'https://api.test',
-    send,
-    sleep: () => Promise.resolve(),
-    getAccessToken: () => Promise.resolve('token-marker'),
-    refreshSession: () => Promise.resolve(false),
-    signOut: () => Promise.resolve(),
-  });
-  return { api, requests };
-}
 
 /** An API source for `topic` over a network that gives `answers`. */
 function sourceOver(answers: Answer[], topic: () => string | null = () => TOPIC) {
