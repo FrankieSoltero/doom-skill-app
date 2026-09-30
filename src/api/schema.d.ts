@@ -478,11 +478,17 @@ export interface components {
         };
         /**
          * FeedSet
-         * @description `GET /feed/today` and `GET /feed/next`.
+         * @description `GET /feed/today` and `GET /feed/next`. An attempt at one of its cards names the set by
+         *     `feed_date` and `set_number`.
          */
         FeedSet: {
             /** Cards */
             cards: components["schemas"]["Card"][];
+            /**
+             * Feed Date
+             * Format: date
+             */
+            feed_date: string;
             /** Set Number */
             set_number: number;
             summary: components["schemas"]["Summary"];

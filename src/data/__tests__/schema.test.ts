@@ -96,6 +96,13 @@ describe('feedSetSchema', () => {
     expect(Object.keys(set).sort()).toEqual(['cards', 'setNumber', 'summary', 'topic']);
   });
 
+  it("keeps the API's feed date, and refuses one that is not a YYYY-MM-DD date", () => {
+    expect(feedSetSchema.parse({ ...feedSetInput(), feedDate: '2026-10-01' }).feedDate).toBe(
+      '2026-10-01',
+    );
+    expect(issuePaths({ ...feedSetInput(), feedDate: '1 October' })).toEqual(['feedDate']);
+  });
+
   it('rejects a quiz whose correct index is a string, naming the field path', () => {
     expect(issuePaths(feedSetInput(patchCard(QUIZ_INDEX, { correct: '1' })))).toEqual([
       'cards.1.correct',

@@ -18,14 +18,13 @@ jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 const TOPIC = 'strudel';
 const TODAY = `/feed/today?topic=${TOPIC}`;
 const NEXT = `/feed/next?topic=${TOPIC}`;
-/** 11:30 pm on 30 September 2026, in the device's own time zone. */
-const LATE_EVENING = new Date(2026, 8, 30, 23, 30);
 
 type Answer = Response | Error | Promise<Response>;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-const ok = (setNumber = 1) => json(200, { ...response, set_number: setNumber });
+const ok = (setNumber = 1, feedDate = response.feed_date) =>
+  json(200, { ...response, set_number: setNumber, feed_date: feedDate });
 const noContent = () => new Response(null, { status: 204 });
 const failed = (status: number) => json(status, { detail: 'x' });
 
@@ -56,7 +55,7 @@ function network(...answers: Answer[]) {
 /** An API source for `topic` over a network that gives `answers`. */
 function sourceOver(answers: Answer[], topic: () => string | null = () => TOPIC) {
   const { api, requests } = network(...answers);
-  return { source: createApiSource(api, topic, () => LATE_EVENING), requests };
+  return { source: createApiSource(api, topic), requests };
 }
 
 /** The rejection of `promise`, which must be a FeedLoadError. */
@@ -221,6 +220,27 @@ describe('createApiSource: the current set', () => {
     expect(source.currentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
     await source.getNextSet();
     expect(source.currentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
+  });
+
+  it("names the set by the API's date, not the device's", async () => {
+    // The set was stored for 1 October in the user's timezone, whatever the device's date is.
+    const { source } = sourceOver([ok(1, '2026-10-01')]);
+
+    const set = await source.getNextSet();
+
+    expect(set?.feedDate).toBe('2026-10-01');
+    expect(source.currentSet()).toStrictEqual({ feedDate: '2026-10-01', setNumber: 1 });
+  });
+
+  it('fails with kind schema for a set without a date, and keeps no current set', async () => {
+    const { feed_date: _dropped, ...undated } = response;
+    const { source } = sourceOver([json(200, undated)]);
+
+    const error = await loadErrorOf(source.getNextSet());
+
+    expect(error.kind).toBe('schema');
+    expect(error.message).toBe('Card set failed validation at feedDate');
+    expect(source.currentSet()).toBeNull();
   });
 
   it('keeps a set that arrives after the feed screen has gone', async () => {

@@ -1,7 +1,8 @@
 // A CardSource over the API's feed (`GET /feed/today` and `GET /feed/next`), through the app's
 // one API client (rule SS-13), whose types come from the generated `schema.d.ts` (rule SS-2).
 // Every answer is untrusted: its keys are mapped (`mapFeed`) and it is parsed with the same
-// `feedSetSchema` as the demo sets before a screen sees it.
+// `feedSetSchema` as the demo sets before a screen sees it, which here also requires the set's
+// date (`apiSetSchema`).
 import type { createApiClient } from '../api/client';
 import { ApiError } from '../api/errors';
 import { logWarning } from '../log';
@@ -16,11 +17,10 @@ type FeedPath = '/feed/today' | '/feed/next';
 /** What an attempt at a card of the served set must name: the set's date and its number. */
 type CurrentSet = { feedDate: string; setNumber: number };
 
-/** The date of `date` in the device's own time zone, as `YYYY-MM-DD`. */
-function localDate(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+/** A set from the API: the demo sets' schema, with the date the server stored the set for. */
+const apiSetSchema = feedSetSchema.required({ feedDate: true });
+
+type ApiSet = FeedSet & CurrentSet;
 
 /** The API's 409 on `GET /feed/next`: the current set still has a card with no attempt. */
 function isSetUnfinished(error: unknown): boolean {
@@ -46,8 +46,8 @@ function loadErrorFrom(error: unknown): FeedLoadError {
  * The served set, parsed. A set the schema refuses is a FeedLoadError of kind `schema`: the paths
  * of the fields at fault are logged and put in its message, never their content.
  */
-function parseSet(data: unknown): FeedSet {
-  const result = feedSetSchema.safeParse(mapFeed(data));
+function parseSet(data: unknown): ApiSet {
+  const result = apiSetSchema.safeParse(mapFeed(data));
   if (result.success) {
     return result.data;
   }
@@ -65,15 +65,14 @@ function parseSet(data: unknown): FeedSet {
  * - A 409 from next (the set is unfinished) serves the current set again from today.
  * - No active topic fails with kind `noTopic`, before any request.
  * - Any ApiError fails with its kind; the client has already applied its time limit and retries.
- * - `currentSet()` gives the served set's date (the device's date when it arrived, `now`) and
- *   number, for the attempts at its cards; `null` before the first set.
+ * - `currentSet()` gives the served set's date (the API's: the date the server stored it for, in
+ *   the user's timezone) and number, for the attempts at its cards; `null` before the first set.
  *
  * Nothing is cancelled when the feed screen goes: the session keeps a set that arrives late.
  */
 export function createApiSource(
   api: ApiClient,
   getTopic: () => string | null,
-  now: () => Date = () => new Date(),
 ): CardSource & { currentSet: () => CurrentSet | null } {
   let served: { topic: string; set: CurrentSet } | null = null;
 
@@ -108,7 +107,7 @@ export function createApiSource(
         return null;
       }
       const set = parseSet(data);
-      served = { topic, set: { feedDate: localDate(now()), setNumber: set.setNumber } };
+      served = { topic, set: { feedDate: set.feedDate, setNumber: set.setNumber } };
       return set;
     },
     currentSet: () => served?.set ?? null,

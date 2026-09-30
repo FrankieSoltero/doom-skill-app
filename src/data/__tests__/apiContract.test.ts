@@ -30,7 +30,8 @@ describe('the API feed response', () => {
     expect(parsed.cards.map((card) => card.type)).toEqual(response.cards.map((card) => card.type));
   });
 
-  it('keeps the topic, the set number and the summary', () => {
+  it('keeps the topic, the set number, its date and the summary', () => {
+    expect(parsed.feedDate).toBe(response.feed_date);
     expect(parsed.topic).toEqual({
       slug: 'strudel',
       title: 'Strudel',

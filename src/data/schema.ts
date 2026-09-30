@@ -206,9 +206,17 @@ const cardSlotSchema = z.unknown().transform((item, ctx): Card | null => {
   return result.data;
 });
 
+/** A calendar date as the API writes it: `YYYY-MM-DD`. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 export const feedSetSchema = z.object({
   topic: topicSchema,
   setNumber: z.number().int().positive(),
+  /**
+   * The date the server stored the set for, in the user's timezone; an attempt at one of its
+   * cards names it. Optional: the bundled demo sets have none (the API source requires it).
+   */
+  feedDate: z.string().regex(ISO_DATE).optional(),
   cards: z.array(cardSlotSchema).transform((slots) => slots.filter((card) => card !== null)),
   summary: summarySchema,
 });
