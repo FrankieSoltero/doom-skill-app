@@ -207,3 +207,31 @@ describe('the store adds nothing', () => {
     expect(add).not.toHaveBeenCalled();
   });
 });
+
+describe('skipDropped: the cards the app dropped from a set, as skipped', () => {
+  it('adds a skip for each dropped id, with the set date and number', () => {
+    const set = { ...apiSet([served(quiz, 1)]), droppedIds: [served(quiz, 7).id ?? ''] };
+
+    store().skipDropped(set);
+
+    expect(add.mock.calls).toStrictEqual([
+      [
+        {
+          cardId: '00000000-0000-4000-8000-000000000007',
+          response: { skipped: true },
+          durationMs: 0,
+          feedDate: '2026-10-01',
+          setNumber: 3,
+        },
+      ],
+    ]);
+  });
+
+  it('adds nothing for a set without a date (the demo sets) or with nothing dropped', () => {
+    store().skipDropped({ ...makeSet(0, [quiz]), droppedIds: ['x'] });
+    store().skipDropped(apiSet([served(quiz, 1)]));
+    store().startSet({ ...apiSet([served(quiz, 1)]), droppedIds: ['x'] });
+
+    expect(add).not.toHaveBeenCalled();
+  });
+});

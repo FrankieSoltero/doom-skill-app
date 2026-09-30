@@ -2,7 +2,9 @@
 // day's totals and streak. Held in memory only; the store is not persisted, so "today" means
 // since the store was created or last reset (the set round alone keeps counting across a reset).
 // Each answered card of a set the API served is also handed to the attempt outbox, which sends it
-// on its own (`sendAttemptsTo`, src/feed/outbox.ts).
+// on its own (`sendAttemptsTo`, src/feed/outbox.ts), and so is each card the app dropped from a
+// set (`droppedIds`), as skipped, when the session is served the set (`skipDropped`): the server
+// finishes a set only when every card of it has an attempt.
 import { create } from 'zustand';
 
 import type { Card, FeedSet, Summary } from '../data';
@@ -41,6 +43,8 @@ type FeedState = {
 
 type FeedActions = {
   startSet: (set: FeedSet) => void;
+  /** Hands the outbox a skip for each card dropped from `set`, which need not be started. */
+  skipDropped: (set: FeedSet) => void;
   setIndex: (index: number) => void;
   setAnswer: (cardIndex: number, answer: CardAnswer) => void;
   reachSummary: () => void;
@@ -139,6 +143,19 @@ function send(attempt: Attempt | null): void {
   if (attempt !== null) sink?.add(attempt);
 }
 
+/** A skip for each card the app dropped from `set`; none for a set without a date (the demo). */
+function skipsOf(set: FeedSet): Attempt[] {
+  const { feedDate, setNumber, droppedIds = [] } = set;
+  if (feedDate === undefined) return [];
+  return droppedIds.map((cardId) => ({
+    cardId,
+    response: { skipped: true },
+    durationMs: 0,
+    feedDate,
+    setNumber,
+  }));
+}
+
 /** The concept page the learner leaves forward for `to`, not yet sent as seen; else `null`. */
 function conceptLeft(state: FeedState, to: number): number | null {
   const from = state.index;
@@ -199,6 +216,9 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
   ...initialState,
   startSet: (set) => {
     setState((state) => started(state, set));
+  },
+  skipDropped: (set) => {
+    skipsOf(set).forEach(send);
   },
   // Moving on from a concept card sends it as seen, once per set; a page is timed from when it
   // is first shown.

@@ -39,6 +39,7 @@ const queuedSchema = z.object({
     z.strictObject({ code: z.string() }),
     z.strictObject({ rating: z.enum(['again', 'hard', 'good', 'easy']) }),
     z.strictObject({ seen: z.literal(true) }),
+    z.strictObject({ skipped: z.literal(true) }),
   ]),
   durationMs: z.number().int().nonnegative(),
   feedDate: z.string(),

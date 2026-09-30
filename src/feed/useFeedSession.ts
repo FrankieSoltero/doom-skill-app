@@ -80,6 +80,8 @@ function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: F
     handlers.start();
     try {
       const answer = await source.getNextSet();
+      // Before the filter: a set with no card left to show still has its dropped cards skipped.
+      if (answer !== null) useFeedStore.getState().skipDropped(answer);
       const set = answer === null ? null : renderablePart(answer, canRender);
       if (set !== null) onSet(set);
       if (alive.current) handlers.loaded(set);

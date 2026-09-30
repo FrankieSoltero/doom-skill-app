@@ -188,28 +188,82 @@ function isForeignExercise(item: unknown): boolean {
   return foreign;
 }
 
+/** A card the slot parser dropped, with the server id to record it as skipped by, if any. */
+type Dropped = { droppedId: string | null };
+
+/** True for a card with a server id: a UUID in `id`. */
+function hasServerId(item: unknown): item is { id: string } {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    'id' in item &&
+    typeof item.id === 'string' &&
+    UUID.test(item.id)
+  );
+}
+
+/**
+ * The id to record a dropped card by: its server id, but not a checkpoint's, which is its
+ * milestone's (the attempts endpoint takes cards only).
+ */
+function droppedIdOf(item: unknown): string | null {
+  const isCheckpoint =
+    typeof item === 'object' && item !== null && 'type' in item && item.type === 'checkpoint';
+  return hasServerId(item) && !isCheckpoint ? item.id : null;
+}
+
+/** The paths at fault in a card, each once, joined for a log line: never their content. */
+function faultPaths(error: z.ZodError): string {
+  return [...new Set(error.issues.map((issue) => issue.path.join('.')))].join('; ');
+}
+
 // One card slot. A card of an unknown type, or an exercise in a language the app does not know,
-// becomes `null` and is filtered out below, so newer content (or a set from another topic) does
-// not break an older app. Parsing slot by slot keeps each issue's path at the card's original
-// index.
-const cardSlotSchema = z.unknown().transform((item, ctx): Card | null => {
+// is dropped and filtered out below, so newer content (or a set from another topic) does not break
+// an older app. A card with a server id that fails its schema is dropped too, logged by the paths
+// at fault, so one bad card from the API does not cost the whole set; a card without one (the
+// bundled demo cards) fails the set. Each dropped card's id is kept, for the feed session to
+// record it as skipped. Parsing slot by slot keeps each issue's path at the card's original index.
+const cardSlotSchema = z.unknown().transform((item, ctx): Card | Dropped => {
   if (hasUnknownType(item) || isForeignExercise(item)) {
-    return null;
+    return { droppedId: droppedIdOf(item) };
   }
   const result = cardSchema.safeParse(item);
-  if (!result.success) {
-    result.error.issues.forEach((issue) => {
-      ctx.addIssue({ ...issue });
-    });
-    return z.NEVER;
+  if (result.success) {
+    return result.data;
   }
-  return result.data;
+  if (hasServerId(item)) {
+    logWarning('card_invalid', { paths: faultPaths(result.error) });
+    return { droppedId: droppedIdOf(item) };
+  }
+  result.error.issues.forEach((issue) => {
+    ctx.addIssue({ ...issue });
+  });
+  return z.NEVER;
 });
+
+type Slot = z.infer<typeof cardSlotSchema>;
+
+/**
+ * The set with its dropped cards taken out of `cards`; `droppedIds` names those with an id to
+ * record, and is left out when there is none.
+ */
+function withoutDropped<T extends { cards: Slot[] }>({
+  cards: slots,
+  ...set
+}: T): Omit<T, 'cards'> & { cards: Card[]; droppedIds?: string[] } {
+  const cards: Card[] = [];
+  const droppedIds: string[] = [];
+  for (const slot of slots) {
+    if (!('droppedId' in slot)) cards.push(slot);
+    else if (slot.droppedId !== null) droppedIds.push(slot.droppedId);
+  }
+  return droppedIds.length > 0 ? { ...set, cards, droppedIds } : { ...set, cards };
+}
 
 /** A calendar date as the API writes it: `YYYY-MM-DD`. */
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export const feedSetSchema = z.object({
+const feedSetShape = z.object({
   topic: topicSchema,
   setNumber: z.number().int().positive(),
   /**
@@ -217,9 +271,14 @@ export const feedSetSchema = z.object({
    * cards names it. Optional: the bundled demo sets have none (the API source requires it).
    */
   feedDate: z.string().regex(ISO_DATE).optional(),
-  cards: z.array(cardSlotSchema).transform((slots) => slots.filter((card) => card !== null)),
+  cards: z.array(cardSlotSchema),
   summary: summarySchema,
 });
+
+export const feedSetSchema = feedSetShape.transform(withoutDropped);
+
+/** A set from the API: the demo sets' schema, with the date the server stored the set for. */
+export const apiSetSchema = feedSetShape.required({ feedDate: true }).transform(withoutDropped);
 
 export type Topic = z.infer<typeof topicSchema>;
 export type Card = z.infer<typeof cardSchema>;

@@ -1,16 +1,17 @@
 // A CardSource over the API's feed (`GET /feed/today` and `GET /feed/next`), through the app's
 // one API client (rule SS-13), whose types come from the generated `schema.d.ts` (rule SS-2).
-// Every answer is untrusted: its keys are mapped (`mapFeed`) and it is parsed with the same
-// `feedSetSchema` as the demo sets before a screen sees it, which here also requires the set's
-// date (`apiSetSchema`). The recorded summary of a stored set (`GET /feed/summary`) is read the
+// Every answer is untrusted: its keys are mapped (`mapFeed`) and it is parsed with the demo sets'
+// schema before a screen sees it, which here also requires the set's date (`apiSetSchema`). A card
+// the app cannot show is dropped from the set, and the set names its id in `droppedIds`, so the
+// feed session records it as skipped and the server can finish the set. The recorded summary of a stored set (`GET /feed/summary`) is read the
 // same way (`fetchSummary`).
-import type { ZodType } from 'zod';
+import type { z, ZodType } from 'zod';
 
 import type { createApiClient } from '../api/client';
 import { ApiError } from '../api/errors';
 import { logWarning } from '../log';
 import { mapFeed } from './mapFeed';
-import { feedSetSchema, summarySchema, type FeedSet, type Summary } from './schema';
+import { apiSetSchema, summarySchema, type Summary } from './schema';
 import { FeedLoadError, type CardSource } from './source';
 
 type ApiClient = ReturnType<typeof createApiClient>;
@@ -20,10 +21,7 @@ type FeedPath = '/feed/today' | '/feed/next';
 /** What an attempt at a card of the served set must name: the set's date and its number. */
 type CurrentSet = { feedDate: string; setNumber: number };
 
-/** A set from the API: the demo sets' schema, with the date the server stored the set for. */
-const apiSetSchema = feedSetSchema.required({ feedDate: true });
-
-type ApiSet = FeedSet & CurrentSet;
+type ApiSet = z.infer<typeof apiSetSchema>;
 
 /** The API's 409 on `GET /feed/next`: the current set still has a card with no attempt. */
 function isSetUnfinished(error: unknown): boolean {
@@ -93,6 +91,7 @@ export async function fetchSummary(api: ApiClient, asked: SummaryAsk): Promise<S
  * - A 409 from next (the set is unfinished) serves the current set again from today.
  * - No active topic fails with kind `noTopic`, before any request.
  * - Any ApiError fails with its kind; the client has already applied its time limit and retries.
+ * - A set with cards the app cannot show is served without them, their ids in `droppedIds`.
  * - `currentSet()` gives the served set's date (the API's: the date the server stored it for, in
  *   the user's timezone) and number, for the attempts at its cards; `null` before the first set.
  *

@@ -287,7 +287,7 @@ export interface components {
             /** Set Number */
             set_number: number;
         };
-        AttemptResponse: components["schemas"]["ChoiceAnswer"] | components["schemas"]["CodeAnswer"] | components["schemas"]["RatingAnswer"] | components["schemas"]["SeenAnswer"];
+        AttemptResponse: components["schemas"]["ChoiceAnswer"] | components["schemas"]["CodeAnswer"] | components["schemas"]["RatingAnswer"] | components["schemas"]["SeenAnswer"] | components["schemas"]["SkippedAnswer"];
         /**
          * AttemptResult
          * @description What an attempt did (module docstring).
@@ -708,6 +708,17 @@ export interface components {
              * @constant
              */
             seen: true;
+        };
+        /**
+         * SkippedAnswer
+         * @description Any card's answer when the app could not show it (module docstring).
+         */
+        SkippedAnswer: {
+            /**
+             * Skipped
+             * @constant
+             */
+            skipped: true;
         };
         /**
          * Summary

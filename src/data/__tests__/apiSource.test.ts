@@ -167,7 +167,11 @@ describe('createApiSource: failures', () => {
 
   it('fails with kind schema for a set the schema refuses, logging the paths, not the content', async () => {
     const [first, ...rest] = response.cards;
-    const bad = { ...response, cards: [{ ...first, title: 42, body: 'secret-marker' }, ...rest] };
+    const { id: _id, ...anonymous } = first ?? {};
+    const bad = {
+      ...response,
+      cards: [{ ...anonymous, title: 42, body: 'secret-marker' }, ...rest],
+    };
     const { source } = sourceOver([json(200, bad)]);
 
     const error = await loadErrorOf(source.getNextSet());
@@ -178,6 +182,22 @@ describe('createApiSource: failures', () => {
       ['feed_invalid', { paths: 'cards.0.title' }],
     ]);
     expect(JSON.stringify(jest.mocked(logWarning).mock.calls)).not.toContain('secret-marker');
+  });
+});
+
+describe('createApiSource: cards it cannot show', () => {
+  it('serves the set without them and names their ids', async () => {
+    const [first, ...rest] = response.cards;
+    const bad = {
+      ...response,
+      cards: [{ ...first, title: 42 }, { type: 'video', id: 'x' }, ...rest],
+    };
+    const { source } = sourceOver([json(200, bad)]);
+
+    const set = await source.getNextSet();
+
+    expect(set?.cards.map((card) => card.id)).toStrictEqual(rest.map((card) => card.id));
+    expect(set?.droppedIds).toStrictEqual([first?.id]);
   });
 });
 

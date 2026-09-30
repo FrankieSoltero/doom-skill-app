@@ -28,6 +28,13 @@ describe('storage', () => {
     expect(jest.mocked(logWarning)).toHaveBeenCalledWith('outbox_entries_invalid', { count: 2 });
   });
 
+  it('keeps a stored skip and sends it', async () => {
+    const box = rig(JSON.stringify([{ ...attempt(7, { skipped: true }), clientAttemptId: 'x-1' }]));
+    await settle();
+
+    expect(box.post.mock.calls[0]?.[0].response).toStrictEqual({ skipped: true });
+  });
+
   it('sends what an earlier run left as soon as it is made', async () => {
     const box = rig(JSON.stringify([{ ...attempt(7), clientAttemptId: 'left-1' }]));
     expect(box.outbox.pending()).toBe(0);
