@@ -1,6 +1,6 @@
 /**
- * The attempt outbox's queue (src/feed/outbox.ts): the attempts not yet sent, kept in async
- * storage under one key, at most 200. What storage holds is untrusted: an entry that does not fit
+ * The attempt outbox's queue (src/feed/outbox.ts): one user's attempts not yet sent, kept in async
+ * storage under a key with the user's id (`queueKey`), at most 200. What storage holds is untrusted: an entry that does not fit
  * is dropped. The logs name kinds and counts only, never an answer's content.
  */
 import { z } from 'zod';
@@ -26,9 +26,22 @@ export type Queued = Attempt & { clientAttemptId: string };
 export type QueueStorage = {
   getItem: (key: string) => Promise<string | null>;
   setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+  getAllKeys: () => Promise<readonly string[]>;
 };
 
-const STORAGE_KEY = 'learnloop.outbox.v1';
+/** The start of every queue's key; alone, the key an earlier version kept every user's under. */
+const STORAGE_PREFIX = 'learnloop.outbox.v1';
+
+/** The key `userId`'s attempts are kept under. */
+export function queueKey(userId: string): string {
+  return `${STORAGE_PREFIX}.${userId}`;
+}
+
+/** True for a key a queue is kept under, any user's, or the earlier version's shared one. */
+export function isQueueKey(key: string): boolean {
+  return key === STORAGE_PREFIX || key.startsWith(`${STORAGE_PREFIX}.`);
+}
 const MAX_ATTEMPTS = 200;
 
 const queuedSchema = z.object({
@@ -66,13 +79,15 @@ function readStored(text: string | null): Queued[] {
 }
 
 /**
- * The attempts not yet sent, in order, kept in step with storage: read once at the start (what an
- * earlier run left goes first), then written after every change, one write after another, each
- * writing the attempts as they are then. `changed` listeners hear of every change.
+ * The attempts not yet sent, in order, kept in step with storage under `key`: read once at the
+ * start (what an earlier run left goes first), then written after every change, one write after
+ * another, each writing the attempts as they are then. `changed` listeners hear of every change.
+ * `discard()` empties it and removes its key after any write still pending; it changes nothing
+ * after that.
  */
-export function storedQueue(storage: QueueStorage) {
+export function storedQueue(storage: QueueStorage, key: string) {
   let entries: Queued[] = [];
-  let cleared = false;
+  let discarded = false;
   const listeners = new Set<() => void>();
   const changed = () => {
     listeners.forEach((listener) => {
@@ -86,24 +101,25 @@ export function storedQueue(storage: QueueStorage) {
     }
   };
   const loaded = storage
-    .getItem(STORAGE_KEY)
+    .getItem(key)
     .then(readStored)
     .catch((error: unknown) => {
       logWarning('outbox_load_failed', { kind: kindOf(error) });
       return [];
     })
     .then((earlier) => {
-      if (cleared || earlier.length === 0) return;
+      if (discarded || earlier.length === 0) return;
       entries = [...earlier, ...entries];
       keepAtMost();
       changed();
     });
   let saving: Promise<void> = loaded;
   const update = (next: Queued[]) => {
+    if (discarded) return;
     entries = next;
     keepAtMost();
     saving = saving
-      .then(() => storage.setItem(STORAGE_KEY, JSON.stringify(entries)))
+      .then(() => storage.setItem(key, JSON.stringify(entries)))
       .catch((error: unknown) => {
         logWarning('outbox_save_failed', { kind: kindOf(error) });
       });
@@ -120,9 +136,15 @@ export function storedQueue(storage: QueueStorage) {
     remove: (sent: Queued) => {
       update(entries.filter((entry) => entry !== sent));
     },
-    clear: () => {
-      cleared = true;
-      update([]);
+    discard: () => {
+      discarded = true;
+      entries = [];
+      saving = saving
+        .then(() => storage.removeItem(key))
+        .catch((error: unknown) => {
+          logWarning('outbox_remove_failed', { kind: kindOf(error) });
+        });
+      changed();
     },
     subscribe: (listener: () => void) => {
       listeners.add(listener);

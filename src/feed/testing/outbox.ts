@@ -1,10 +1,43 @@
 // Test support: the attempt outbox (src/feed/outbox.ts) over in-memory storage, a network the
-// test answers and timers it fires, shared by the outbox tests. Not app code.
+// test answers, timers it fires and a session it signs in and out, shared by the outbox tests.
+// Not app code.
 import { ApiError } from '../../api/errors';
-import { createOutbox, type Attempt, type OutboxDeps } from '../outbox';
+import { createOutbox, type Attempt, type OutboxDeps, type SessionView } from '../outbox';
 
-/** The storage key the outbox keeps its attempts under. */
-const KEY = 'learnloop.outbox.v1';
+/** The user the rig's session starts signed in as. */
+export const USER = 'user-1';
+
+/** The storage key the outbox keeps `user`'s attempts under. */
+export const keyOf = (user: string) => `learnloop.outbox.v1.${user}`;
+
+const KEY = keyOf(USER);
+
+/** A session the test moves: its state, and the listeners the outbox added. */
+export function fakeSession(initial: SessionView) {
+  let state = initial;
+  const listeners = new Set<(state: SessionView) => void>();
+  return {
+    getState: () => state,
+    subscribe: (listener: (state: SessionView) => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    /** Moves the session to `next` and tells the listeners. */
+    set: (next: SessionView) => {
+      state = next;
+      listeners.forEach((listener) => {
+        listener(state);
+      });
+    },
+  };
+}
+
+/** A signed-in state for `user`, and the signed-out and loading states. */
+export const signedIn = (user: string): SessionView => ({ status: 'signedIn', userId: user });
+export const SIGNED_OUT: SessionView = { status: 'signedOut', userId: null };
+export const LOADING: SessionView = { status: 'loading', userId: null };
 
 /** An attempt at card `n`. */
 export function attempt(n: number, response: Attempt['response'] = { choice: 1 }): Attempt {
@@ -28,9 +61,16 @@ export const settle = () =>
 /** A network failure, as the API client reports it. */
 export const offline = () => new ApiError('offline', 0);
 
-/** The outbox over in-memory storage holding `stored`, a network the test answers, and timers. */
-export function rig(stored: string | null = null) {
-  const saved = new Map<string, string>(stored === null ? [] : [[KEY, stored]]);
+/**
+ * The outbox over in-memory storage, a network the test answers, timers, and a session signed in
+ * as `USER` unless `session` says otherwise. `stored` is what storage holds under `USER`'s key;
+ * `saved` may hold more.
+ */
+export function rig(
+  stored: string | null = null,
+  { session = fakeSession(signedIn(USER)), saved = new Map<string, string>() } = {},
+) {
+  if (stored !== null) saved.set(KEY, stored);
   const answers: (ApiError | Error | null)[] = [];
   const timers: Timer[] = [];
   let ids = 0;
@@ -44,10 +84,16 @@ export function rig(stored: string | null = null) {
       saved.set(key, value);
       return Promise.resolve();
     }),
+    removeItem: jest.fn((key: string) => {
+      saved.delete(key);
+      return Promise.resolve();
+    }),
+    getAllKeys: jest.fn(() => Promise.resolve([...saved.keys()])),
   };
   const outbox = createOutbox({
     post,
     storage,
+    session,
     schedule: (run, ms) => {
       const timer = { ms, run, cancelled: false };
       timers.push(timer);
@@ -62,6 +108,8 @@ export function rig(stored: string | null = null) {
     outbox,
     post,
     storage,
+    session,
+    saved,
     answers,
     live,
     /** The ids of the attempts posted, in order. */

@@ -1,10 +1,11 @@
-// The attempt outbox (src/feed/outbox.ts): what it keeps in async storage, clearing, counting,
-// and the app's outbox with the demo sets. Nothing leaves the test.
+// The attempt outbox (src/feed/outbox.ts): what it keeps in async storage, counting, and the app's
+// outbox with the demo sets. Keeping each user's attempts apart is in outbox.user.test.ts. Nothing
+// leaves the test.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { logWarning } from '../../log';
 import { createOutbox, outbox } from '../outbox';
-import { attempt, offline, rig, settle } from '../testing/outbox';
+import { SIGNED_OUT, attempt, offline, rig, settle } from '../testing/outbox';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -64,6 +65,7 @@ describe('storage', () => {
     const other = createOutbox({
       post: box.post,
       storage: box.storage,
+      session: box.session,
       schedule: () => () => undefined,
       newId: () => 'mem-1',
     });
@@ -78,25 +80,11 @@ describe('storage', () => {
   });
 });
 
-describe('clear, pending and subscribe', () => {
-  it('clears the attempts, the storage and the retry', async () => {
-    const box = rig();
-    box.answers.push(offline());
-    box.outbox.add(attempt(1));
-    await settle();
-
-    box.outbox.clear();
-    await settle();
-
-    expect(box.outbox.pending()).toBe(0);
-    expect(box.kept()).toStrictEqual([]);
-    expect(box.live()).toStrictEqual([]);
-  });
-
-  it('does not bring back what an earlier run left when cleared before it was read', async () => {
+describe('sign-out, pending and subscribe', () => {
+  it('does not bring back what an earlier run left when signed out before it was read', async () => {
     const box = rig(JSON.stringify([{ ...attempt(7), clientAttemptId: 'left-1' }]));
 
-    box.outbox.clear();
+    box.session.set(SIGNED_OUT);
     await settle();
 
     expect(box.outbox.pending()).toBe(0);
@@ -125,7 +113,6 @@ describe('the app outbox with the demo sets (this run has no API)', () => {
     await outbox.flush();
     const leave = outbox.subscribe(() => undefined);
     leave();
-    outbox.clear();
 
     expect(outbox.pending()).toBe(0);
     expect(AsyncStorage.getItem).not.toHaveBeenCalled();

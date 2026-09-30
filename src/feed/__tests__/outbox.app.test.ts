@@ -35,10 +35,17 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
       mockSaved.set(key, value);
       return Promise.resolve();
     },
+    removeItem: (key: string) => {
+      mockSaved.delete(key);
+      return Promise.resolve();
+    },
+    getAllKeys: () => Promise.resolve([...mockSaved.keys()]),
   },
 }));
 
-const KEY = 'learnloop.outbox.v1';
+const KEY = 'learnloop.outbox.v1.user-1';
+const SIGNED_IN = { status: 'signedIn', userId: 'user-1' } as const;
+const SIGNED_OUT = { status: 'signedOut', userId: null } as const;
 const CARD_ID = '00000000-0000-4000-8000-000000000001';
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SET: FeedSet = {
@@ -54,8 +61,8 @@ const settle = () =>
 
 const answered = (status: number) => Promise.resolve(new Response(JSON.stringify({}), { status }));
 
-/** The outbox of the case running, cleared after it so no retry timer outlives the case. */
-let running: { clear: () => void } | undefined;
+/** The session of the case running, signed out after it so no retry timer outlives the case. */
+let running: typeof import('../../auth/useSession').useSession | undefined;
 
 /** The app's modules, loaded afresh, and the app-state listeners the outbox added. */
 function loadApp() {
@@ -80,7 +87,8 @@ function loadApp() {
     };
   });
   if (app === undefined) throw new Error('the app modules did not load');
-  running = app.outbox;
+  running = app.session.useSession;
+  running.setState(SIGNED_IN);
   return { ...app, foreground };
 }
 
@@ -97,7 +105,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  running?.clear();
+  running?.setState(SIGNED_OUT);
   running = undefined;
   jest.restoreAllMocks();
 });
@@ -109,6 +117,11 @@ describe('the app outbox, with the API', () => {
     jest.isolateModules(() => {
       jest.requireActual<typeof import('../useFeedSession')>('../useFeedSession');
       store = jest.requireActual<typeof import('../store')>('../store').useFeedStore;
+      running =
+        jest.requireActual<typeof import('../../auth/useSession')>(
+          '../../auth/useSession',
+        ).useSession;
+      running.setState(SIGNED_IN);
     });
     if (store === undefined) throw new Error('the store did not load');
 
@@ -173,17 +186,17 @@ describe('the app outbox, with the API', () => {
     expect(app.outbox.pending()).toBe(0);
   });
 
-  it('clears the outbox when the user signs out', async () => {
+  it("keeps the user's attempts under the user's key, and removes them on sign-out", async () => {
     mockSend.mockImplementation(() => answered(503));
     const app = loadApp();
     answer(app.store);
     await settle();
-    app.session.useSession.setState({ status: 'signedIn', userId: 'user-1' });
+    expect(JSON.parse(mockSaved.get(KEY) ?? '[]')).toHaveLength(1);
 
     await app.session.signOut();
     await settle();
 
     expect(app.outbox.pending()).toBe(0);
-    expect(mockSaved.get(KEY)).toBe('[]');
+    expect(mockSaved.has(KEY)).toBe(false);
   });
 });
