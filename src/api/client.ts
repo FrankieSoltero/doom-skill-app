@@ -46,8 +46,11 @@ export type ApiClientDeps = {
   signOut: () => Promise<void>;
 };
 
-/** A new UUID v4, from `crypto.randomUUID` where it exists, else from `getRandomValues`. */
-function requestId(): string {
+/**
+ * A new UUID v4, from `crypto.randomUUID` where it exists, else from `getRandomValues`: each
+ * request's `X-Request-ID`, and each attempt's `client_attempt_id` (src/feed/outbox.ts).
+ */
+export function newUuid(): string {
   const random: Partial<Crypto> & Pick<Crypto, 'getRandomValues'> = globalThis.crypto;
   if (random.randomUUID !== undefined) {
     return random.randomUUID();
@@ -74,7 +77,7 @@ async function attemptHeaders(deps: ApiClientDeps, request: Request): Promise<He
   } else {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  headers.set('X-Request-ID', requestId());
+  headers.set('X-Request-ID', newUuid());
   return headers;
 }
 

@@ -5,6 +5,9 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { FeedLoadError, type Card, type CardSource, type FeedSet } from '../data';
 import { logError, logWarning } from '../log';
 import { canAdvanceFrom, canGoTo, nextMove } from './feedGate';
+// Loaded for its effect: the app's attempt outbox installs itself as the store's sink for answered
+// cards, so it is in place before the session draws any card.
+import './outbox';
 import { useFeedStore } from './store';
 
 /**
