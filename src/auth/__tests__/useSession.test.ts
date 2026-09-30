@@ -267,7 +267,9 @@ describe('signOut', () => {
 
     await module.signOut();
 
+    // This device only: the owner's other devices stay signed in.
     expect(fake.client.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(fake.client.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(secure.removeItem).not.toHaveBeenCalled();
     expect(module.useSession.getState()).toStrictEqual({ status: 'signedOut', userId: null });
     expect(listener).toHaveBeenCalledTimes(1);

@@ -110,16 +110,17 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 /**
- * Signs out: Supabase removes the stored session (and revokes it on the server), and the user's
- * data is cleared once. When Supabase fails (for example offline with an expired token), the
- * stored session is removed here, so the next launch starts signed out.
+ * Signs this device out: Supabase removes the stored session (and revokes this session on the
+ * server; the `local` scope leaves the owner's other devices signed in), and the user's data is
+ * cleared once. When Supabase fails (for example offline with an expired token), the stored
+ * session is removed here, so the next launch starts signed out.
  */
 export async function signOut(): Promise<void> {
   const hadUser = useSession.getState().userId !== null;
   if (supabase !== null) {
     let failed: unknown = null;
     try {
-      failed = (await supabase.auth.signOut()).error;
+      failed = (await supabase.auth.signOut({ scope: 'local' })).error;
     } catch (error) {
       failed = error;
     }
