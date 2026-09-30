@@ -2,7 +2,7 @@
 // moves into store actions under the gating rule. No rendering; the screen draws what it returns.
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import type { Card, CardSource, FeedSet } from '../data';
+import { FeedLoadError, type Card, type CardSource, type FeedSet } from '../data';
 import { logError, logWarning } from '../log';
 import { canAdvanceFrom, canGoTo, nextMove } from './feedGate';
 import { useFeedStore } from './store';
@@ -13,12 +13,17 @@ import { useFeedStore } from './store';
  */
 const TOAST_MS = 1400;
 
-type SessionStatus = 'loading' | 'ready' | 'error' | 'empty';
+type SessionStatus = 'loading' | 'ready' | 'error' | 'empty' | 'noTopic';
 /** Where loading the next set stands: the hook's `nextSetStatus`, which the Summary shows. */
 export type NextSetStatus = 'idle' | 'loading' | 'error' | 'none';
 type CardFilter = (card: Card) => boolean;
 
 const acceptAll: CardFilter = () => true;
+
+/** True for the source's failure when the learner has no active topic: nothing was asked. */
+function isNoTopic(error: unknown): boolean {
+  return error instanceof FeedLoadError && error.kind === 'noTopic';
+}
 
 /** No page has failed. Shared and read-only; a failure makes a new set. */
 const NO_FAILED_PAGES: ReadonlySet<number> = new Set();
@@ -107,6 +112,10 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
       setStatus(set === null ? 'empty' : 'ready');
     },
     failed: (error) => {
+      if (isNoTopic(error)) {
+        setStatus('noTopic');
+        return;
+      }
       logError('feed_load_failed', error);
       setStatus('error');
     },
@@ -216,7 +225,8 @@ function sessionStatus(set: FeedSet | null, loaded: SessionStatus): SessionStatu
  * all see the same cards; a set with none left counts as no set.
  *
  * - `status`: `ready` whenever the store holds a set; otherwise the first set's load (`loading`,
- *   `error` or `empty`). `retry` asks the source again after an error.
+ *   `error`, `empty`, or `noTopic` when the source has no active topic to ask for). `retry` asks
+ *   the source again after an error.
  * - `set`, `index`: the store's set and page. The last page is the Summary.
  * - `canAdvance`: the gate for moving on from the current page.
  * - `goTo(index)`: shows a page: any page back, or the next one through an open gate; anything

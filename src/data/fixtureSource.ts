@@ -32,6 +32,7 @@ function parseFeedSet(raw: unknown): FeedSet {
   const result = feedSetSchema.safeParse(raw);
   if (!result.success) {
     throw new FeedLoadError(`Card set failed validation: ${describeIssues(result.error)}`, {
+      kind: 'schema',
       cause: result.error,
     });
   }

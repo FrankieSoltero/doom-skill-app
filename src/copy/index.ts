@@ -50,6 +50,10 @@ export const copy = deepFreeze({
   loadFailed: "Couldn't load your cards.",
   /** The Today screen when the card source has no set to give. */
   nothingYet: 'Nothing to learn yet.',
+  /** The Today screen with no active topic: nothing to ask the server for. */
+  noTopic: 'Pick a topic to start learning.',
+  /** The button under `noTopic`, to the Explore tab. */
+  exploreTopics: 'Explore topics',
   /** The fallback card shown in place of a card that failed to render. */
   cardFailed: "This card couldn't be shown.",
   /** The whole screen when the app itself failed to render; Retry draws it again. */

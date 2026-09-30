@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { openSkillTree } from '../../src/components/FeedScreen';
 import { textStyleOf, viewStyleOf } from '../../src/components/testing/styles';
-import { cardSource } from '../../src/data';
+import { cardSource, FeedLoadError } from '../../src/data';
 import { useFeedStore } from '../../src/feed/store';
 import { cardsByType, makeSet } from '../../src/feed/testing/sets';
 import { colors, type } from '../../src/theme';
@@ -117,6 +117,16 @@ describe('tab routes', () => {
     expect(router.getPathname()).toBe('/tree');
     expect(screen.getByRole('tab', { name: 'Tree' })).toBeSelected();
     expect(screen.getByTestId('placeholder-screen')).toHaveTextContent('Skill tree');
+  });
+
+  it("with no active topic, the Today screen's Explore button switches to the Explore tab", async () => {
+    getNextSet.mockRejectedValueOnce(new FeedLoadError('No active topic', { kind: 'noTopic' }));
+    const router = renderRouter(ROUTES, { initialUrl: '/' });
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Explore topics' }));
+
+    expect(router.getPathname()).toBe('/explore');
+    expect(screen.getByRole('tab', { name: 'Explore' })).toBeSelected();
   });
 
   it('pressing the Today tab from another tab renders /', () => {

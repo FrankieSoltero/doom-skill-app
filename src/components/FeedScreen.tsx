@@ -108,8 +108,16 @@ function CardPage({ card, index, round, session, drawCard }: CardPageProps) {
   );
 }
 
-/** How the ready feed draws a card and the Summary, and what the Summary's `View skill tree` does. */
-type ScreenActions = { drawCard: CardDrawer; drawSummary: SummaryDrawer; onViewTree: () => void };
+/**
+ * How the ready feed draws a card and the Summary, what the Summary's `View skill tree` does, and
+ * what the no-topic screen's button does.
+ */
+type ScreenActions = {
+  drawCard: CardDrawer;
+  drawSummary: SummaryDrawer;
+  onViewTree: () => void;
+  onExplore: () => void;
+};
 
 type DrawnSummaryProps = {
   drawSummary: SummaryDrawer;
@@ -216,6 +224,15 @@ function FeedBody({ session, ...actions }: ScreenActions & { session: FeedSessio
       <ErrorScreen message={copy.loadFailed} actionLabel={copy.retry} onAction={session.retry} />
     );
   }
+  if (session.status === 'noTopic') {
+    return (
+      <ErrorScreen
+        message={copy.noTopic}
+        actionLabel={copy.exploreTopics}
+        onAction={actions.onExplore}
+      />
+    );
+  }
   if (session.status === 'empty') return <ErrorScreen message={copy.nothingYet} />;
   if (session.set === null) return <FeedLoading />;
   return <ReadyFeed set={session.set} session={session} {...actions} />;
@@ -224,6 +241,11 @@ function FeedBody({ session, ...actions }: ScreenActions & { session: FeedSessio
 /** Switches to the Tree tab: what the Summary's `View skill tree` does in the app. */
 export function openSkillTree(): void {
   router.navigate('/tree');
+}
+
+/** Switches to the Explore tab: what the no-topic screen's button does in the app. */
+function openExplore(): void {
+  router.navigate('/explore');
 }
 
 type FeedScreenProps = {
@@ -237,13 +259,15 @@ type FeedScreenProps = {
   renderSummary?: SummaryDrawer;
   /** What the Summary's `View skill tree` does. `openSkillTree` unless a test passes its own. */
   onViewTree?: () => void;
+  /** What the no-topic screen's button does. Switches to Explore unless a test passes its own. */
+  onExplore?: () => void;
 };
 
 /**
  * The Today feed (docs/design/card-feed/README.md:24-45): on a paper ground, while the first set
  * loads, a loading line; then the feed header over the pager, with the gating toast over the
  * pager's foot. A failed load shows an error screen with Retry; a source with nothing to give
- * shows one without. Card types the registry cannot draw are left out of the set. The tab bar
+ * shows one without; with no active topic, one with a button to Explore. Card types the registry cannot draw are left out of the set. The tab bar
  * belongs to the tab layout, not to this screen.
  *
  * The root pads for the top safe-area inset in every state; the tab bar below it covers the
@@ -258,6 +282,7 @@ export function FeedScreen({
   canRenderCard: canDraw = canRenderCard,
   renderSummary: drawSummary = renderSummary,
   onViewTree = openSkillTree,
+  onExplore = openExplore,
 }: FeedScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useFeedSession(source, canDraw);
@@ -269,6 +294,7 @@ export function FeedScreen({
         drawCard={drawCard}
         drawSummary={drawSummary}
         onViewTree={onViewTree}
+        onExplore={onExplore}
       />
     </View>
   );
