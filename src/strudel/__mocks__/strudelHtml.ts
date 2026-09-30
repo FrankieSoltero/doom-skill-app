@@ -5,3 +5,4 @@
 
 export const STRUDEL_HTML: string = '<!doctype html><html><body></body></html>';
 export const STRUDEL_BUNDLE_VERSION: string = 'test';
+export const FRAME_GUARD_SCRIPT: string = 'true;';

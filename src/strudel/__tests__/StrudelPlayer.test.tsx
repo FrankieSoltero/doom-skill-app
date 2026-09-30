@@ -5,8 +5,7 @@ import type { WebView } from 'react-native-webview';
 import RNCWebViewModule from 'react-native-webview/lib/NativeRNCWebViewModule';
 import RealWebView from 'react-native-webview/lib/WebView';
 
-import { SILENCE_DIALOGS_SCRIPT } from '../dialogScript';
-import { STRUDEL_HTML } from '../generated/strudelHtml';
+import { FRAME_GUARD_SCRIPT, STRUDEL_HTML } from '../generated/strudelHtml';
 import { sendToPage, StrudelPlayer } from '../StrudelPlayer';
 import { fireWebViewEvent, navigation, postRaw, webView } from '../testing/webview';
 
@@ -64,9 +63,10 @@ const WEBVIEW_PROPS = {
   geolocationEnabled: false,
   allowsBackForwardNavigationGestures: false,
   mediaCapturePermissionGrantType: 'deny',
-  // react-native-webview 13.16.1 has no prop that turns its native dialogs off: the page's own
-  // dialogs are replaced before any of its content runs, in every frame (see dialogScript.ts).
-  injectedJavaScriptBeforeContentLoaded: SILENCE_DIALOGS_SCRIPT,
+  // react-native-webview 13.16.1 has no prop that turns its native dialogs off, and CSP does not
+  // govern WebRTC: both are replaced before any content runs, in every frame (page/dialogs.js and
+  // page/webrtc.js, built into the generated module; scripts/__tests__/build-strudel.test.mjs runs it).
+  injectedJavaScriptBeforeContentLoaded: FRAME_GUARD_SCRIPT,
   injectedJavaScriptBeforeContentLoadedForMainFrameOnly: false,
 };
 

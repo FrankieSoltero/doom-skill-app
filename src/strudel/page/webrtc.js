@@ -1,6 +1,7 @@
 // Blocks WebRTC in the page. player.js calls it on the page's window before Strudel starts, so
-// before any card code runs, and on each frame's window as it removes the frame;
-// scripts/__tests__/webrtc.test.mjs tests it under Node.
+// before any card code runs, and frames.js on each frame's window it can read as it removes the
+// frame; scripts/build-strudel.mjs also bundles it into the script the WebView runs before
+// content in every frame (FRAME_GUARD_SCRIPT). scripts/__tests__/webrtc.test.mjs tests it.
 //
 // The page's Content-Security-Policy (index.html) limits fetches to raw.githubusercontent.com, but
 // CSP does not govern WebRTC: code from card data could open a peer connection or a data channel

@@ -1,9 +1,12 @@
-// Tests for the page's guards against JavaScript dialogs and frames (src/strudel/page/player.js):
+// Tests for the page's guards against JavaScript dialogs and frames (src/strudel/page/dialogs.js,
+// frames.js, and startPage in player.js):
 // learner code must not be able to put a native alert, confirm or prompt over the app.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { removeFrames, silenceDialogs, startPage } from '../../src/strudel/page/player.js';
+import { silenceDialogs } from '../../src/strudel/page/dialogs.js';
+import { removeFrames } from '../../src/strudel/page/frames.js';
+import { startPage } from '../../src/strudel/page/player.js';
 
 const NAMES = ['alert', 'confirm', 'prompt', 'print'];
 

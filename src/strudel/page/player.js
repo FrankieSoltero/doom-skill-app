@@ -8,6 +8,8 @@
 //   Page to app: {type:'ready'}, {type:'error', message}, {type:'step', step}, {type:'needsNetwork'}
 
 import { createAudioPreparer } from './audio.js';
+import { silenceDialogs } from './dialogs.js';
+import { closeFrameAccess, removeFrames } from './frames.js';
 import { createTicker } from './steps.js';
 import { blockWebRtc } from './webrtc.js';
 
@@ -193,85 +195,16 @@ export function createPlayer({ repl, audio, post, timers }) {
   return { handle, reportError, onLog, onNetworkFailure };
 }
 
-// Learner code runs in this page, and react-native-webview 13.16.1 shows `alert`, `confirm` and
-// `prompt` as native alerts over the app (RNCWebViewImpl.m), with page-controlled text; no prop
-// turns that off. The WebView replaces them in every frame before any content runs
-// (src/strudel/dialogScript.ts); the page replaces them again here, and `print`, before any
-// learner code can run, with functions that show nothing and return what a dismissed dialog
-// returns. They are read-only and non-configurable, so a snippet cannot assign them back. A frame
-// a snippet creates has a fresh `window`: removeFrames silences each frame's window and blocks its
-// WebRTC before it takes the frame out, but a mutation observer runs after the snippet's
-// synchronous code; the WebView's own injection into every frame is meant to cover that gap for
-// the dialogs (not yet checked on a device for a frame a script creates), not for WebRTC.
-// `document.open()` from learner code also removes the page's `message` listener: the player then
-// stops answering, and the app's readiness and playing state go stale until the card calls
-// `reset()` (the app's play watchdog reports it).
-const DIALOGS = {
-  alert: () => undefined,
-  confirm: () => false,
-  prompt: () => null,
-  print: () => undefined,
-};
-const FRAME_SELECTOR = 'iframe, frame, object, embed';
-const ELEMENT_NODE = 1;
+// Learner code runs in this page. Before any of it can run, startPage replaces the page's dialogs
+// (dialogs.js), blocks its WebRTC (webrtc.js), closes every way to a frame's window (frames.js)
+// and removes each frame added to the document. The WebView also runs the dialog and WebRTC guards
+// before any content in every frame (FRAME_GUARD_SCRIPT). `document.open()` from learner code removes
+// the page's `message` listener: the player then stops answering, and the app's readiness and
+// playing state go stale until the card calls `reset()` (the app's play watchdog reports it).
 
 /**
- * Replaces the window's dialogs with silent, non-writable, non-configurable stubs.
- * @param {object} win
- */
-export function silenceDialogs(win) {
-  for (const [name, value] of Object.entries(DIALOGS)) {
-    try {
-      Object.defineProperty(win, name, { value, writable: false, configurable: false });
-    } catch {
-      // The engine will not let this one be replaced. The page must still start and post ready,
-      // so it goes on; the device checklist covers each dialog.
-    }
-  }
-}
-
-/**
- * Silences a frame's own window and blocks its WebRTC, then takes the frame out. A window that
- * cannot be read (another origin) is left alone; the frame is removed all the same.
- * @param {Element & { contentWindow?: object | null }} frame
- */
-function removeFrame(frame) {
-  try {
-    const win = frame.contentWindow;
-    if (win) {
-      silenceDialogs(win);
-      blockWebRtc(win);
-    }
-  } catch {
-    // Not readable from here: nothing in it can be changed, and it is removed below.
-  }
-  frame.remove();
-}
-
-/**
- * Removes every frame added to the document from now on; the page has no use for frames. Each
- * frame's window is silenced first (removeFrame). It observes the document itself, not its root
- * element, which `document.open()` replaces.
- * @param {Node} doc
- * @param {typeof MutationObserver} Observer
- */
-export function removeFrames(doc, Observer) {
-  /** @param {Node} node */
-  const sweep = (node) => {
-    if (node.nodeType !== ELEMENT_NODE) return;
-    const element = /** @type {Element} */ (node);
-    if (element.matches(FRAME_SELECTOR)) removeFrame(element);
-    else for (const frame of element.querySelectorAll(FRAME_SELECTOR)) removeFrame(frame);
-  };
-  const observer = new Observer((records) => {
-    for (const record of records) record.addedNodes.forEach(sweep);
-  });
-  observer.observe(doc, { childList: true, subtree: true });
-}
-
-/**
- * Wires the page to the real window and Strudel: silences dialogs, blocks WebRTC and frames first
- * (before Strudel, so before any card code), then starts
+ * Wires the page to the real window and Strudel: silences dialogs, blocks WebRTC, closes frames'
+ * windows and removes frames first (before Strudel, so before any card code), then starts
  * Strudel, posts ready once it has initialized, then handles the app's messages. If Strudel fails
  * to start, the page stays silent and the app gives up waiting for ready.
  * @param {Window & Timers & { ReactNativeWebView?: { postMessage(raw: string): void } }} win
@@ -280,6 +213,7 @@ export function removeFrames(doc, Observer) {
 export async function startPage(win, strudel) {
   silenceDialogs(win);
   blockWebRtc(win);
+  closeFrameAccess(win);
   removeFrames(win.document, win.MutationObserver);
   const post = createPoster(win);
   /** @type {Player | undefined} */

@@ -3,10 +3,10 @@
 // replaces the constructors, before any card code runs, with functions that throw.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import vm from 'node:vm';
 
 import { startPage } from '../../src/strudel/page/player.js';
 import { WEBRTC_BLOCKED, blockWebRtc } from '../../src/strudel/page/webrtc.js';
+import { snippetRepl } from './fakes.mjs';
 
 const NAMES = ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel'];
 
@@ -86,27 +86,6 @@ function pageWindow() {
     clearInterval,
   });
   return { win, built, sent, listeners };
-}
-
-/**
- * A REPL that runs a snippet as Strudel's does: as script in the page's global scope, reporting a
- * throw through onEvalError and resolving to undefined.
- */
-function snippetRepl(win, onEvalError) {
-  const context = vm.createContext(win);
-  return {
-    scheduler: { now: () => 0, cps: 0.5 },
-    evaluate: async (code) => {
-      try {
-        return vm.runInContext(code, context) ?? {};
-      } catch (error) {
-        onEvalError(error);
-        return undefined;
-      }
-    },
-    start: async () => {},
-    stop: () => {},
-  };
 }
 
 test('Page: a snippet calling new RTCPeerConnection() reports an error and opens nothing', async () => {

@@ -1,6 +1,8 @@
-// Fakes shared by the page's audio tests (audio.test.mjs and samples.test.mjs): a clock whose
-// timeouts run only when a test moves it on, and Strudel's audio functions and REPL. Not a test
-// file itself: the Node test glob is scripts/__tests__/*.test.mjs.
+// Fakes shared by the page's tests: a clock whose timeouts run only when a test moves it on,
+// Strudel's audio functions and REPL, and a REPL that runs snippets in a window. Not a test file
+// itself: the Node test glob is scripts/__tests__/*.test.mjs.
+import vm from 'node:vm';
+
 import { createAudioPreparer } from '../../src/strudel/page/audio.js';
 import { createPlayer } from '../../src/strudel/page/player.js';
 
@@ -102,6 +104,27 @@ export function fakePlayer({ resume = resolved, samples = resolved } = {}) {
   };
   const player = createPlayer({ repl, audio, post: (message) => posted.push(message), timers });
   return { player, clock, calls, posted, tick: () => ticker.run() };
+}
+
+/**
+ * A REPL that runs a snippet as Strudel's does: as script in the page's global scope (`win`),
+ * reporting a throw through onEvalError and resolving to undefined.
+ */
+export function snippetRepl(win, onEvalError) {
+  const context = vm.createContext(win);
+  return {
+    scheduler: { now: () => 0, cps: 0.5 },
+    evaluate: async (code) => {
+      try {
+        return vm.runInContext(code, context) ?? {};
+      } catch (error) {
+        onEvalError(error);
+        return undefined;
+      }
+    },
+    start: async () => {},
+    stop: () => {},
+  };
 }
 
 export const LOAD = JSON.stringify({ type: 'load', code: 's("bd")' });

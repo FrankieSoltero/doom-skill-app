@@ -19,6 +19,7 @@ import vm from 'node:vm';
 
 import { transformSync } from 'esbuild';
 
+import { WEBRTC_BLOCKED } from '../../src/strudel/page/webrtc.js';
 import { renderHtml, renderModule } from '../build-strudel.mjs';
 
 const MOBILE = join(import.meta.dirname, '..', '..');
@@ -55,7 +56,7 @@ function scriptBody(html) {
 const built = { a: join(work, 'a', 'strudelHtml.ts'), b: join(work, 'b', 'strudelHtml.ts') };
 const results = { a: run('--out', built.a), b: run('--postinstall', '--out', built.b) };
 
-test('Build: writes the module with both exports, silently', async () => {
+test('Build: writes the module with its exports, silently', async () => {
   assert.equal(results.a.stderr, '');
   assert.equal(results.a.status, 0);
   const source = readFileSync(built.a, 'utf8');
@@ -73,6 +74,34 @@ test('Build: writes the module with both exports, silently', async () => {
   const notice = '/*! @strudel/web 1.3.0 | AGPL-3.0-or-later | https://codeberg.org/uzu/strudel */';
   assert.ok(scriptBody(STRUDEL_HTML).trimStart().startsWith(notice));
   assert.doesNotThrow(() => new vm.Script(scriptBody(STRUDEL_HTML)), 'the real bundle parses');
+});
+
+test("the frame guard script silences dialogs and blocks WebRTC, from the page's own modules", async () => {
+  const { FRAME_GUARD_SCRIPT } = await importModule(readFileSync(built.a, 'utf8'));
+  const used = [];
+  const win = {
+    alert: () => void used.push('alert'),
+    confirm: () => void used.push('confirm'),
+    prompt: () => void used.push('prompt'),
+    print: () => void used.push('print'),
+    RTCPeerConnection: class {
+      constructor() {
+        used.push('RTCPeerConnection');
+      }
+    },
+  };
+  const result = vm.runInNewContext(FRAME_GUARD_SCRIPT, { window: win });
+  assert.equal(result, true, 'ends with true, as react-native-webview asks');
+  assert.deepEqual(
+    [win.alert('x'), win.confirm('x'), win.prompt('x'), win.print()],
+    [undefined, false, null, undefined],
+  );
+  for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) {
+    assert.throws(() => new win[name](), { message: WEBRTC_BLOCKED });
+    assert.deepEqual(Object.getOwnPropertyDescriptor(win, name).configurable, false);
+  }
+  assert.deepEqual(used, []);
+  assert.ok(!FRAME_GUARD_SCRIPT.includes(MOBILE), 'no absolute path in the script');
 });
 
 test('No network in the page: the policy is exact and nothing loads from a URL', async () => {
@@ -108,7 +137,12 @@ globalThis.tpl = \`\${'a'}</script>\\\`\`; // </script> in a comment`;
   // Spread into this realm's Array: deepEqual compares prototypes, and the sandbox has its own.
   assert.deepEqual([...sandbox.values], values);
   assert.equal(sandbox.tpl, 'a</script>`');
-  const source = renderModule({ html, version: '1.3.0', license: 'AGPL-3.0-or-later' });
+  const source = renderModule({
+    html,
+    frameScript: 'true;',
+    version: '1.3.0',
+    license: 'AGPL-3.0-or-later',
+  });
   assert.ok(!source.includes('\u2028'), 'U+2028 is escaped in the module source');
   const { STRUDEL_HTML } = await importModule(source);
   assert.equal(STRUDEL_HTML, html);
