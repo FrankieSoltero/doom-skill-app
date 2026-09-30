@@ -102,6 +102,24 @@ const STRUDEL_MODULE = '^(react-native-webview(/|$)|@strudel/)';
 const STRUDEL_IMPORTS = [{ regex: STRUDEL_MODULE, message: STRUDEL_MESSAGE }];
 const STRUDEL_LOAD_SYNTAX = moduleLoadSyntax(STRUDEL_MODULE, STRUDEL_MESSAGE);
 
+// SS-13: the app's HTTP goes through the API client, src/api/client.ts; the Supabase client, which
+// makes its own requests, lives in src/auth/. Only those two may call `fetch` or load
+// `openapi-fetch` (with any subpath); tests elsewhere may not either. A call is `fetch(...)` or
+// `globalThis.fetch(...)` (also through `window`, `global` or `self`). This is a syntax check:
+// `fetch` passed as a value, or called through another name, is not detected.
+const HTTP_MESSAGE = 'HTTP goes through the API client, src/api/client.ts. Import api instead.';
+const HTTP_MODULE = '^openapi-fetch(/|$)';
+const HTTP_IMPORTS = [{ regex: HTTP_MODULE, message: HTTP_MESSAGE }];
+const HTTP_SYNTAX = [
+  { selector: 'CallExpression[callee.name="fetch"]', message: HTTP_MESSAGE },
+  {
+    selector:
+      'CallExpression[callee.property.name="fetch"][callee.object.name=/^(globalThis|window|global|self)$/]',
+    message: HTTP_MESSAGE,
+  },
+  ...moduleLoadSyntax(HTTP_MODULE, HTTP_MESSAGE),
+];
+
 // SS-4: the app reads its settings in one place, src/config.ts. Every other file, tests and
 // scripts included, imports `config` instead of reading `process.env` (a member access or a
 // destructuring of `process`).
@@ -148,15 +166,16 @@ module.exports = [
       'import/no-default-export': 'error',
       // TS-12, SS-10
       'no-console': 'error',
-      // SS-1, SS-6, SS-7, SS-9 (the UI folders add SS-8 below)
+      // SS-1, SS-6, SS-7, SS-9, SS-13 (the UI folders add SS-8 below)
       'no-restricted-syntax': restrictSyntax(
         COLOR_LITERAL_SYNTAX,
         CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
         STRUDEL_LOAD_SYNTAX,
+        HTTP_SYNTAX,
       ),
-      // SS-6, SS-9
-      'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS, STRUDEL_IMPORTS),
+      // SS-6, SS-9, SS-13
+      'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS, STRUDEL_IMPORTS, HTTP_IMPORTS),
       // SS-4
       'no-restricted-properties': [
         'error',
@@ -180,8 +199,8 @@ module.exports = [
   // which carry the SS-8 message, so testID, accessibilityRole and style stay allowed.
   // Exception #12 in docs/standards.md: both SS-8 checks are off in the __tests__ folders inside
   // these three folders ({app,src/components,src/cards}/**/__tests__/**) because tests assert on
-  // literal UI text. Tests there keep the color, card-data, card-type and Strudel selectors of the
-  // base.
+  // literal UI text. Tests there keep the color, card-data, card-type, Strudel and HTTP selectors
+  // of the base.
   {
     files: UI_FILES,
     ignores: ['**/__tests__/**'],
@@ -192,6 +211,7 @@ module.exports = [
         CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
         STRUDEL_LOAD_SYNTAX,
+        HTTP_SYNTAX,
         UI_TEXT_SYNTAX,
       ),
     },
@@ -220,32 +240,54 @@ module.exports = [
         CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
         STRUDEL_LOAD_SYNTAX,
+        HTTP_SYNTAX,
       ),
     },
   },
   // Exceptions #9 and #10 in docs/standards.md: SS-6 (no-restricted-imports, the card-data
   // patterns, and no-restricted-syntax, the card-data selectors) and SS-7 (no-restricted-syntax,
   // the card-type selectors) off for src/data/** because it is the one place card data is read
-  // and card types are declared. The other groups, SS-9 included, stay on.
+  // and card types are declared. The other groups, SS-9 and SS-13 included, stay on.
   {
     files: ['src/data/**'],
     rules: {
-      'no-restricted-imports': restrictImports(STRUDEL_IMPORTS),
-      'no-restricted-syntax': restrictSyntax(COLOR_LITERAL_SYNTAX, STRUDEL_LOAD_SYNTAX),
+      'no-restricted-imports': restrictImports(STRUDEL_IMPORTS, HTTP_IMPORTS),
+      'no-restricted-syntax': restrictSyntax(
+        COLOR_LITERAL_SYNTAX,
+        STRUDEL_LOAD_SYNTAX,
+        HTTP_SYNTAX,
+      ),
     },
   },
   // Exceptions #13 and #14 in docs/standards.md: SS-9 (no-restricted-imports, the Strudel
   // patterns, and no-restricted-syntax, the Strudel selectors) off for src/strudel/** and
   // scripts/** because src/strudel is the one home of Strudel and the WebView, and the build
-  // scripts bundle Strudel. The other groups stay on.
+  // scripts bundle Strudel. The other groups, SS-13 included, stay on.
   {
     files: ['src/strudel/**', 'scripts/**'],
     rules: {
-      'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS),
+      'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS, HTTP_IMPORTS),
       'no-restricted-syntax': restrictSyntax(
         COLOR_LITERAL_SYNTAX,
         CARD_DATA_LOAD_SYNTAX,
         CARD_TYPE_SYNTAX,
+        HTTP_SYNTAX,
+      ),
+    },
+  },
+  // Exceptions #51 and #52 in docs/standards.md: SS-13 (no-restricted-imports, the openapi-fetch
+  // pattern, and no-restricted-syntax, the HTTP selectors) off for src/api/client.ts, the API
+  // client, and src/auth/**, the home of the Supabase client, which makes its own requests. The
+  // other groups stay on.
+  {
+    files: ['src/api/client.ts', 'src/auth/**'],
+    rules: {
+      'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS, STRUDEL_IMPORTS),
+      'no-restricted-syntax': restrictSyntax(
+        COLOR_LITERAL_SYNTAX,
+        CARD_DATA_LOAD_SYNTAX,
+        CARD_TYPE_SYNTAX,
+        STRUDEL_LOAD_SYNTAX,
       ),
     },
   },
