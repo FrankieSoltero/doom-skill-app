@@ -16,6 +16,9 @@
  * with `access_token` and `refresh_token` strings) gives `null`, and both halves are removed. So
  * this storage holds sessions only: any other value supabase-js might keep here reads as `null`.
  *
+ * Operations on one name run one at a time, in the order they were called (`serialized`), so a
+ * read never sees one write's key with another write's ciphertext.
+ *
  * Limitation: this gives confidentiality at rest, not integrity. Counter mode has no
  * authentication tag and `aes-js` offers no MAC, so a ciphertext changed on disk decrypts without
  * error; the shape check refuses most such changes, but someone who can write the device's app
@@ -101,6 +104,34 @@ function decrypt(keyText: string, dataText: string): string | null {
   }
 }
 
+/**
+ * The last queued operation on each name. Settles, never rejects, so a failed operation does not
+ * stop the ones after it; the caller of the failed one still gets its rejection.
+ */
+const queues = new Map<string, Promise<void>>();
+
+/**
+ * Runs `operation` once every operation queued before it on `name` has settled. supabase-js
+ * (auth-js 2.117.2) has no lock of its own: `getSession()` can read while `_saveSession` writes a
+ * refreshed session, and a read that pairs one write's key with another write's ciphertext would
+ * decrypt to garbage and remove the session. Operations on different names do not wait for each
+ * other.
+ */
+function serialized<T>(name: string, operation: () => Promise<T>): Promise<T> {
+  const result = (queues.get(name) ?? Promise.resolve()).then(operation);
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  queues.set(name, tail);
+  void tail.then(() => {
+    if (queues.get(name) === tail) {
+      queues.delete(name);
+    }
+  });
+  return result;
+}
+
 async function removeBoth(name: string): Promise<void> {
   await Promise.all([
     SecureStore.deleteItemAsync(name, STORE_OPTIONS),
@@ -115,7 +146,7 @@ function unreadable(keyText: string | null, dataText: string | null): Unreadable
   return dataText === null ? 'missing_data' : 'undecodable';
 }
 
-async function getItem(name: string): Promise<string | null> {
+async function readNow(name: string): Promise<string | null> {
   const [keyText, dataText] = await Promise.all([
     SecureStore.getItemAsync(name, STORE_OPTIONS),
     AsyncStorage.getItem(name),
@@ -131,18 +162,24 @@ async function getItem(name: string): Promise<string | null> {
   return value;
 }
 
-async function setItem(name: string, value: string): Promise<void> {
+async function writeNow(name: string, value: string): Promise<void> {
   const key = randomBytes(KEY_BYTES);
   const counter = randomBytes(COUNTER_BYTES);
   const data = cipher(key, counter).encrypt(aesjs.utils.utf8.toBytes(value));
   const material = new Uint8Array(KEY_BYTES + COUNTER_BYTES);
   material.set(key);
   material.set(counter, KEY_BYTES);
-  await Promise.all([
-    SecureStore.setItemAsync(name, toBase64(material), STORE_OPTIONS),
-    AsyncStorage.setItem(name, toBase64(data)),
-  ]);
+  // The ciphertext first, the key and counter second, one after the other. A read between the
+  // two would see the old key with the new ciphertext and fail closed to `null`; `serialized`
+  // keeps any read on this name from running between them.
+  await AsyncStorage.setItem(name, toBase64(data));
+  await SecureStore.setItemAsync(name, toBase64(material), STORE_OPTIONS);
 }
 
 /** The session storage supabase-js takes as `auth.storage`; see the module comment. */
-export const secureSession = { getItem, setItem, removeItem: removeBoth };
+export const secureSession = {
+  getItem: (name: string): Promise<string | null> => serialized(name, () => readNow(name)),
+  setItem: (name: string, value: string): Promise<void> =>
+    serialized(name, () => writeNow(name, value)),
+  removeItem: (name: string): Promise<void> => serialized(name, () => removeBoth(name)),
+};
