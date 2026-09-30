@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/cards/{card_id}/attempt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attempt Card
+         * @description Grade, record and schedule an answer to a card of the user's feed (module docstring).
+         */
+        post: operations["attempt_card"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feed/next": {
         parameters: {
             query?: never;
@@ -212,6 +232,54 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AttemptNode
+         * @description The attempted card's node: its title, and the user's mastery of it before and after.
+         */
+        AttemptNode: {
+            mastery_after: components["schemas"]["Fraction"];
+            mastery_before: components["schemas"]["Fraction"];
+            /** Title */
+            title: string;
+        };
+        /**
+         * AttemptRequest
+         * @description `POST /cards/{id}/attempt`.
+         */
+        AttemptRequest: {
+            /**
+             * Client Attempt Id
+             * Format: uuid
+             */
+            client_attempt_id: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /**
+             * Feed Date
+             * Format: date
+             */
+            feed_date: string;
+            response: components["schemas"]["AttemptResponse"];
+            /** Set Number */
+            set_number: number;
+        };
+        AttemptResponse: components["schemas"]["ChoiceAnswer"] | components["schemas"]["CodeAnswer"] | components["schemas"]["RatingAnswer"] | components["schemas"]["SeenAnswer"];
+        /**
+         * AttemptResult
+         * @description What an attempt did (module docstring).
+         */
+        AttemptResult: {
+            /** Correct */
+            correct: boolean | null;
+            /** Feedback */
+            feedback: string | null;
+            /** Next Due */
+            next_due: string | null;
+            node: components["schemas"]["AttemptNode"];
+            rating: components["schemas"]["Rating"] | null;
+            /** Score */
+            score: number | null;
+        };
         Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["CheckpointCard"];
         /** CheckpointCard */
         CheckpointCard: {
@@ -240,7 +308,23 @@ export interface components {
              */
             type: "checkpoint";
         };
+        /**
+         * ChoiceAnswer
+         * @description A quiz or predict card's answer: the index of the option chosen.
+         */
+        ChoiceAnswer: {
+            /** Choice */
+            choice: number;
+        };
         Code: string;
+        /**
+         * CodeAnswer
+         * @description An exercise's answer: the learner's code.
+         */
+        CodeAnswer: {
+            /** Code */
+            code: string;
+        };
         /** ConceptCard */
         ConceptCard: {
             /** Body */
@@ -518,6 +602,15 @@ export interface components {
              */
             type: "quiz";
         };
+        /** @enum {string} */
+        Rating: "again" | "hard" | "good" | "easy";
+        /**
+         * RatingAnswer
+         * @description A review card's answer: how well the learner recalled it.
+         */
+        RatingAnswer: {
+            rating: components["schemas"]["Rating"];
+        };
         /** ReviewCard */
         ReviewCard: {
             /** Answer */
@@ -557,6 +650,17 @@ export interface components {
             label: string;
             /** Regex */
             regex: string;
+        };
+        /**
+         * SeenAnswer
+         * @description A concept card's answer: it was read.
+         */
+        SeenAnswer: {
+            /**
+             * Seen
+             * @constant
+             */
+            seen: true;
         };
         /**
          * Summary
@@ -721,6 +825,77 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    attempt_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttemptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttemptResult"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not in feed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_feed_next: {
         parameters: {
             query: {
