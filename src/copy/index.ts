@@ -54,6 +54,11 @@ export const copy = deepFreeze({
   cardFailed: "This card couldn't be shown.",
   /** The whole screen when the app itself failed to render; Retry draws it again. */
   appFailed: 'Something went wrong.',
+  /**
+   * The whole screen when the build's configuration is missing or wrong (src/config.ts). Fixed
+   * text: it never names the variable or shows its value. No Retry: only a new build fixes it.
+   */
+  configFailed: "The app isn't set up to reach its server.",
   /** The feed header's kicker on a day's first set, docs/design/card-feed/README.md:28. */
   kicker: (topic: string, day: number, horizon: number) =>
     `${topic.toUpperCase()} · DAY ${String(day)} OF ${String(horizon)}`,

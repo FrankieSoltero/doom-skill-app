@@ -102,6 +102,11 @@ const STRUDEL_MODULE = '^(react-native-webview(/|$)|@strudel/)';
 const STRUDEL_IMPORTS = [{ regex: STRUDEL_MODULE, message: STRUDEL_MESSAGE }];
 const STRUDEL_LOAD_SYNTAX = moduleLoadSyntax(STRUDEL_MODULE, STRUDEL_MESSAGE);
 
+// SS-4: the app reads its settings in one place, src/config.ts. Every other file, tests and
+// scripts included, imports `config` instead of reading `process.env` (a member access or a
+// destructuring of `process`).
+const ENV_MESSAGE = 'The app reads the environment in src/config.ts only. Import config instead.';
+
 // `no-restricted-imports` options from pattern groups. Like `no-restricted-syntax`, it is one rule
 // with one option object per file: a later config object that sets it replaces every group for the
 // files it matches, so each scope below lists every group that stays on there. To add a group,
@@ -152,6 +157,11 @@ module.exports = [
       ),
       // SS-6, SS-9
       'no-restricted-imports': restrictImports(CARD_DATA_IMPORTS, STRUDEL_IMPORTS),
+      // SS-4
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'env', message: ENV_MESSAGE },
+      ],
     },
   },
   // Project rules that need the TypeScript parser.
@@ -238,6 +248,12 @@ module.exports = [
         CARD_TYPE_SYNTAX,
       ),
     },
+  },
+  // Exception #50 in docs/standards.md: SS-4 (no-restricted-properties, `process.env`) off for
+  // src/config.ts because it is the one place the app reads the environment.
+  {
+    files: ['src/config.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
   // Exception #11 in docs/standards.md: TS-12 (no-console) off for src/log.ts because it is the
   // one home of app logging (SS-10). Every other file logs through it.

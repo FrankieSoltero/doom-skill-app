@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { ErrorScreen } from '../src/components/ErrorScreen';
+import { configError } from '../src/config';
 import { copy } from '../src/copy';
 import { logWarning } from '../src/log';
 import { colors } from '../src/theme';
@@ -64,12 +65,17 @@ export default function RootLayout() {
   }
 
   // The gesture root sits as close to the app's root as possible, as Gesture Handler asks, so the
-  // feed pager's pan works on every screen.
+  // feed pager's pan works on every screen. A configuration problem (src/config.ts, logged there)
+  // shows one fixed message in place of the routes: nothing in the app can work without it.
   return (
     <GestureHandlerRootView style={styles.root}>
-      <RootBoundary>
-        <Stack screenOptions={STACK_OPTIONS} />
-      </RootBoundary>
+      {configError === null ? (
+        <RootBoundary>
+          <Stack screenOptions={STACK_OPTIONS} />
+        </RootBoundary>
+      ) : (
+        <ErrorScreen message={copy.configFailed} />
+      )}
       <StatusBar style="dark" />
     </GestureHandlerRootView>
   );
