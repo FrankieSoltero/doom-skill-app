@@ -250,6 +250,34 @@ export const copy = deepFreeze({
     explore: 'Explore',
     profile: 'Profile',
   },
+  /**
+   * The sign-in screens (app/(auth)): the email step, then the code step. Every failure shows a
+   * fixed message from here, never the server's text, and a failure to send reads the same
+   * whether or not the address has an account.
+   */
+  signIn: {
+    title: 'Sign in',
+    emailIntro: 'Enter your email address. We will send you a 6-digit code.',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'you@example.com',
+    sendCode: 'Send code',
+    sending: 'Sending…',
+    invalidEmail: 'Enter a valid email address.',
+    sendFailed: "Couldn't send a code. Try again in a minute.",
+    /** Shown on the email step after 5 wrong codes sent the person back to it. */
+    tooManyTries: 'Too many wrong codes. Send a new one.',
+    codeTitle: 'Enter your code',
+    codeIntro: (email: string) => `We sent a 6-digit code to ${email}.`,
+    codeLabel: '6-digit code',
+    verify: 'Sign in',
+    verifying: 'Checking…',
+    wrongCode: "That code didn't work. Check it, or send a new one.",
+    verifyFailed: "Couldn't reach the server. Try again.",
+    resend: 'Send a new code',
+    resendIn: (seconds: number) => `You can send a new code in ${String(seconds)} s.`,
+    codeResent: 'A new code is on its way.',
+    changeEmail: 'Use a different email',
+  },
   /** Titles of the placeholder tabs (spec section 10 approves a title only). */
   placeholder: {
     tree: 'Skill tree',

@@ -9,12 +9,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useSession } from '../src/auth/useSession';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { ErrorScreen } from '../src/components/ErrorScreen';
-import { configError } from '../src/config';
+import { config, configError } from '../src/config';
 import { copy } from '../src/copy';
 import { logWarning } from '../src/log';
 import { colors } from '../src/theme';
@@ -74,13 +75,40 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       {configError === null ? (
         <RootBoundary>
-          <Stack screenOptions={STACK_OPTIONS} />
+          <Routes />
         </RootBoundary>
       ) : (
         <ErrorScreen message={copy.configFailed} />
       )}
       <StatusBar style="dark" />
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * The routes the session allows. With the API source, the tabs need a session: while the stored
+ * session is read, only the paper ground shows; without a session, only the sign-in group
+ * (`(auth)`) can be reached; with one, only the tabs. The guards also move a person who is on a
+ * route that closes, so signing in shows the tabs and signing out shows the email step. With the
+ * fixture source there is no sign-in, and only the tabs can be reached.
+ */
+function Routes() {
+  const status = useSession((state) => state.status);
+  const needsSession = config.dataSource === 'api';
+  if (needsSession && status === 'loading') {
+    return <View testID="session-loading" style={styles.loading} />;
+  }
+  const signedIn = !needsSession || status === 'signedIn';
+
+  return (
+    <Stack screenOptions={STACK_OPTIONS}>
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
   );
 }
 
@@ -111,4 +139,5 @@ function RootBoundary({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  loading: { flex: 1, backgroundColor: colors.paper },
 });
