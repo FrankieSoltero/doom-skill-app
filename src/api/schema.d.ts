@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Enrollments
+         * @description The user's enrollments, oldest first.
+         */
+        get: operations["list_enrollments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics": {
         parameters: {
             query?: never;
@@ -108,6 +128,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/{slug}/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enroll Topic
+         * @description Enroll in the topic, or read the enrollment that exists (module docstring).
+         */
+        post: operations["enroll_topic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}/tree": {
         parameters: {
             query?: never;
@@ -132,6 +172,54 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * EnrollRequest
+         * @description `POST /topics/{slug}/enroll`.
+         */
+        EnrollRequest: {
+            /**
+             * Daily Minutes
+             * @default 10
+             */
+            daily_minutes: number;
+            /**
+             * Horizon Days
+             * @default 14
+             */
+            horizon_days: number;
+        };
+        /**
+         * Enrollment
+         * @description A user's enrollment in a topic.
+         */
+        Enrollment: {
+            /** Daily Minutes */
+            daily_minutes: number;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Progress */
+            progress: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            status: components["schemas"]["EnrollmentStatus"];
+            /** Topic Slug */
+            topic_slug: string;
+            /** Topic Title */
+            topic_title: string;
+        };
+        /**
+         * EnrollmentList
+         * @description `GET /me/enrollments`: oldest first.
+         */
+        EnrollmentList: {
+            /** Enrollments */
+            enrollments: components["schemas"]["Enrollment"][];
+        };
+        /** @enum {string} */
+        EnrollmentStatus: "active" | "paused" | "completed";
         /**
          * ErrorBody
          * @description The shape of every fixed body, `{"detail": "..."}`, for the OpenAPI document.
@@ -478,6 +566,44 @@ export interface operations {
             };
         };
     };
+    list_enrollments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentList"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     list_topics: {
         parameters: {
             query: {
@@ -629,6 +755,86 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    enroll_topic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnrollRequest"];
+            };
+        };
+        responses: {
+            /** @description Enrolled already; the stored enrollment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Enrollment"];
+                };
+            };
+            /** @description Enrolled */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Enrollment"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not ready */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
