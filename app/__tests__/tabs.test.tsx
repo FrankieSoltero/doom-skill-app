@@ -47,12 +47,12 @@ const ROUTES = {
 };
 
 const PLACEHOLDERS = [
-  { path: '/tree', tab: 'Tree', title: 'Skill tree', Screen: TreeScreen },
   { path: '/profile', tab: 'Profile', title: 'Profile', Screen: ProfileScreen },
 ];
 
 /** The built tab screens, each with its root's test id and its title. */
 const SCREENS = [
+  { path: '/tree', tab: 'Tree', title: 'Skill tree', Screen: TreeScreen, testID: 'tree-screen' },
   {
     path: '/explore',
     tab: 'Explore',
@@ -145,7 +145,7 @@ describe('tab routes', () => {
 
     expect(router.getPathname()).toBe('/tree');
     expect(screen.getByRole('tab', { name: 'Tree' })).toBeSelected();
-    expect(screen.getByTestId('placeholder-screen')).toHaveTextContent('Skill tree');
+    expect(screen.getByTestId('tree-screen')).toHaveTextContent(/^Skill tree/);
   });
 
   it("with no active topic, the Today screen's Explore button switches to the Explore tab", async () => {
@@ -175,11 +175,12 @@ describe('tab routes', () => {
   });
 });
 
+// The built tab screens draw through TabScreen, whose own test covers their ground, inset and
+// title; each screen's test checks its root too. Some need a navigator, so they are not here.
 describe('tab screens', () => {
   it.each([
     { name: 'Today', Screen: TodayScreen, testID: 'today-screen' },
     ...PLACEHOLDERS.map(({ tab, Screen }) => ({ name: tab, Screen, testID: 'placeholder-screen' })),
-    ...SCREENS.map(({ tab, Screen, testID }) => ({ name: tab, Screen, testID })),
   ])('$name: paper ground, padded by the top safe-area inset', ({ Screen, testID }) => {
     renderWithTopInset(Screen);
 
@@ -190,15 +191,12 @@ describe('tab screens', () => {
     });
   });
 
-  it.each([...PLACEHOLDERS, ...SCREENS])(
-    '$tab: the title in the tab title style, in ink',
-    ({ title, Screen }) => {
-      renderWithTopInset(Screen);
+  it.each(PLACEHOLDERS)('$tab: the title in the tab title style, in ink', ({ title, Screen }) => {
+    renderWithTopInset(Screen);
 
-      expect(textStyleOf(screen.getByText(title))).toMatchObject({
-        ...type.tabTitle,
-        color: colors.ink,
-      });
-    },
-  );
+    expect(textStyleOf(screen.getByText(title))).toMatchObject({
+      ...type.tabTitle,
+      color: colors.ink,
+    });
+  });
 });

@@ -4,7 +4,12 @@ import { router } from 'expo-router';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
 import { useSession } from '../../../src/auth/useSession';
-import { advance, renderScreen, SCREEN_TOP_INSET } from '../../../src/components/testing/screen';
+import {
+  advance,
+  pressRetry,
+  renderScreen,
+  SCREEN_TOP_INSET,
+} from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { activeTopic, loadActiveTopic } from '../../../src/feed/useActiveTopic';
 import { colors } from '../../../src/theme';
@@ -106,8 +111,7 @@ describe('Topic detail: states', () => {
     });
     expect(screen.getByText("Couldn't load this topic.")).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
-    await advance(0);
+    await pressRetry();
 
     expect(requests).toHaveLength(2);
     expect(screen.getByRole('header', { name: 'Strudel' })).toBeOnTheScreen();

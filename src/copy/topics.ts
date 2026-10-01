@@ -1,7 +1,7 @@
 /**
- * UI strings of the topic screens: the Explore tab, the pending topic card and the topic detail
- * screen. Part of `copy` (src/copy/index.ts), which freezes them; read them through `copy`, not
- * from here.
+ * UI strings of the topic screens: the Explore tab, the pending topic card, the topic detail
+ * screen and the Tree tab. Part of `copy` (src/copy/index.ts), which freezes them; read them
+ * through `copy`, not from here.
  */
 
 /** The Explore tab (app/(tabs)/explore.tsx). */
@@ -60,4 +60,26 @@ export const topic = {
   /** The topic has no tree yet: it cannot be started. */
   notReady: 'This topic is still being built. Check back soon.',
   enrollFailed: "Couldn't start this topic. Try again.",
+} as const;
+
+/** The Tree tab (app/(tabs)/tree.tsx), README.md:156-160. */
+export const tree = {
+  /** The title before a topic is chosen. */
+  title: 'Skill tree',
+  kicker: 'Skill tree',
+  /** No active topic: the button under it opens Explore (`copy.exploreTopics`). */
+  noTopic: 'Pick a topic to see its skill tree.',
+  loadFailed: "Couldn't load the skill tree.",
+  /** The topic's tree is not built yet (a 409). */
+  notReady: 'This skill tree is still being built.',
+  empty: 'This topic has no skills yet.',
+  /** The overall bar's spoken label. */
+  overall: 'Topic progress',
+  /** The section of nodes that belong to no milestone. */
+  otherSkills: 'Other skills',
+  /** A milestone whose every node is locked, at the right of its header. */
+  locked: 'Locked',
+  /** A node row as a screen reader hears it. */
+  node: (title: string, percent: number, locked: boolean) =>
+    locked ? `${title}, locked` : `${title}, ${String(percent)}% mastered`,
 } as const;

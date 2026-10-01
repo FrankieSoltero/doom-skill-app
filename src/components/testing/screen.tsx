@@ -4,7 +4,7 @@
  * every file there as a suite. Tests that use it mock `react-native-safe-area-context` with the
  * package's Jest mock, and `src/api/client` as `src/api/testing/fakeApi.tsx` describes.
  */
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -35,4 +35,10 @@ export async function advance(ms: number): Promise<void> {
   await act(async () => {
     await jest.advanceTimersByTimeAsync(ms);
   });
+}
+
+/** Presses the screen's Retry button and lets the request it makes answer. */
+export async function pressRetry(): Promise<void> {
+  fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+  await advance(0);
 }

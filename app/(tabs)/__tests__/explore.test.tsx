@@ -3,7 +3,12 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
-import { advance, renderScreen, SCREEN_TOP_INSET } from '../../../src/components/testing/screen';
+import {
+  advance,
+  pressRetry,
+  renderScreen,
+  SCREEN_TOP_INSET,
+} from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { colors } from '../../../src/theme';
 import { useFocusEffect as mockUseFocusEffect } from '../../../src/topics/testing/focus';
@@ -102,8 +107,7 @@ describe('Explore: results', () => {
     await search('strudel');
     expect(screen.getByText("Couldn't search topics.")).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
-    await advance(0);
+    await pressRetry();
 
     expect(requests).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Open Strudel' })).toBeOnTheScreen();

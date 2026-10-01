@@ -9,7 +9,7 @@
  * here; screens still read it through `copy`.
  */
 
-import { explore, pendingTopic, topic } from './topics';
+import { explore, pendingTopic, topic, tree } from './topics';
 
 /** Freezes every nested object under `value`. Functions and primitives are left as they are. */
 function freezeChildren(value: object): void {
@@ -293,10 +293,10 @@ export const copy = deepFreeze({
   },
   /** Titles of the placeholder tabs (spec section 10 approves a title only). */
   placeholder: {
-    tree: 'Skill tree',
     profile: 'Profile',
   },
   explore,
   pendingTopic,
   topic,
+  tree,
 } as const);
