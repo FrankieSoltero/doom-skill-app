@@ -297,6 +297,14 @@ module.exports = [
     files: ['src/config.ts'],
     rules: { 'no-restricted-properties': 'off' },
   },
+  // Exception #54 in docs/standards.md: SS-4 (no-restricted-properties, `process.env`) off for
+  // scripts/check-build-tag.mjs and its test, because the EAS build hook reads EAS_BUILD_PROFILE
+  // and EXPO_PUBLIC_BUILD_TAG from the environment EAS itself sets before the app is built; it is
+  // not the app reading its own runtime configuration (that stays src/config.ts alone).
+  {
+    files: ['scripts/check-build-tag.mjs', 'scripts/__tests__/check-build-tag.test.mjs'],
+    rules: { 'no-restricted-properties': 'off' },
+  },
   // Exception #11 in docs/standards.md: TS-12 (no-console) off for src/log.ts because it is the
   // one home of app logging (SS-10). Every other file logs through it.
   {

@@ -12,7 +12,8 @@
     "make:assets": "node scripts/make-assets.mjs",
     "publish:app": "node scripts/publish-app.mjs",
     "gen:types": "openapi-typescript ../../services/api/openapi.json -o src/api/schema.d.ts",
-    "postinstall": "node scripts/build-strudel.mjs --postinstall"
+    "postinstall": "node scripts/build-strudel.mjs --postinstall",
+    "eas-build-pre-install": "node scripts/check-build-tag.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",
