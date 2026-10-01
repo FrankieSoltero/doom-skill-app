@@ -35,8 +35,8 @@ server, `answer-set.yaml` answers one set (its parameters are listed at its top)
 ## Run
 
 1. Build the app once (route A in `docs/device-builds.md`), or install an existing build:
-   `xcrun simctl install <udid> <path to LearnLoop.app>`. The build is in Xcode's DerivedData,
-   under `LearnLoop-*/Build/Products/Debug-iphonesimulator/`.
+   `xcrun simctl install <udid> <path to DoomSkill.app>`. The build is in Xcode's DerivedData,
+   under `DoomSkill-*/Build/Products/Debug-iphonesimulator/`.
 2. Start the dev server if it is not running: `pnpm --filter mobile start`.
 3. Pick a booted simulator's UDID (`xcrun simctl list devices booted`). Use one nobody is using:
    the flows relaunch the app.
