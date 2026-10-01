@@ -16,7 +16,7 @@ import { MAX_CODE_LENGTH } from '../strudel/bridge';
 import { border, colors, fonts, type } from '../theme';
 
 // Editor values from docs/design/card-feed/README.md:90 and, where it is silent, the prototype
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:149. The theme holds none.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:149. The theme holds none.
 /** Top and bottom padding, prototype line 149 ("padding:12px 14px"). */
 const PADDING_Y = 12;
 /** Side padding, prototype line 149. */

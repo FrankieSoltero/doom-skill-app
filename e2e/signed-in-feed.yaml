@@ -5,9 +5,9 @@
 #
 # The demo topic is the app's demo cards, written by `python -m scripts.seed_demo_topic`. A new
 # learner's first set is its first node's three cards: concept, quiz and exercise (set 1's).
-appId: com.frankiesoltero.learnloop
+appId: com.frankiesoltero.doomskill
 env:
-  DEV_SERVER_LINK: exp+learnloop://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+  DEV_SERVER_LINK: exp+doomskill://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
 ---
 # A new address for each run. The `example.test` domain never receives mail outside the stack.
 - evalScript: ${output.email = 'e2e-' + Date.now() + '@example.test'}

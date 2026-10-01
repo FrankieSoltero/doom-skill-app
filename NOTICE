@@ -1,9 +1,9 @@
-LearnLoop: third-party notices
+DoomSkill: third-party notices
 ==============================
 
 The app itself is licensed AGPL-3.0-or-later (see LICENSE, in this same folder).
 
-The LearnLoop mobile app bundles the third-party libraries listed below into its builds, and this
+The DoomSkill mobile app bundles the third-party libraries listed below into its builds, and this
 file reproduces their notices: for each library, its name, its version, its licence as its
 package.json states it, and the copyright lines of its LICENSE file where the package ships one.
 The full licence text of each library is in the LICENSE file of its package as published on npm.

@@ -1,8 +1,8 @@
 import { copy, deepFreeze } from '../index';
 
 describe('copy', () => {
-  it('names the app LearnLoop', () => {
-    expect(copy.appName).toBe('LearnLoop');
+  it('names the app DoomSkill', () => {
+    expect(copy.appName).toBe('DoomSkill');
   });
 
   it('is frozen', () => {
@@ -21,7 +21,7 @@ describe('copy', () => {
 
     // A frozen object throws a TypeError in strict mode and ignores the write otherwise.
     expect(thrown === null || thrown instanceof TypeError).toBe(true);
-    expect(copy.appName).toBe('LearnLoop');
+    expect(copy.appName).toBe('DoomSkill');
   });
 
   it('speaks an answered option with its verdict', () => {

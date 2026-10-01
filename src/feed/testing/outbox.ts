@@ -8,7 +8,7 @@ import { createOutbox, type Attempt, type OutboxDeps, type SessionView } from '.
 export const USER = 'user-1';
 
 /** The storage key the outbox keeps `user`'s attempts under. */
-export const keyOf = (user: string) => `learnloop.outbox.v1.${user}`;
+export const keyOf = (user: string) => `doomskill.outbox.v1.${user}`;
 
 const KEY = keyOf(USER);
 

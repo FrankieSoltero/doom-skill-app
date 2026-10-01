@@ -6,7 +6,7 @@ import { BoldText } from './BoldText';
 import { useCardTextColor } from './cardTextColor';
 
 // Badge values from docs/design/card-feed/README.md:107-109 and, where it is silent, the prototype
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:170-172. The theme holds none.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:170-172. The theme holds none.
 /** Size of the label and the message, prototype line 171 ("font-size:14px"). */
 const TEXT_SIZE = 14;
 /**

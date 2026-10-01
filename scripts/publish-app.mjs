@@ -131,7 +131,7 @@ function push(root, context) {
       { code: 3 },
     );
   }
-  git(root, 'tag', '-a', '-m', `LearnLoop app ${version} at ${sha}`, tag, branch);
+  git(root, 'tag', '-a', '-m', `DoomSkill app ${version} at ${sha}`, tag, branch);
   context.tagCreated = true;
   const refs = [`refs/heads/${branch}:refs/heads/main`, `refs/tags/${tag}:refs/tags/${tag}`];
   const result = spawn('git', ['push', '--atomic', '--quiet', remote, ...refs], root);

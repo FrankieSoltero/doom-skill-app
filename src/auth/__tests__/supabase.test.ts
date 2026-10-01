@@ -1,9 +1,9 @@
-const STORAGE_KEY = 'learnloop.session';
+const STORAGE_KEY = 'doomskill.session';
 
 describe('the Supabase client', () => {
   const storage = { marker: 'secure session' };
   const API_CONFIG = {
-    apiUrl: 'https://api.learnloop.example',
+    apiUrl: 'https://api.doomskill.example',
     supabaseUrl: 'https://project.supabase.example',
     supabaseAnonKey: 'anon-key-marker',
     dataSource: 'api',

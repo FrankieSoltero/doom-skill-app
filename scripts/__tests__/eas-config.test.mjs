@@ -11,7 +11,7 @@ import { test } from 'node:test';
 
 const MOBILE = join(import.meta.dirname, '..', '..');
 const RULE = 'REPO-7 / K18 (docs/standards.md): the eas.json shape rule';
-const BUNDLE_ID = 'com.frankiesoltero.learnloop';
+const BUNDLE_ID = 'com.frankiesoltero.doomskill';
 const PROFILE_NAMES = ['development', 'preview', 'production'];
 const PLACEHOLDER = /^REPLACE_ME/;
 const URL_LIKE = /https?:\/\//;

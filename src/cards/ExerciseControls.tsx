@@ -7,7 +7,7 @@ import { copy } from '../copy';
 import { colors, fonts } from '../theme';
 
 // Exercise button values from docs/design/card-feed/README.md:103-105 and, where it is silent,
-// the prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:162-168 and its
+// the prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:162-168 and its
 // button class (reference/_ds/industry-be146a4e-adb2-4c13-8c51-8590a0cfc099/styles.css:140-151).
 // The theme holds none.
 /** Height of each button, README.md:103 ("Two buttons, 46px"). Above the 44pt touch target. */

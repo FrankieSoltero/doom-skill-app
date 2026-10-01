@@ -5,7 +5,7 @@
 # menu. The first tap focuses the editor and puts the caret where it lands. Where the tap lands
 # on text, a second tap on the caret shows the menu; where it lands below the text, the caret
 # goes to the end and a long press shows the menu instead.
-appId: com.frankiesoltero.learnloop
+appId: com.frankiesoltero.doomskill
 ---
 - retry:
     maxRetries: 2

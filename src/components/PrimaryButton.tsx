@@ -10,7 +10,7 @@ export const BUTTON_HEIGHT = 50;
 /**
  * How far the button moves right and down while pressed. README.md:18 says "1-2px" and gives no
  * number for the button; the prototype's primary buttons use `translate(1px,1px)`
- * (docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:96).
+ * (docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:96).
  */
 const PRESSED_OFFSET = 1;
 /** Opacity of a disabled button, README.md:49. */

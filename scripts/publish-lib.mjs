@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /** The public repository. Its web form is SOURCE_REPOSITORY in src/config.ts (a test checks). */
-export const DEFAULT_REMOTE = 'git@github.com:FrankieSoltero/learnloop-app.git';
+export const DEFAULT_REMOTE = 'https://github.com/FrankieSoltero/doom-skill-app.git';
 
 // A path in the split whose name starts with `.env`, in any folder. `.env.example` files list
 // variable names without secrets and are tracked on purpose (REPO-3), so they are allowed;

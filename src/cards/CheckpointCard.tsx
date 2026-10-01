@@ -22,7 +22,7 @@ import { DismissKeyboardArea } from './DismissKeyboardArea';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 
 // Checkpoint card values from docs/design/card-feed/README.md:123-140 and, where it is silent, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:215-240. The theme holds
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:215-240. The theme holds
 // none of them.
 /** The editor's height, README.md:125 ("An ink TextInput, 104px"). */
 const EDITOR_HEIGHT = 104;

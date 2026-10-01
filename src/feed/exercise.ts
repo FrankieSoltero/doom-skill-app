@@ -2,7 +2,7 @@
 // that decides whether the code passes. Pure functions, no rendering.
 //
 // Provenance: `parseGrid` follows the reference prototype's `parseGrid`
-// (`docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html`).
+// (`docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html`).
 import type { ExerciseCard } from '../data';
 
 /** One sample's row in the step grid. `hits` always holds `STEPS` entries. */

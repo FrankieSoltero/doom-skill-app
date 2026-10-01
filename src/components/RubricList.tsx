@@ -5,7 +5,7 @@ import { copy } from '../copy';
 import { border, cardTheme, fonts } from '../theme';
 
 // Rubric values from docs/design/card-feed/README.md:130 and :138 and, where it is silent, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:222-229. The theme holds
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:222-229. The theme holds
 // none of them.
 /** The label's size, README.md:130 ("Each row is 13.5px"). */
 const LABEL_SIZE = 13.5;

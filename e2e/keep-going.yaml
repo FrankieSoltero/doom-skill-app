@@ -4,7 +4,7 @@
 #
 # Each title is computed from the cards done and their estimated seconds (sets 1 to 4 estimate
 # 405, 435, 440 and 445 seconds). Minutes are rounded; counts above twenty are written in digits.
-appId: com.frankiesoltero.learnloop
+appId: com.frankiesoltero.doomskill
 ---
 - runFlow: subflows/launch.yaml
 

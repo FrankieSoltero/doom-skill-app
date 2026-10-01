@@ -5,7 +5,7 @@ import { colors, type } from '../theme';
 import { useCardTextColor } from './cardTextColor';
 
 // Mastery row values from docs/design/card-feed/README.md:151 and the prototype,
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:256-258, which the theme lacks.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:256-258, which the theme lacks.
 /** The bar's height, README.md:151 ("a 6px bar"). */
 export const BAR_HEIGHT = 6;
 /** Gap between the text line and the bar, prototype line 256 (`gap:5px`). */

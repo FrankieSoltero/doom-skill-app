@@ -47,7 +47,7 @@ describe('scheduleDailyReminder', () => {
     expect(mocked.cancelScheduledNotificationAsync).toHaveBeenCalledWith(ID);
     expect(mocked.scheduleNotificationAsync).toHaveBeenCalledWith({
       identifier: ID,
-      content: { title: 'LearnLoop', body: 'Your cards for today are ready.' },
+      content: { title: 'DoomSkill', body: 'Your cards for today are ready.' },
       trigger: { type: 'calendar', hour: 20, minute: 30, repeats: true },
     });
   });

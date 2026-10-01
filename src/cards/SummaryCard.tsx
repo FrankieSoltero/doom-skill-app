@@ -15,7 +15,7 @@ import { SummaryActions } from './SummaryActions';
 import { progressAfterSet, summaryTitle } from './summaryText';
 
 // Summary values from docs/design/card-feed/README.md:143-153 and the prototype,
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:243-265, that the theme lacks.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:243-265, that the theme lacks.
 /** Gap between the two stat tiles, prototype line 249 (`gap:8px`). */
 const TILES_GAP = 8;
 /** Gap between the mastery heading and its rows, prototype line 253 (`gap:10px`). */

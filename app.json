@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "LearnLoop",
-    "slug": "learnloop",
-    "scheme": "learnloop",
+    "name": "DoomSkill",
+    "slug": "doomskill",
+    "scheme": "doomskill",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -13,7 +13,7 @@
       "resizeMode": "contain"
     },
     "ios": {
-      "bundleIdentifier": "com.frankiesoltero.learnloop",
+      "bundleIdentifier": "com.frankiesoltero.doomskill",
       "supportsTablet": false
     },
     "android": {

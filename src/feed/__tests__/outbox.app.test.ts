@@ -43,7 +43,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
-const KEY = 'learnloop.outbox.v1.user-1';
+const KEY = 'doomskill.outbox.v1.user-1';
 const SIGNED_IN = { status: 'signedIn', userId: 'user-1' } as const;
 const SIGNED_OUT = { status: 'signedOut', userId: null } as const;
 const CARD_ID = '00000000-0000-4000-8000-000000000001';

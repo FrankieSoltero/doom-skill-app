@@ -231,7 +231,7 @@ describe('OptionButton accessibility', () => {
   });
 });
 
-// Predict's grid options, docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:132
+// Predict's grid options, docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:132
 // and screenshots/03-predict-answered.png.
 describe('OptionButton compact', () => {
   it.each<OptionState>(['correct', 'wrong'])('%s: no icon', (state) => {

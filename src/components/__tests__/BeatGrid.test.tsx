@@ -11,7 +11,7 @@ const DEMO_CODE = 'stack(\n  s("bd ~ sd ~"),\n  s("hh*4")\n)';
 const DEMO_ROWS = parseGrid(DEMO_CODE);
 
 // Values from README.md:98-100 and, where it is silent, the prototype
-// reference/LearnLoop Card Feed v2.dc.html:151-154. The line height is 10 times the body line
+// reference/DoomSkill Card Feed v2.dc.html:151-154. The line height is 10 times the body line
 // height, 1.55, from reference/_ds/industry-be146a4e-adb2-4c13-8c51-8590a0cfc099/styles.css:108.
 const LABEL_STYLE = { width: 26, fontFamily: fonts.mono, fontSize: 10, lineHeight: 15.5 };
 const ROW_STYLE = { flexDirection: 'row', alignItems: 'center', gap: 2 };

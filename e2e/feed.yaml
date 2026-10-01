@@ -1,6 +1,6 @@
 # The feed flow: answers the six cards of set 1 in order, checks the gate toast on an unanswered
 # card, reaches the Summary, and takes a screenshot of each card and of each tab. See README.md.
-appId: com.frankiesoltero.learnloop
+appId: com.frankiesoltero.doomskill
 ---
 - runFlow: subflows/launch.yaml
 - assertVisible: '12 day streak'

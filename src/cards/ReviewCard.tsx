@@ -19,7 +19,7 @@ import { RatingRow } from './RatingRow';
 import type { Rating } from './RatingRow';
 
 // Review card values from docs/design/card-feed/README.md:114-121 and, where it gives none, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html, that the theme lacks.
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html, that the theme lacks.
 /**
  * How long after a rating the card moves on, README.md:121 ("auto-advances 550ms after rating").
  * `motion` in the theme holds no such timing.

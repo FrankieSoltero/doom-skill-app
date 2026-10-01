@@ -9,7 +9,7 @@ import { useCardTextColor } from './cardTextColor';
 export const BUTTON_HEIGHT = 50;
 /**
  * How far the button moves right and down while pressed, as `PrimaryButton` does: the prototype's
- * buttons use `translate(1px,1px)` (docs/design/card-feed/reference/LearnLoop Card Feed
+ * buttons use `translate(1px,1px)` (docs/design/card-feed/reference/DoomSkill Card Feed
  * v2.dc.html:96).
  */
 const PRESSED_OFFSET = 1;

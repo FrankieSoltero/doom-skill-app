@@ -7,7 +7,7 @@ import { border, colors, fonts, hardShadow, type } from '../theme';
 import { doneCount, kickerText, segmentFills, streakCount } from './feedHeaderText';
 
 // Feed header values from docs/design/card-feed/README.md:27-30 (or, where it gives none, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html) that the theme lacks.
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html) that the theme lacks.
 /** Header padding, top / sides / bottom, README.md:27 ("Padding is 6/18/12"). */
 const HEADER_PADDING_TOP = 6;
 const HEADER_PADDING_X = 18;

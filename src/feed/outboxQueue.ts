@@ -31,7 +31,7 @@ export type QueueStorage = {
 };
 
 /** The start of every queue's key; alone, the key an earlier version kept every user's under. */
-const STORAGE_PREFIX = 'learnloop.outbox.v1';
+const STORAGE_PREFIX = 'doomskill.outbox.v1';
 
 /** The key `userId`'s attempts are kept under. */
 export function queueKey(userId: string): string {

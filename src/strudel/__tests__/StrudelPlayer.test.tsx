@@ -152,7 +152,7 @@ const HOSTILE_URLS = [
   'tel:1',
   'sms:1',
   'mailto:a@example.com',
-  'learnloop://x',
+  'doomskill://x',
   'file:///etc/passwd',
   'javascript:alert(1)',
   'data:text/html,x',

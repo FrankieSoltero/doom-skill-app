@@ -12,7 +12,7 @@ import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardBody, CardTitle } from './CardText';
 
 // Cycle tile values the theme does not hold, from docs/design/card-feed/README.md:55-56 and,
-// where it gives none, reference/LearnLoop Card Feed v2.dc.html:87-91.
+// where it gives none, reference/DoomSkill Card Feed v2.dc.html:87-91.
 /** Space between tiles, README.md:55 ("6px gap"). The nearest theme step, space[2], is 6.8. */
 const TILE_GAP = 6;
 /** Inner padding of a tile, prototype line 89 ("padding:8px"). */

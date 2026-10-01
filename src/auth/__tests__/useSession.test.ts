@@ -10,14 +10,14 @@ import { getAccessToken, onSignOut, signOut, useSession } from '../useSession';
 // this file imports loads on the fixture source (no client), whatever this run's environment;
 // each `load` below sets a client first and loads a fresh copy, which reads it. `afterEach`
 // clears it.
-jest.mock('../supabase', () => ({ supabase: null, SESSION_STORAGE_KEY: 'learnloop.session' }));
+jest.mock('../supabase', () => ({ supabase: null, SESSION_STORAGE_KEY: 'doomskill.session' }));
 const mockSupabase = jest.requireMock<{ supabase: unknown }>('../supabase');
 
 type AuthListener = (event: AuthChangeEvent, session: Session | null) => void;
 type AppStateListener = (state: AppStateStatus) => void;
 type GetSessionResult = { data: { session: Session | null }; error: Error | null };
 
-const STORAGE_KEY = 'learnloop.session';
+const STORAGE_KEY = 'doomskill.session';
 const TOKEN = 'access-token-marker';
 
 /** A session as supabase-js gives it; only the fields this module reads matter. */

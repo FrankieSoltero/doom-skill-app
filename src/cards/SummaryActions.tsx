@@ -85,7 +85,7 @@ export function SummaryActions({ status, onKeepGoing, onViewTree }: SummaryActio
 
 // The design has one button here. These gaps, between the status line and the row and between
 // the two buttons, are the theme's step nearest the prototype's 10px list gaps
-// (reference/LearnLoop Card Feed v2.dc.html:253).
+// (reference/DoomSkill Card Feed v2.dc.html:253).
 export const ACTIONS_GAP = space[3];
 
 const styles = StyleSheet.create({

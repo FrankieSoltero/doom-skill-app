@@ -7,7 +7,7 @@ import { copy } from '../copy';
 import { border, colors, hardShadow, type } from '../theme';
 
 // Answer option values from docs/design/card-feed/README.md (or, where it gives none, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html) that the theme lacks.
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html) that the theme lacks.
 /** Minimum height of a quiz option, README.md:61. Above the 44pt minimum touch target. */
 const MIN_HEIGHT = 52;
 /** Horizontal padding, README.md:61. */

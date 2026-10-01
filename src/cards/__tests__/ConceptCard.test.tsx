@@ -8,7 +8,7 @@ import { border, colors, fonts, motion, type } from '../../theme';
 import { ConceptCard } from '../ConceptCard';
 
 // Values from docs/design/card-feed/README.md:55-57 and the prototype
-// (reference/LearnLoop Card Feed v2.dc.html:87-91) that the theme does not hold.
+// (reference/DoomSkill Card Feed v2.dc.html:87-91) that the theme does not hold.
 const TILE_ROW = { flexDirection: 'row', gap: 6 };
 const TILE = {
   flex: 1,

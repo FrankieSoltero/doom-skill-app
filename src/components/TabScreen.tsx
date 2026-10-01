@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, space, type } from '../theme';
 
-// Tab screen values from the prototype (docs/design/card-feed/reference/LearnLoop Card Feed
+// Tab screen values from the prototype (docs/design/card-feed/reference/DoomSkill Card Feed
 // v2.dc.html) that the theme lacks: the tab screens use `padding:6px 22px 20px 18px`.
 const PADDING_TOP = 6;
 const PADDING_RIGHT = 22;

@@ -10,7 +10,7 @@ import { copy } from '../copy';
 import { type } from '../theme';
 
 // Values from docs/design/card-feed/README.md:59-85 and, where it gives none, the prototype
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html that the theme does not hold.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html that the theme does not hold.
 /**
  * Space between options, in both layouts: the quiz stack's `gap:8px` (prototype line 106) and the
  * predict grid's `gap:8px` (line 130). The nearest theme steps, space[2] and space[3], are 6.8

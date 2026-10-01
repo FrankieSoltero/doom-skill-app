@@ -133,7 +133,7 @@ function envText(value: unknown): string | undefined {
  * The app's public source repository (`apps/mobile/README.md`'s Licence section); the only place
  * the host appears, so a changed repository name or owner is a one-line change.
  */
-export const SOURCE_REPOSITORY = 'https://github.com/FrankieSoltero/learnloop-app';
+export const SOURCE_REPOSITORY = 'https://github.com/FrankieSoltero/doom-skill-app';
 
 /** A release build tag as the app's build step writes it: `app-v<semver>+<7-40 hex sha>`. */
 const BUILD_TAG = /^app-v\d+\.\d+\.\d+\+[0-9a-f]{7,40}$/;

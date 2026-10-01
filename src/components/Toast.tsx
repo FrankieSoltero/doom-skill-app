@@ -4,7 +4,7 @@ import { AccessibilityInfo, Platform, StyleSheet, Text, View } from 'react-nativ
 import { colors, type } from '../theme';
 
 // Toast values from docs/design/card-feed/README.md:43 and, where it gives none, the prototype
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:270. The theme has none of them.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:270. The theme has none of them.
 /** Distance from the bottom edge of the parent (the pager), README.md:43. */
 const TOAST_BOTTOM = 44;
 /** Inner padding, top and bottom, prototype line 270 ("padding:6px 12px"). */

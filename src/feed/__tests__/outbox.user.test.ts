@@ -19,7 +19,7 @@ import {
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
-const LEGACY_KEY = 'learnloop.outbox.v1';
+const LEGACY_KEY = 'doomskill.outbox.v1';
 
 /** What an earlier run left for `user`: one attempt, with its client id. */
 const leftFor = (user: string) => JSON.stringify([{ ...attempt(9), clientAttemptId: `${user}-9` }]);
@@ -109,7 +109,7 @@ describe('a change of the signed-in user', () => {
     const saved = new Map([
       [keyOf(USER), leftFor(USER)],
       [LEGACY_KEY, leftFor('unknown')],
-      ['learnloop.other', 'kept'],
+      ['doomskill.other', 'kept'],
     ]);
     const session = fakeSession(LOADING);
     const box = rig(null, { session, saved });
@@ -121,7 +121,7 @@ describe('a change of the signed-in user', () => {
     await settle();
 
     expect(box.sent()).toStrictEqual(['id-1']);
-    expect([...saved.keys()].sort()).toStrictEqual(['learnloop.other', keyOf('user-2')]);
+    expect([...saved.keys()].sort()).toStrictEqual(['doomskill.other', keyOf('user-2')]);
   });
 
   it('stops a flush that was sending the first user attempts', async () => {

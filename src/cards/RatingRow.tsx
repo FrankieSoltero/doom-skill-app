@@ -7,7 +7,7 @@ import type { CardAnswer } from '../feed/answers';
 import { border, cardTheme, colors, fonts, hardShadow, type } from '../theme';
 
 // Rating values from docs/design/card-feed/README.md:119 and, where it gives none, the prototype
-// docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html, that the theme does not hold.
+// docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html, that the theme does not hold.
 /** Height of a rating button, README.md:119 ("each 60px"). Above the 44pt minimum touch target. */
 const BUTTON_HEIGHT = 60;
 /** Space between the caption and the buttons, prototype line 200 ("gap:6px"). */

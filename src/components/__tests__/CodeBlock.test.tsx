@@ -10,7 +10,7 @@ const CONCEPT_COMMENT = '// cycle 1 → c3 · 2 → e3 · 3 → g3';
 const EXERCISE_CODE = 'stack(\n  s("bd ~ sd ~"),\n  s("hh*4")\n)';
 const LONG_LINE = `s("${'bd sd '.repeat(40)}")`;
 
-// Values the prototype gives and the theme does not hold, reference/LearnLoop Card Feed
+// Values the prototype gives and the theme does not hold, reference/DoomSkill Card Feed
 // v2.dc.html:83-85: padding 14/16 and a 12px comment line at the block's 1.6 line height.
 const PADDING = { paddingVertical: 14, paddingHorizontal: 16 };
 const COMMENT_TEXT = { fontSize: 12, lineHeight: 19 };

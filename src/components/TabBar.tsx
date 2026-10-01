@@ -7,7 +7,7 @@ import { copy } from '../copy';
 import { border, colors, fonts } from '../theme';
 
 // Tab bar values from docs/design/card-feed/README.md:32-35 (or, where it gives none, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html) that the theme lacks.
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html) that the theme lacks.
 // The bar's height, README.md:32: 82 including the home-indicator area on the 390x844 reference
 // device. The prototype splits it (line 345, `height:82px`, `padding:8px 8px 22px`, border-box
 // from its design system's `box-sizing: border-box`): 1.5 top border + 8 + 50.5 + 22 = 82.

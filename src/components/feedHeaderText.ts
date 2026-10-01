@@ -25,7 +25,7 @@ export function kickerText(set: FeedSet): string {
 /**
  * A card type's progress segment color: the card's own fill, except the exercise card, whose
  * fill is ink. Its segment is lime, the card's accent, as in the prototype's `cardCols`
- * (docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:506).
+ * (docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:506).
  */
 export function segmentColor(cardType: Card['type']): string {
   return cardType === 'exercise' ? colors.lime : cardTheme[cardType].bg;

@@ -195,7 +195,7 @@ describe('Profile: the daily reminder', () => {
 
     expect(
       screen.getByText(
-        'Notifications are off for LearnLoop. Turn them on in Settings to get a reminder.',
+        'Notifications are off for DoomSkill. Turn them on in Settings to get a reminder.',
       ),
     ).toBeOnTheScreen();
     expect(patches()).toStrictEqual([]);

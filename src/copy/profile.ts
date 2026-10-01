@@ -22,7 +22,7 @@ export const profile = {
   invalidTime: 'Enter a time as HH:MM, for example 20:30.',
   /** The one line shown when the device refuses notifications. */
   remindersDenied:
-    'Notifications are off for LearnLoop. Turn them on in Settings to get a reminder.',
+    'Notifications are off for DoomSkill. Turn them on in Settings to get a reminder.',
   timezone: 'Timezone',
   /** The button that sets the profile's timezone to the device's. */
   useDeviceTimezone: (zone: string) => `Use this device's timezone (${zone})`,
@@ -47,6 +47,6 @@ export const profile = {
 
 /** The daily reminder's notification (src/profile/reminders.ts). */
 export const reminder = {
-  title: 'LearnLoop',
+  title: 'DoomSkill',
   body: 'Your cards for today are ready.',
 } as const;

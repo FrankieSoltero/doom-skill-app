@@ -8,7 +8,7 @@ import { colors, fonts, gridRowColors } from '../theme';
 import { GRID_STEPS, playheadColumn } from './beatStep';
 
 // Beat grid values from docs/design/card-feed/README.md:97-101 or, where it is silent, the
-// prototype docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html. The theme holds none.
+// prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html. The theme holds none.
 /** Width of the sample label column, README.md:98. */
 const LABEL_WIDTH = 26;
 /** Size of the label's mono text, prototype line 154. */

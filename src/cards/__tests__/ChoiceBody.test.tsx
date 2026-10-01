@@ -12,7 +12,7 @@ import { ChoiceBody } from '../ChoiceBody';
 type Props = ComponentProps<typeof ChoiceBody>;
 
 // Values from docs/design/card-feed/README.md:59-85 and the prototype
-// (reference/LearnLoop Card Feed v2.dc.html:106, 116, 130) that the theme does not hold.
+// (reference/DoomSkill Card Feed v2.dc.html:106, 116, 130) that the theme does not hold.
 const STACK = { gap: 8 };
 const GRID = { gap: 8 };
 const GRID_ROW = { flexDirection: 'row', gap: 8 };

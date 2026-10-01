@@ -1,4 +1,4 @@
-// LearnLoop v2 "color" theme. The only home of design tokens.
+// DoomSkill v2 "color" theme. The only home of design tokens.
 // OKLCH values from the prototype pre-converted to sRGB hex (RN has no oklch()).
 
 export const colors = {

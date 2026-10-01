@@ -6,7 +6,7 @@
 #   CHECKPOINT_SCORE             the score line that code earns, as a regular expression
 #   SHOTS                        'true' to take a screenshot of each card, else 'false'
 # The caller must pass every one: a default set here would override the caller's value.
-appId: com.frankiesoltero.learnloop
+appId: com.frankiesoltero.doomskill
 ---
 # 1. Concept: answered on sight.
 - assertVisible: 'Card 1 of 7'

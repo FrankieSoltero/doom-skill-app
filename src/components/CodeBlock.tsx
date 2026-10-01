@@ -4,7 +4,7 @@ import { colors, type } from '../theme';
 import { tokenizeCode, type CodeToken } from './codeTokens';
 
 // Code block values that docs/design/card-feed/README.md:21 leaves to the prototype and the
-// theme does not hold, from reference/LearnLoop Card Feed v2.dc.html:83-85.
+// theme does not hold, from reference/DoomSkill Card Feed v2.dc.html:83-85.
 /** Inner padding, top and bottom ("padding:14px 16px"). The nearest theme step is 13.6. */
 const PADDING_VERTICAL = 14;
 /** Inner padding, left and right ("padding:14px 16px"). */

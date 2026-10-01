@@ -32,7 +32,7 @@ export function deepFreeze<T extends object>(value: T): Readonly<T> {
 }
 
 export const copy = deepFreeze({
-  appName: 'LearnLoop',
+  appName: 'DoomSkill',
   gotIt: 'Got it',
   /** The label of the card button that moves on, README.md:74 and :111. */
   nextCard: 'Next card',
@@ -175,7 +175,7 @@ export const copy = deepFreeze({
   notYetOf: (n: number, total: number) => `Not yet · ${String(n)} of ${String(total)}`,
   /**
    * The checkpoint feedback for each grade outcome, after the prototype's `cpFeedback`
-   * (reference/LearnLoop Card Feed v2.dc.html:588), written from the card's own values: `all`
+   * (reference/DoomSkill Card Feed v2.dc.html:588), written from the card's own values: `all`
    * from its milestone and the topic's milestone count, `pass` and `fail` from its threshold and
    * its rubric's size.
    */

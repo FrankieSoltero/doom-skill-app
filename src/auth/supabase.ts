@@ -22,7 +22,7 @@ import { secureSession } from './secureSession';
  * The name the session is stored under. Fixed, not derived from the project URL, so the app can
  * remove the stored session itself when a sign-out cannot reach Supabase (`useSession`).
  */
-export const SESSION_STORAGE_KEY = 'learnloop.session';
+export const SESSION_STORAGE_KEY = 'doomskill.session';
 
 function makeClient() {
   return createClient(config.supabaseUrl, config.supabaseAnonKey, {

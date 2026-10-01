@@ -6,7 +6,7 @@ import {
   type RawConfig,
 } from '../config';
 
-const API = 'https://api.learnloop.example';
+const API = 'https://api.doomskill.example';
 const SUPABASE = 'https://project.supabase.example';
 const ANON_KEY = 'anon-key-marker';
 const VALID: RawConfig = {
@@ -77,12 +77,12 @@ describe('parseConfig, the api source', () => {
 
   it.each([
     'not a url',
-    'api.learnloop.example',
-    'ftp://api.learnloop.example',
+    'api.doomskill.example',
+    'ftp://api.doomskill.example',
     'javascript:alert(1)',
-    'https://user:secret-marker@api.learnloop.example',
-    'https://api.learnloop.example/?token=secret-marker',
-    'https://api.learnloop.example/#secret-marker',
+    'https://user:secret-marker@api.doomskill.example',
+    'https://api.doomskill.example/?token=secret-marker',
+    'https://api.doomskill.example/#secret-marker',
   ])('refuses %p as a URL, without quoting it', (url) => {
     expect(errorFor({ ...VALID, apiUrl: url })).toBe('EXPO_PUBLIC_API_URL: not an allowed URL');
     expect(errorFor({ ...VALID, supabaseUrl: url })).toBe(
@@ -124,15 +124,15 @@ describe('parseConfig, http', () => {
   );
 
   it.each([
-    'http://api.learnloop.example',
+    'http://api.doomskill.example',
     'http://8.8.8.8',
     'http://11.0.0.1',
     'http://127.0.0.2',
     'http://172.15.0.1',
     'http://172.32.0.1',
     'http://192.169.0.1',
-    'http://localhost.learnloop.example',
-    'http://10.learnloop.example',
+    'http://localhost.doomskill.example',
+    'http://10.doomskill.example',
     'http://192.168.1.1.nip.io',
     'http://[::2]',
   ])('refuses %p even in a development build', (url) => {
@@ -205,7 +205,7 @@ describe('config, read once when the module loads', () => {
 
   it('gives the error and logs it once, naming the variable and not its value', () => {
     const { configError } = loadWith({
-      EXPO_PUBLIC_API_URL: 'https://api.learnloop.example/?token=secret-marker',
+      EXPO_PUBLIC_API_URL: 'https://api.doomskill.example/?token=secret-marker',
       EXPO_PUBLIC_DATA_SOURCE: 'api',
     });
 

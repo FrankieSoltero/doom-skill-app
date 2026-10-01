@@ -80,10 +80,10 @@ describe('SourceLink', () => {
 
 describe('isHttpsUrl', () => {
   it.each([
-    ['https://github.com/FrankieSoltero/learnloop-app', true],
-    ['http://github.com/FrankieSoltero/learnloop-app', false],
+    ['https://github.com/FrankieSoltero/doom-skill-app', true],
+    ['http://github.com/FrankieSoltero/doom-skill-app', false],
     ['javascript:alert(1)', false],
-    [' https://github.com/FrankieSoltero/learnloop-app', false],
+    [' https://github.com/FrankieSoltero/doom-skill-app', false],
   ])('%s -> %p', (url, expected) => {
     expect(isHttpsUrl(url)).toBe(expected);
   });

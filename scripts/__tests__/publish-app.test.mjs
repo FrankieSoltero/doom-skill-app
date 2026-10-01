@@ -69,7 +69,7 @@ function makeRepo(first = {}) {
   commit(
     repo,
     {
-      'apps/mobile/app.json': JSON.stringify({ expo: { name: 'LearnLoop', version: VERSION } }),
+      'apps/mobile/app.json': JSON.stringify({ expo: { name: 'DoomSkill', version: VERSION } }),
       'apps/mobile/.env.example': 'EXPO_PUBLIC_DATA_SOURCE=fixture\n',
       'services/api/main.py': 'print("not part of the app")\n',
       ...first,
@@ -124,10 +124,10 @@ test('the default remote is the repository the app links to (src/config.ts)', ()
 });
 
 test('a remote is printed without credentials', () => {
-  const remote = 'https://someone:hunter2@github.com/FrankieSoltero/learnloop-app.git';
+  const remote = 'https://someone:hunter2@github.com/FrankieSoltero/doom-skill-app.git';
   assert.equal(safeRemote(remote).includes('hunter2'), false);
   assert.equal(safeRemote(remote).includes('someone'), false);
-  assert.equal(webUrl(remote), 'https://github.com/FrankieSoltero/learnloop-app');
+  assert.equal(webUrl(remote), 'https://github.com/FrankieSoltero/doom-skill-app');
   assert.equal(safeRemote('/tmp/public.git'), '/tmp/public.git');
 });
 
@@ -278,7 +278,7 @@ test('--push publishes the split as main with an annotated tag, then fast-forwar
   const sha = git(repo, 'rev-parse', '--short=7', 'HEAD');
   assert.equal(
     git(target, 'tag', '-l', '--format=%(contents:subject)', tag),
-    `LearnLoop app ${VERSION} at ${sha}`,
+    `DoomSkill app ${VERSION} at ${sha}`,
   );
   assert.equal(git(target, 'ls-tree', '--name-only', 'main'), '.env.example\napp.json\nsrc');
   assert.match(first.stdout, /^pushed: /m);
