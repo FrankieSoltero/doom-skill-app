@@ -25,7 +25,7 @@ describe('the cards a set drops', () => {
     const cards = [
       { ...concept, id: id(1) },
       { type: 'video', id: id(2), title: 'Clip' },
-      { ...exercise, id: id(3), lang: 'python' },
+      { ...exercise, id: id(3), lang: 'cobol' },
       { ...quiz, id: id(4), correct: 'secret-marker' },
       { ...quiz, id: id(5) },
     ];

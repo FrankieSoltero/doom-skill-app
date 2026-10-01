@@ -104,7 +104,7 @@ function useExerciseAnswer(card: ExerciseCardData, index: number) {
   };
   const check = () => {
     const checked = codeNow();
-    const passed = checkExercise(checked, card.checks);
+    const passed = checkExercise(checked, card.checks, card.lang);
     setAnswer(index, { kind: 'exercise', code: checked, result: passed ? 'pass' : 'fail' });
     const badge = resultBadge(passed ? 'pass' : 'fail', card);
     announce(copy.badgeSpoken(badge.label, spokenText(badge.message)));

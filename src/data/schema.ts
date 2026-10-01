@@ -20,10 +20,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const cardId = z.string().regex(UUID).optional();
 
 /**
- * The exercise languages the app can check: `strudel`, which it can also play, and `sql`, which it
- * only checks (M6 hardening Task 8). An exercise in any other language is dropped.
+ * The exercise languages: the server's `Lang` (services/api/app/llm/resolve_model.py; kept in step
+ * by services/api/tests/test_lang_sync.py). The app plays `strudel` and only checks the others (M6
+ * hardening Task 8). An exercise in any other language is dropped.
  */
-const EXERCISE_LANGS = ['strudel', 'sql'] as const;
+const EXERCISE_LANGS = ['strudel', 'sql', 'python', 'javascript', 'text'] as const;
 const exerciseLang = z.enum(EXERCISE_LANGS);
 
 /** Just enough of an exercise to read its language before the card itself is parsed. */

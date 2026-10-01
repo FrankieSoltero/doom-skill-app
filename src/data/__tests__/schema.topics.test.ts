@@ -19,7 +19,9 @@ const sqlExercise = {
 /** True only when A and B are each assignable to the other. */
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
-const exerciseLangsAreKnown: Same<ExerciseCard['lang'], 'strudel' | 'sql'> = true;
+/** The server's `Lang` (services/api/app/llm/resolve_model.py). */
+type ServerLang = 'strudel' | 'sql' | 'python' | 'javascript' | 'text';
+const exerciseLangsAreKnown: Same<ExerciseCard['lang'], ServerLang> = true;
 const conceptCodeIsOptional: Same<
   Pick<ConceptCard, 'snippet' | 'snippetComment' | 'cycles'>,
   {
@@ -52,12 +54,16 @@ describe('a card of a topic without Strudel', () => {
     }
   });
 
-  it('keeps an sql exercise in its set and logs nothing', () => {
-    const set = feedSetSchema.parse({ ...fixture, setNumber: 1, cards: [sqlExercise] });
+  it.each(['sql', 'python', 'javascript', 'text'])(
+    'keeps a %s exercise and logs nothing',
+    (lang) => {
+      const card = { ...sqlExercise, lang };
+      const set = feedSetSchema.parse({ ...fixture, setNumber: 1, cards: [card] });
 
-    expect(set.cards).toStrictEqual([sqlExercise]);
-    expect(logWarning).not.toHaveBeenCalled();
-  });
+      expect(set.cards).toStrictEqual([card]);
+      expect(logWarning).not.toHaveBeenCalled();
+    },
+  );
 
   it('still parses every fixture card unchanged', () => {
     expect(fixture.cards.map((card) => cardSchema.parse(card))).toStrictEqual(fixture.cards);

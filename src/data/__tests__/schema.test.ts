@@ -196,7 +196,7 @@ describe('feedSetSchema: conditions for cards from a server', () => {
   });
 
   it('drops an exercise in another language as an unknown kind, keeps the rest and logs it', () => {
-    const set = feedSetSchema.parse(feedSetInput(patchCard(EXERCISE_INDEX, { lang: 'python' })));
+    const set = feedSetSchema.parse(feedSetInput(patchCard(EXERCISE_INDEX, { lang: 'cobol' })));
 
     expect(set.cards.map((card) => card.type)).toEqual(
       FIXTURE_CARD_TYPES.filter((type) => type !== 'exercise'),

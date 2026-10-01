@@ -86,12 +86,24 @@ export function parseGrid(code: string): GridRow[] {
 
 const stripWhitespace = (text: string): string => text.replace(/\s+/g, '');
 
-/** True when `code` passes every check. An exercise with no checks cannot pass. */
-export function checkExercise(code: string, checks: ExerciseCard['checks']): boolean {
+/** The languages whose checks ignore case, as the server's (`card_checks.CASE_INSENSITIVE`). */
+const CASE_INSENSITIVE: ReadonlySet<string> = new Set(['sql']);
+
+/**
+ * True when `code` passes every check, the server's rule (`card_checks.passes`). An exercise with
+ * no checks cannot pass. For `sql`, which is case-insensitive, both sides are lower-cased first.
+ */
+export function checkExercise(
+  code: string,
+  checks: ExerciseCard['checks'],
+  lang: ExerciseCard['lang'] = 'strudel',
+): boolean {
   if (checks.length === 0) return false;
+  const fold = (text: string) => (CASE_INSENSITIVE.has(lang) ? text.toLowerCase() : text);
+  const written = fold(code);
   return checks.every(({ value, ignoreWhitespace }) =>
     ignoreWhitespace
-      ? stripWhitespace(code).includes(stripWhitespace(value))
-      : code.includes(value),
+      ? stripWhitespace(written).includes(stripWhitespace(fold(value)))
+      : written.includes(fold(value)),
   );
 }

@@ -101,3 +101,14 @@ describe('ExerciseCard for sql', () => {
     expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
   });
 });
+
+describe('ExerciseCard for sql: case', () => {
+  it('passes code that matches a check in another case, as SQL ignores case', () => {
+    renderExerciseCard(SQL_CARD);
+
+    typeCode(SOLUTION.toLowerCase());
+    press('Check');
+
+    expect(badges()).toStrictEqual([`Spec met: ${SQL_CARD.passMsg}`]);
+  });
+});

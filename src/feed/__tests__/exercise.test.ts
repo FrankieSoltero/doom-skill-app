@@ -122,4 +122,14 @@ describe('checkExercise', () => {
   it('fails when there is nothing to check', () => {
     expect(checkExercise('s("hh*8")', [])).toBe(false);
   });
+
+  it('ignores case for sql only, as the server does (card_checks.passes)', () => {
+    const partition = contains('PARTITION BY dept', true);
+    const code = 'select rank() over (partition by dept) from t';
+
+    expect(checkExercise(code, [partition], 'sql')).toBe(true);
+    expect(checkExercise(code, [partition], 'strudel')).toBe(false);
+    expect(checkExercise(code, [partition])).toBe(false);
+    expect(checkExercise(code, [partition], 'python')).toBe(false);
+  });
 });
