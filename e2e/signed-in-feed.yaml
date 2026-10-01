@@ -1,0 +1,136 @@
+# The signed-in flow, against the local stack (the app built with EXPO_PUBLIC_DATA_SOURCE=api):
+# signs in a new throwaway user with the code from the local mail page, enrolls in the demo
+# topic `strudel-demo`, answers its first set and checks the Summary. See README.md for the
+# commands before (seed, servers) and after (deleting the user, which removes the enrollment).
+#
+# The demo topic is the app's demo cards, written by `python -m scripts.seed_demo_topic`. A new
+# learner's first set is its first node's three cards: concept, quiz and exercise (set 1's).
+appId: com.frankiesoltero.learnloop
+env:
+  DEV_SERVER_LINK: exp+learnloop://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+---
+# A new address for each run. The `example.test` domain never receives mail outside the stack.
+- evalScript: ${output.email = 'e2e-' + Date.now() + '@example.test'}
+
+# Start signed out: no stored session, no stored active topic.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: ${DEV_SERVER_LINK}
+- runFlow:
+    when:
+      visible: 'Open'
+    commands:
+      - tapOn: 'Open'
+# The sign-in screen, or on a fresh install Expo's developer menu introduction, which covers it.
+- extendedWaitUntil:
+    visible: 'Send code|Continue'
+    timeout: 120000
+- extendedWaitUntil:
+    visible: 'Continue'
+    timeout: 5000
+    optional: true
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+      - tapOn: 'Close'
+
+# Sign in with the code from the email.
+- tapOn: 'Email address'
+- inputText: ${output.email}
+- takeScreenshot: 01-sign-in
+- tapOn: 'Send code'
+- extendedWaitUntil:
+    visible: 'Enter your code'
+    timeout: 15000
+# The code, from the stack's mail page (Mailpit's API, 127.0.0.1 only): the one message sent to
+# this address, its code element (supabase/templates/magic_link.html).
+- evalScript: |
+    ${output.code = (function () {
+      var mail = 'http://127.0.0.1:54324/api/v1/';
+      var query = encodeURIComponent('to:"' + output.email + '"');
+      var found = json(http.get(mail + 'search?query=' + query).body).messages;
+      if (found.length !== 1) throw new Error(found.length + ' sign-in emails for the address');
+      var html = json(http.get(mail + 'message/' + found[0].ID).body).HTML;
+      var code = /class="code"[^>]*>\s*(\d{6})\s*</.exec(html);
+      if (code === null) throw new Error('no six-digit code in the sign-in email');
+      return code[1];
+    })()}
+- tapOn: '6-digit code'
+- inputText: ${output.code}
+- tapOn:
+    text: 'Sign in'
+    enabled: true
+
+# Signed in, with no topic yet.
+- extendedWaitUntil:
+    visible: 'Pick a topic to start learning.'
+    timeout: 15000
+- takeScreenshot: 02-today-no-topic
+
+# Find the demo topic and start it.
+- tapOn: 'Explore'
+- tapOn: 'Search topics'
+- inputText: 'strudel-demo'
+- extendedWaitUntil:
+    visible: 'Open Strudel demo'
+    timeout: 10000
+- takeScreenshot: 03-explore
+- tapOn: 'Open Strudel demo'
+- extendedWaitUntil:
+    visible: 'Start'
+    timeout: 10000
+- assertVisible: 'Milestone 1: Build a 4-bar drum loop'
+- takeScreenshot: 04-topic
+- tapOn: 'Start'
+
+# Today: the first set, three cards and the Summary.
+- extendedWaitUntil:
+    visible: 'Card 1 of 4'
+    timeout: 30000
+- assertVisible: 'STRUDEL DEMO · DAY 1 OF 14'
+- assertVisible: 'Alternate with angle brackets'
+- takeScreenshot: 05-concept
+- tapOn: 'Got it'
+
+- extendedWaitUntil:
+    visible: 'Card 2 of 4'
+    timeout: 5000
+- tapOn: 's\("bd\*4"\)'
+- assertVisible: '.*\. Correct answer\.'
+- assertVisible: 'Correct\. .*'
+- tapOn: 'Next card'
+
+# The exercise: type the solution, check it, then play it (Stop in place of Play).
+- extendedWaitUntil:
+    visible: 'Card 3 of 4'
+    timeout: 5000
+- runFlow:
+    file: subflows/replace-code.yaml
+    env:
+      CODE: "stack(\n  s(\"bd ~ sd ~\"),\n  s(\"hh*8\")\n)"
+- tapOn: 'Check'
+- assertVisible: 'Spec met'
+- extendedWaitUntil:
+    visible:
+      text: 'Play'
+      enabled: true
+    timeout: 15000
+- tapOn: 'Play'
+- extendedWaitUntil:
+    visible: 'Stop'
+    timeout: 30000
+- assertNotVisible: 'Audio unavailable'
+- takeScreenshot: 06-exercise-playing
+- tapOn: 'Next card'
+
+# The Summary of day 1: three cards of 175 estimated seconds.
+- extendedWaitUntil:
+    visible: 'Card 4 of 4'
+    timeout: 10000
+- assertVisible: 'DAY 1 COMPLETE'
+- assertVisible: 'Three cards\. Three minutes\.'
+- assertVisible: 'Keep going'
+- takeScreenshot: 07-summary
