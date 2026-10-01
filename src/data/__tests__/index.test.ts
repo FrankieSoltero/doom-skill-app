@@ -77,7 +77,7 @@ describe('cardSource', () => {
 type DataModule = typeof import('../index');
 
 /** The export `name` of src/data/index.ts under `dataSource`. */
-function exportFor<Name extends 'loadSummary' | 'flagCard'>(
+function exportFor<Name extends 'loadSummary' | 'flagCard' | 'placement'>(
   dataSource: 'api' | 'fixture',
   name: Name,
 ): DataModule[Name] | undefined {
@@ -127,5 +127,34 @@ describe('flagCard', () => {
 
   it('is null with the fixture data source: a demo card is never flagged', () => {
     expect(exportFor('fixture', 'flagCard')).toBeNull();
+  });
+});
+
+describe('placement', () => {
+  it('asks the API for the set, sends answers and resets, with the api data source', async () => {
+    const send = jest
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 409 })));
+    const calls = exportFor('api', 'placement');
+
+    await expect(calls?.load('strudel')).resolves.toStrictEqual({ kind: 'placed' });
+    await expect(calls?.send('strudel', { skip: true })).resolves.toStrictEqual({
+      kind: 'placed',
+    });
+    await expect(calls?.reset('strudel')).resolves.toBe('nothing');
+
+    const asked = send.mock.calls.map(([sent]) => {
+      const request = sent as Request;
+      return `${request.method} ${new URL(request.url).pathname}`;
+    });
+    expect(asked).toStrictEqual([
+      'GET /topics/strudel/placement',
+      'POST /topics/strudel/placement',
+      'POST /topics/strudel/placement/reset',
+    ]);
+  });
+
+  it('is null with the fixture data source: the demo sets have no placement', () => {
+    expect(exportFor('fixture', 'placement')).toBeNull();
   });
 });

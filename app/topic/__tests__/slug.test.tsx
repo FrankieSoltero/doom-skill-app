@@ -1,4 +1,5 @@
 // The topic detail screen (app/topic/[slug].tsx), over the real API client and a fake network.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
@@ -11,6 +12,8 @@ import {
   SCREEN_TOP_INSET,
 } from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
+import { ApiError } from '../../../src/api/errors';
+import type { Placement } from '../../../src/data';
 import { activeTopic, loadActiveTopic } from '../../../src/feed/useActiveTopic';
 import { colors } from '../../../src/theme';
 import TopicScreen from '../[slug]';
@@ -20,10 +23,16 @@ jest.mock('react-native-safe-area-context', () => {
   return mock.default;
 });
 jest.mock('expo-router', () => ({
-  router: { back: jest.fn(), dismissTo: jest.fn() },
+  router: { back: jest.fn(), dismissTo: jest.fn(), replace: jest.fn() },
   useLocalSearchParams: () => ({ slug: 'strudel' }),
 }));
 jest.mock('../../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+// The placement calls (src/data): null with the demo sets; a test sets them to stand for the API.
+const mockData: { placement: Placement | null } = { placement: null };
+jest.mock('../../../src/data', () => {
+  const actual = jest.requireActual<typeof import('../../../src/data')>('../../../src/data');
+  return Object.defineProperty({ ...actual }, 'placement', { get: () => mockData.placement });
+});
 
 const MILESTONES = [
   { id: 'm1', position: 1, title: 'First sounds' },
@@ -57,10 +66,13 @@ const ENROLLMENT = {
 };
 
 beforeEach(async () => {
+  mockData.placement = null;
   jest.useFakeTimers();
   jest.mocked(router.dismissTo).mockClear();
+  jest.mocked(router.replace).mockClear();
   jest.mocked(router.back).mockClear();
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
+  await AsyncStorage.clear();
   await loadActiveTopic();
 });
 
@@ -174,5 +186,100 @@ describe('Topic detail: Start', () => {
 
     expect(screen.getByText(line)).toBeOnTheScreen();
     expect(router.dismissTo).not.toHaveBeenCalled();
+  });
+});
+
+/** Placement calls standing for the API: the set says `placed` (a 409) or serves a quiz. */
+function withPlacement(placed: boolean) {
+  const calls = {
+    load: jest.fn<ReturnType<Placement['load']>, [string]>(() =>
+      Promise.resolve(
+        placed ? { kind: 'placed' } : { kind: 'quiz', quiz: { bands: [], cards: [] } },
+      ),
+    ),
+    send: jest.fn<ReturnType<Placement['send']>, Parameters<Placement['send']>>(),
+    reset: jest.fn<ReturnType<Placement['reset']>, [string]>(() => Promise.resolve('reset')),
+  };
+  mockData.placement = calls;
+  return calls;
+}
+
+const START_ROUTES = {
+  'GET /topics/strudel': [json(200, READY)],
+  'GET /me': [json(200, ME)],
+};
+
+describe('Topic detail: placement (API)', () => {
+  it('opens the placement quiz after a new enrollment, leaving the active topic to it', async () => {
+    withPlacement(false);
+    await renderTopic({ ...START_ROUTES, 'POST /topics/strudel/enroll': [json(201, ENROLLMENT)] });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Start' }));
+    await advance(0);
+
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/topic/[slug]/placement',
+      params: { slug: 'strudel' },
+    });
+    expect(router.dismissTo).not.toHaveBeenCalled();
+    expect(activeTopic()).toBeNull();
+  });
+
+  it('opens Today when the learner was enrolled already (a 200)', async () => {
+    withPlacement(false);
+    await renderTopic({ ...START_ROUTES, 'POST /topics/strudel/enroll': [json(200, ENROLLMENT)] });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Start' }));
+    await advance(0);
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(router.dismissTo).toHaveBeenCalledWith('/');
+  });
+
+  it('offers no reset when the enrollment has no placement', async () => {
+    const calls = withPlacement(false);
+    await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+
+    expect(calls.load).toHaveBeenCalledWith('strudel');
+    expect(screen.queryByRole('button', { name: 'Start from the beginning' })).toBeNull();
+  });
+
+  it.each(['reset', 'nothing'] as const)('on a %s, says so and stops offering it', async (done) => {
+    const calls = withPlacement(true);
+    calls.reset.mockResolvedValue(done);
+    await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+    calls.load.mockResolvedValue({ kind: 'quiz', quiz: { bands: [], cards: [] } });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Start from the beginning' }));
+    await advance(0);
+
+    expect(calls.reset).toHaveBeenCalledWith('strudel');
+    expect(screen.getByText('Starting from the beginning.')).toBeOnTheScreen();
+    expect(calls.load).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('button', { name: 'Start from the beginning' })).toBeNull();
+  });
+
+  it.each([
+    { outcome: () => Promise.resolve('limit' as const), line: 'You can reset again tomorrow.' },
+    {
+      outcome: () => Promise.reject(new ApiError('server', 500)),
+      line: "Couldn't reset your starting point. Try again.",
+    },
+  ])('shows "$line" when the reset is refused', async ({ outcome, line }) => {
+    const calls = withPlacement(true);
+    calls.reset.mockImplementation(outcome);
+    await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Start from the beginning' }));
+    await advance(0);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Start from the beginning' })).toBeOnTheScreen();
+  });
+
+  it('asks nothing about placement with the demo sets', async () => {
+    await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+
+    expect(screen.queryByRole('button', { name: 'Start from the beginning' })).toBeNull();
   });
 });

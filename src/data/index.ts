@@ -1,13 +1,20 @@
-// The app's entry to card data. Screens import `cardSource`, `loadSummary` and the card types from
-// here.
+// The app's entry to card data. Screens import `cardSource`, `loadSummary`, `placement` and the
+// card types from here.
 import { api } from '../api/client';
 import { config } from '../config';
 import { activeTopic } from '../feed/useActiveTopic';
 import {
   createApiSource,
+  fetchPlacement,
   fetchSummary,
+  resetPlacement,
   sendFlag,
+  sendPlacement,
   type FlagReason,
+  type PlacementLoad,
+  type PlacementOutcome,
+  type PlacementSubmit,
+  type ResetOutcome,
   type SummaryAsk,
 } from './apiSource';
 import { createFixtureSource } from './fixtureSource';
@@ -44,12 +51,35 @@ export type FlagSender = (cardId: string, reason: FlagReason) => Promise<void>;
 export const flagCard: FlagSender | null =
   client === null ? null : (cardId, reason) => sendFlag(client, cardId, reason);
 
+/** The placement quiz's calls for a topic (src/data/apiSource.ts). */
+export type Placement = {
+  load: (slug: string) => Promise<PlacementLoad>;
+  send: (slug: string, submit: PlacementSubmit) => Promise<PlacementOutcome>;
+  reset: (slug: string) => Promise<ResetOutcome>;
+};
+
+/**
+ * The placement quiz (K19) through the API; `null` with the demo sets, which have no placement,
+ * so the app shows no placement screen and no reset.
+ */
+export const placement: Placement | null =
+  client === null
+    ? null
+    : {
+        load: (slug) => fetchPlacement(client, slug),
+        send: (slug, submit) => sendPlacement(client, slug, submit),
+        reset: (slug) => resetPlacement(client, slug),
+      };
+
 export type {
   Card,
   CheckpointCard,
   ConceptCard,
   ExerciseCard,
   FeedSet,
+  PlacementCard,
+  PlacementQuiz,
+  PlacementResult,
   PredictCard,
   QuizCard,
   ReviewCard,

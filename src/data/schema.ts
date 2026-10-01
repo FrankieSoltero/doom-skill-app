@@ -313,6 +313,49 @@ export const feedSetSchema = feedSetShape.transform(withoutDropped);
 /** A set from the API: the demo sets' schema, with the date the server stored the set for. */
 export const apiSetSchema = feedSetShape.required({ feedDate: true }).transform(withoutDropped);
 
+// The placement quiz (`GET /topics/{slug}/placement`, K19): a topic's bands, one per milestone
+// in order, and at most 8 quiz or predict cards. A placement card carries no answer index and no
+// explanation: the server grades. `prompt` is a predict card's code (shown in a code block) and
+// null for a quiz. Every field is plain text (rule SS-11).
+const placementBandSchema = z.object({ milestone: z.number().int().positive(), title: text });
+
+const placementCardSchema = z
+  .object({
+    id: z.string().regex(UUID),
+    type: z.enum(['quiz', 'predict']),
+    milestone: z.number().int().positive(),
+    bandIndex: count,
+    title: text,
+    prompt: text.nullable(),
+    options: z.array(text).min(2),
+  })
+  .refine((card) => card.type === 'quiz' || card.prompt !== null, {
+    message: 'a predict card needs its code',
+    path: ['prompt'],
+  });
+
+/** The most cards a placement set holds (K19). */
+const PLACEMENT_MAX_CARDS = 8;
+
+export const placementQuizSchema = z.object({
+  bands: z.array(placementBandSchema),
+  cards: z.array(placementCardSchema).max(PLACEMENT_MAX_CARDS),
+});
+
+/**
+ * Where a placement put the learner: `placed` leading bands passed, out of `bands`.
+ * `milestoneTitle` is the title of the band the learner starts at, null when none was passed.
+ */
+export const placementResultSchema = z.object({
+  placed: count,
+  bands: count,
+  knownNodes: count,
+  milestoneTitle: text.nullable(),
+});
+
+export type PlacementCard = z.infer<typeof placementCardSchema>;
+export type PlacementQuiz = z.infer<typeof placementQuizSchema>;
+export type PlacementResult = z.infer<typeof placementResultSchema>;
 export type Topic = z.infer<typeof topicSchema>;
 export type Card = z.infer<typeof cardSchema>;
 export type ConceptCard = z.infer<typeof conceptCardSchema>;

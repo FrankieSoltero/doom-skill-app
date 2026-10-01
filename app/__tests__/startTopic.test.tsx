@@ -1,7 +1,7 @@
 // Starting a topic from its detail screen, through the app's routes, its API card source and the
-// real API client over a fake network: one Today feed is mounted, so it asks for the day's set
-// once, its Summary asks for the recorded summary once, and an exercise card has one Strudel
-// player. Nothing leaves the test.
+// real API client over a fake network: the new enrollment opens the placement quiz, then one Today
+// feed is mounted, so it asks for the day's set once, its Summary asks for the recorded summary
+// once, and an exercise card has one Strudel player. Nothing leaves the test.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
@@ -17,6 +17,7 @@ import TodayScreen from '../(tabs)/index';
 import ProfileScreen from '../(tabs)/profile';
 import TreeScreen from '../(tabs)/tree';
 import TopicScreen from '../topic/[slug]';
+import PlacementScreen from '../topic/[slug]/placement';
 
 // Read by the mocked modules when they load.
 const mockSend = jest.fn<Promise<Response>, [Request]>();
@@ -63,6 +64,7 @@ const ROUTES = {
   '(tabs)/explore': ExploreScreen,
   '(tabs)/profile': ProfileScreen,
   'topic/[slug]': TopicScreen,
+  'topic/[slug]/placement': PlacementScreen,
 };
 
 const TOPIC = {
@@ -133,6 +135,25 @@ const EXERCISE_SET = {
 /** What `GET /feed/today` answers in the current test. */
 let today: object = SET;
 
+/** A placement set of one quiz card, as `GET /topics/{slug}/placement` writes it. */
+const PLACEMENT_SET = {
+  bands: [{ milestone: 1, title: 'First sounds' }],
+  cards: [
+    {
+      id: '00000000-0000-4000-8000-000000000501',
+      type: 'quiz',
+      milestone: 1,
+      band_index: 0,
+      title: 'Which call plays a sample?',
+      prompt: null,
+      options: ['s("bd")', 'note("c3")'],
+    },
+  ],
+};
+
+/** What `GET /topics/strudel/placement` answers in the current test: placed already, by default. */
+let placementSet: () => Response = () => json(409, {});
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -141,6 +162,9 @@ const ANSWERS: Record<string, () => Response> = {
   'GET /topics/strudel': () => json(200, TOPIC),
   'GET /me': () => json(200, ME),
   'POST /topics/strudel/enroll': () => json(201, {}),
+  'GET /topics/strudel/placement': () => placementSet(),
+  'POST /topics/strudel/placement': () =>
+    json(200, { placed: 1, bands: 1, known_nodes: 2, milestone_title: 'First sounds' }),
   'GET /feed/today': () => json(200, today),
   // The app's card source outlives a test: once it has served the topic, it asks for the next set.
   'GET /feed/next': () => json(200, today),
@@ -188,6 +212,7 @@ const HIDDEN = { includeHiddenElements: true };
 
 beforeEach(async () => {
   today = SET;
+  placementSet = () => json(409, {});
   mockSend.mockReset();
   mockSend.mockImplementation((request) => {
     const { pathname } = new URL(request.url);
@@ -227,6 +252,25 @@ describe('starting a topic', () => {
     expect(await screen.findByTestId('today-screen')).toBeOnTheScreen();
     expect(screen.queryAllByTestId('today-screen', HIDDEN)).toHaveLength(1);
     expect(screen.queryByTestId('topic-screen', HIDDEN)).toBeNull();
+  });
+
+  it('takes the placement quiz in place of the topic, then shows the Today tab once', async () => {
+    placementSet = () => json(200, PLACEMENT_SET);
+    await startFrom('/explore');
+
+    expect(await screen.findByRole('header', { name: 'Quick check' })).toBeOnTheScreen();
+    expect(screen.queryByTestId('topic-screen', HIDDEN)).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.press(await screen.findByRole('button', { name: 's("bd")' }));
+    fireEvent.press(await screen.findByRole('button', { name: "Go to today's set" }));
+
+    expect(await screen.findByTestId('today-screen')).toBeOnTheScreen();
+    expect(screen.queryAllByTestId('today-screen', HIDDEN)).toHaveLength(1);
+    expect(screen.queryByTestId('placement-screen', HIDDEN)).toBeNull();
+    await waitFor(() => {
+      expect(setRequests()).toBe(1);
+    });
+    expect(sentTo('POST /topics/strudel/placement')).toBe(1);
   });
 
   // The simulator run's one strudel_unavailable timeout: the second Today feed, under the topic

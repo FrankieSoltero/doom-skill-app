@@ -10,6 +10,9 @@ import { LoadingState } from '../../src/components/LoadingState';
 import { milestoneColor } from '../../src/components/milestoneColor';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { copy } from '../../src/copy';
+import { placementCopy } from '../../src/copy/placement';
+import { placement, type Placement } from '../../src/data';
+import { usePlacementReset } from '../../src/placement/usePlacement';
 import { useEnroll } from '../../src/topics/useEnroll';
 import { useTopic, type TopicDetail } from '../../src/topics/useTopic';
 import { border, colors, space, type } from '../../src/theme';
@@ -32,7 +35,9 @@ function enrollFailure(error: unknown): string {
 /**
  * Start: enrolls, then goes back to the Today tab, which starts the topic. It closes this screen
  * (`dismissTo`) rather than navigating: React Navigation 7's `navigate` pushes a second copy of
- * the tabs over this screen, and both Today feeds would ask for the set and its summary.
+ * the tabs over this screen, and both Today feeds would ask for the set and its summary. A new
+ * enrollment with the API opens the placement quiz in this screen's place instead (`replace`),
+ * which opens the feed when it is done.
  */
 function StartButton({ slug }: { slug: string }) {
   const enrollment = useEnroll(slug);
@@ -41,8 +46,12 @@ function StartButton({ slug }: { slug: string }) {
   const start = async () => {
     setFailure(null);
     try {
-      await enrollment.enroll();
-      router.dismissTo('/');
+      const next = await enrollment.enroll();
+      if (next === 'placement') {
+        router.replace({ pathname: '/topic/[slug]/placement', params: { slug } });
+      } else {
+        router.dismissTo('/');
+      }
     } catch (error) {
       setFailure(enrollFailure(error));
     }
@@ -60,6 +69,35 @@ function StartButton({ slug }: { slug: string }) {
         onPress={() => void start()}
         disabled={starting}
       />
+    </View>
+  );
+}
+
+/**
+ * The way back to the first milestone, for an enrollment with a placement: a row that undoes it
+ * (`usePlacementReset`), then one fixed line for what happened.
+ */
+function PlacementReset({ slug, calls }: { slug: string; calls: Placement }) {
+  const placed = usePlacementReset(slug, calls);
+  return (
+    <View style={styles.section}>
+      {placed.placed ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={placementCopy.reset}
+          accessibilityState={{ disabled: placed.busy }}
+          disabled={placed.busy}
+          onPress={() => void placed.reset()}
+          style={styles.row}
+        >
+          <Text style={styles.rowText}>{placementCopy.reset}</Text>
+        </Pressable>
+      ) : null}
+      {placed.line === null ? null : (
+        <View accessibilityLiveRegion="polite">
+          <Text style={styles.body}>{placed.line}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -110,6 +148,7 @@ function TopicContent({ topic }: { topic: TopicDetail }) {
           ))}
         </View>
       )}
+      {placement === null ? null : <PlacementReset slug={topic.slug} calls={placement} />}
       {ready ? (
         <StartButton slug={topic.slug} />
       ) : (
@@ -170,6 +209,13 @@ const styles = StyleSheet.create({
   kicker: { ...type.kicker, color: colors.neutral[700] },
   title: { ...type.tabTitle, color: colors.ink },
   body: { ...type.body, color: colors.ink },
+  row: {
+    minHeight: MIN_TOUCH,
+    justifyContent: 'center',
+    borderBottomWidth: border.hairline,
+    borderColor: colors.ink,
+  },
+  rowText: { ...type.button, color: colors.ink },
   milestone: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   number: {
     width: NUMBER_SIZE,
