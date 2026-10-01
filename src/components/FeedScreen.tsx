@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
+import { FlagTarget } from '../cards/FlagButton';
 import { canRenderCard, renderCard, renderSummary } from '../cards/registry';
 import { copy } from '../copy';
 import type { Card, CardSource, FeedSet } from '../data';
@@ -76,9 +77,12 @@ type CardPageProps = {
 
 type DrawnCardProps = { card: Card; slot: Parameters<CardDrawer>[1]; drawCard: CardDrawer };
 
-/** Calls `drawCard` while rendering, so an error it throws reaches the page's boundary. */
+/**
+ * Calls `drawCard` while rendering, so an error it throws reaches the page's boundary. The card is
+ * named to its frame (`FlagTarget`), for the frame's flag action.
+ */
 function DrawnCard({ card, slot, drawCard }: DrawnCardProps) {
-  return drawCard(card, slot);
+  return <FlagTarget card={card}>{drawCard(card, slot)}</FlagTarget>;
 }
 
 /**

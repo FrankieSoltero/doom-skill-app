@@ -10,14 +10,17 @@ export const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 /**
- * The API client over a network that gives `answers` in order, and the path and query of each
- * request it was sent. The waits between retries take no time.
+ * The API client over a network that gives `answers` in order, the path and query of each
+ * request it was sent, and each request itself (`sent`, for its method and body). The waits
+ * between retries take no time.
  */
 export function network(...answers: Answer[]) {
   const requests: string[] = [];
+  const sent: Request[] = [];
   const send = (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     requests.push(`${url.pathname}${url.search}`);
+    sent.push(request);
     const answer = answers.shift();
     if (answer === undefined) throw new Error('no answer scripted');
     return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
@@ -30,5 +33,5 @@ export function network(...answers: Answer[]) {
     refreshSession: () => Promise.resolve(false),
     signOut: () => Promise.resolve(),
   });
-  return { api, requests };
+  return { api, requests, sent };
 }

@@ -4,11 +4,12 @@
 // schema before a screen sees it, which here also requires the set's date (`apiSetSchema`). A card
 // the app cannot show is dropped from the set, and the set names its id in `droppedIds`, so the
 // feed session records it as skipped and the server can finish the set. The recorded summary of a stored set (`GET /feed/summary`) is read the
-// same way (`fetchSummary`).
+// same way (`fetchSummary`). A learner's flag on a card is sent from here too (`sendFlag`).
 import type { z, ZodType } from 'zod';
 
 import type { createApiClient } from '../api/client';
 import { ApiError } from '../api/errors';
+import type { components } from '../api/schema';
 import { logWarning } from '../log';
 import { mapFeed } from './mapFeed';
 import { apiSetSchema, summarySchema, type Summary } from './schema';
@@ -80,6 +81,20 @@ export async function fetchSummary(api: ApiClient, asked: SummaryAsk): Promise<S
       throw loadErrorFrom(error);
     });
   return parsed(summarySchema, data, SUMMARY_REFUSED);
+}
+
+/** Why a learner flags a card: one of the API's four reasons. */
+export type FlagReason = components['schemas']['FlagReason'];
+
+/**
+ * Sends the learner's flag on a card (`POST /cards/{id}/flag`, a 204). The client never retries
+ * a POST, and nothing here does: a flag is sent once. Rejects as the client does on any failure.
+ */
+export async function sendFlag(api: ApiClient, cardId: string, reason: FlagReason): Promise<void> {
+  await api.POST('/cards/{card_id}/flag', {
+    params: { path: { card_id: cardId } },
+    body: { reason },
+  });
 }
 
 /**

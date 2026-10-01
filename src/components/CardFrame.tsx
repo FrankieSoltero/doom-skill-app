@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { FlagButton, useFlaggable, useThanksLine } from '../cards/FlagButton';
+import { copy } from '../copy';
 import { border, cardTheme, colors, hardShadow, space, type } from '../theme';
 import type { CardType } from '../theme';
 import { CardTextColorProvider } from './cardTextColor';
 import { CornerMarks } from './CornerMarks';
+import { Toast } from './Toast';
 
 /**
  * Inner padding of every card, docs/design/card-feed/README.md:46. The nearest theme step,
@@ -28,10 +31,16 @@ type CardFrameProps = {
  * and the kicker row above the card's own content. Everything inside it reads the card's text
  * color (`cardTheme[type].fg`) through `useCardTextColor`. The frame's own corner marks do not:
  * they are ink on every card, README.md:19.
+ *
+ * A card the feed drew from the API gets the flag action at the right end of the kicker row
+ * (src/cards/FlagButton.tsx); once a reason is chosen, the thank-you line shows over the bottom
+ * of the frame for a few seconds. The demo cards and the Summary have no flag action.
  */
 export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
   const kickerStyle = [styles.kicker, { color: theme.kicker }];
+  const [thanked, showThanks] = useThanksLine();
+  const flaggable = useFlaggable();
 
   return (
     <CardTextColorProvider color={theme.fg}>
@@ -42,12 +51,14 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
         />
         <View testID="card-frame-body" style={[styles.body, { backgroundColor: theme.bg }]}>
           <View testID="card-kicker-row" style={styles.kickerRow}>
-            <Text style={kickerStyle}>{kicker}</Text>
+            <Text style={[kickerStyle, styles.lead]}>{kicker}</Text>
             {meta ? <Text style={kickerStyle}>{meta}</Text> : null}
+            {flaggable ? <FlagButton onFlagged={showThanks} /> : null}
           </View>
           {children}
         </View>
         <CornerMarks tone="ink" />
+        <Toast message={copy.flag.thanks} visible={thanked} />
       </View>
     </CardTextColorProvider>
   );
@@ -70,6 +81,8 @@ const styles = StyleSheet.create({
     // README.md:46 gives a column gap of 12-14; space[4] (13.6) is the theme step in that range.
     gap: space[4],
   },
-  kickerRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  kickerRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
+  // The kicker takes the row's free width, so the meta and the flag action sit at its right end.
+  lead: { flex: 1 },
   kicker: type.kicker,
 });

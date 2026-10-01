@@ -9,6 +9,7 @@
  * into `copy` here; screens still read it through `copy`.
  */
 
+import { flag } from './flag';
 import { profile, reminder } from './profile';
 import { explore, pendingTopic, topic, tree } from './topics';
 
@@ -315,4 +316,5 @@ export const copy = deepFreeze({
   tree,
   profile,
   reminder,
+  flag,
 } as const);

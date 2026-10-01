@@ -74,18 +74,25 @@ describe('cardSource', () => {
   });
 });
 
-/** The `loadSummary` that src/data/index.ts exports under `dataSource`. */
-function loadSummaryFor(dataSource: 'api' | 'fixture') {
-  let load: typeof import('../index').loadSummary | undefined;
+type DataModule = typeof import('../index');
+
+/** The export `name` of src/data/index.ts under `dataSource`. */
+function exportFor<Name extends 'loadSummary' | 'flagCard'>(
+  dataSource: 'api' | 'fixture',
+  name: Name,
+): DataModule[Name] | undefined {
+  let value: DataModule[Name] | undefined;
   jest.isolateModules(() => {
     jest.doMock('../../config', () => ({
       config: { apiUrl: 'https://api.test', dataSource },
       configError: null,
     }));
-    load = jest.requireActual<typeof import('../index')>('../index').loadSummary;
+    value = jest.requireActual<DataModule>('../index')[name];
   });
-  return load;
+  return value;
 }
+
+const loadSummaryFor = (dataSource: 'api' | 'fixture') => exportFor(dataSource, 'loadSummary');
 
 describe('loadSummary', () => {
   it('asks the API for a recorded summary with the api data source', async () => {
@@ -100,5 +107,25 @@ describe('loadSummary', () => {
 
   it('is null with the fixture data source: there is no API to ask', () => {
     expect(loadSummaryFor('fixture')).toBeNull();
+  });
+});
+
+describe('flagCard', () => {
+  it('posts the flag to the API once with the api data source', async () => {
+    const send = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const flag = exportFor('api', 'flagCard');
+
+    await expect(flag?.('card-id', 'broken')).resolves.toBeUndefined();
+
+    const [request] = send.mock.calls.map(([sent]) => sent as Request);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(request?.method).toBe('POST');
+    expect(new URL(request?.url ?? '').pathname).toBe('/cards/card-id/flag');
+  });
+
+  it('is null with the fixture data source: a demo card is never flagged', () => {
+    expect(exportFor('fixture', 'flagCard')).toBeNull();
   });
 });

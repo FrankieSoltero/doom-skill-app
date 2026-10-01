@@ -1,6 +1,8 @@
 import { render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
+import { FlagTarget } from '../../cards/FlagButton';
+import { cardsByType } from '../../feed/testing/sets';
 import { border, cardTheme, colors, hardShadow, type } from '../../theme';
 import type { CardType } from '../../theme';
 import { CardFrame } from '../CardFrame';
@@ -251,5 +253,19 @@ describe('CardFrame kicker row and content', () => {
     expect(frame.props).not.toHaveProperty('role');
     expect(screen.getByText(KICKER)).toBeOnTheScreen();
     expect(screen.getByText(META)).toBeOnTheScreen();
+  });
+});
+
+describe('CardFrame flag action with the demo sets', () => {
+  it('shows no flag action: the demo cards have no API to send a flag to', () => {
+    render(
+      <FlagTarget card={{ ...cardsByType.quiz, id: '5d1f0c2e-7a3b-4c4d-9e5f-6a7b8c9d0e1f' }}>
+        <CardFrame type="quiz" kicker={KICKER}>
+          <Text>body</Text>
+        </CardFrame>
+      </FlagTarget>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Flag this card' })).toBeNull();
   });
 });
