@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { copy } from '../copy';
+import { useInputFocused } from '../feed/inputFocus';
 import { border, colors, fonts } from '../theme';
 
 // Tab bar values from docs/design/card-feed/README.md:32-35 (or, where it gives none, the
@@ -76,9 +77,14 @@ function barHeight(paddingBottom: number): number {
  * box above a label. The focused tab's box is filled with its color and framed in ink. The bar has
  * a 1.5-point ink top border on paper; it is 82 points tall with a 34-point bottom inset and 68
  * with none.
+ *
+ * While a feed editor has focus the bar keeps its size and shows no tabs. With no on-screen
+ * keyboard (a hardware keyboard), iOS floats the editor's Done bar over this bar, above the
+ * home-indicator inset, and the labels would show under it.
  */
 export function TabBar({ state, navigation, insets }: TabBarProps) {
   const paddingBottom = Math.max(insets.bottom - HOME_INDICATOR_OVERLAP, MIN_BAR_PADDING_BOTTOM);
+  const editing = useInputFocused();
   /** React Navigation's custom tab bar press: emit, then navigate unless focused or prevented. */
   const press = (route: Route, focused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -95,7 +101,7 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
     >
       {state.routes.map((route, position) => {
         const tab = TABS.get(route.name);
-        if (tab === undefined) return null;
+        if (tab === undefined || editing) return null;
         const focused = position === state.index;
         return (
           <Pressable

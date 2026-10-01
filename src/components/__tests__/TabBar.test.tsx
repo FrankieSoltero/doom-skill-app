@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { GitBranch, Layers, Search, User } from 'lucide-react-native';
 
+import { useInputFocus } from '../../feed/inputFocus';
 import { border, colors } from '../../theme';
 import { TabBar } from '../TabBar';
 import type { TabBarProps } from '../TabBar';
@@ -274,5 +275,40 @@ describe('TabBar frame', () => {
     for (const tab of tabs()) {
       expect(viewStyleOf(tab).flex).toBe(1);
     }
+  });
+});
+
+// With no on-screen keyboard (a hardware keyboard), iOS floats an editor's Done bar over the tab
+// bar, above the home-indicator inset, and the tabs' labels showed under it.
+describe('TabBar while a feed editor has focus', () => {
+  afterEach(() => {
+    act(() => {
+      useInputFocus.setState({ focusedIds: new Set() });
+    });
+  });
+
+  it('shows no tabs and keeps its height, border and paper ground', () => {
+    renderBar();
+    const frame = viewStyleOf(screen.getByTestId('tab-bar'));
+
+    act(() => {
+      useInputFocus.getState().inputFocused('editor');
+    });
+
+    expect(screen.queryAllByRole('tab', HIDDEN)).toHaveLength(0);
+    expect(viewStyleOf(screen.getByTestId('tab-bar'))).toStrictEqual(frame);
+  });
+
+  it('shows the tabs again when the editor loses focus', () => {
+    renderBar();
+
+    act(() => {
+      useInputFocus.getState().inputFocused('editor');
+    });
+    act(() => {
+      useInputFocus.getState().inputBlurred('editor');
+    });
+
+    expect(tabs()).toHaveLength(4);
   });
 });
