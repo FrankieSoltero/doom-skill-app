@@ -270,8 +270,17 @@ describe('copy for the Summary card', () => {
     expect(copy.keepGoing).toBe('Keep going');
     expect(copy.viewSkillTree).toBe('View skill tree');
     expect(copy.loadingMore).toBe('Loading…');
-    expect(copy.thatsEverything).toBe("That's everything for now.");
+    expect(copy.nothingLeft).toBe("You've seen everything that's open today.");
     expect(copy.couldNotLoadMore).toBe("Couldn't load more cards.");
+  });
+
+  it('says when the next recall is, in whole minutes, singular for one', () => {
+    expect(copy.nothingLeftRecall(42)).toBe(
+      'Nothing more is open right now. Your next recall is in 42 minutes.',
+    );
+    expect(copy.nothingLeftRecall(1)).toBe(
+      'Nothing more is open right now. Your next recall is in 1 minute.',
+    );
   });
 
   it('writes the kicker, the stat labels and the mastery heading', () => {

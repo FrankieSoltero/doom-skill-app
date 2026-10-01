@@ -29,7 +29,14 @@ describe('fetchSummary', () => {
       moved: response.summary.moved,
       tomorrow: response.summary.tomorrow,
       reminder: response.summary.reminder,
+      nextRecallMinutes: response.summary.next_recall_minutes,
     });
+  });
+
+  it('reads the minutes to the next recall', async () => {
+    const { api } = network(json(200, { ...response.summary, next_recall_minutes: 42 }));
+
+    expect((await fetchSummary(api, ASKED)).nextRecallMinutes).toBe(42);
   });
 
   it('reads a summary without a reminder time as a null reminder', async () => {

@@ -11,6 +11,8 @@ import { space, type } from '../theme';
 
 type SummaryActionsProps = {
   status: NextSetStatus;
+  /** Minutes until the next recall, said when no next set is open; null or absent for none. */
+  nextRecallMinutes?: number | null | undefined;
   /** Loads the next set; also what Retry does. */
   onKeepGoing: () => void;
   /** Switches to the Tree tab. */
@@ -18,8 +20,9 @@ type SummaryActionsProps = {
 };
 
 /** The status line for `status`, or `null` when there is none to show. */
-function statusLine(status: NextSetStatus): string | null {
-  if (status === 'none') return copy.thatsEverything;
+function statusLine(status: NextSetStatus, minutes: number | null | undefined): string | null {
+  if (status === 'none')
+    return minutes == null ? copy.nothingLeft : copy.nothingLeftRecall(minutes);
   if (status === 'error') return copy.couldNotLoadMore;
   return null;
 }
@@ -48,13 +51,19 @@ function useAnnounceChange(line: string | null): void {
  * (outlined) side by side in equal halves, so the card fits its page. While the next set loads,
  * the lime button reads `Loading…` and is disabled. After a failed load an error line sits over
  * the row and the lime button is `Retry`. When there is no next set, a line says so over the row
+ * (the minutes to the next recall when one is due later, else that everything open was seen)
  * and `View skill tree` takes the whole row: the line is too wide for a half at the body size
  * (about 167 points against 149). The whole foot is a polite live region for Android; on iOS,
  * which has no live regions, a change to a status line is announced.
  */
-export function SummaryActions({ status, onKeepGoing, onViewTree }: SummaryActionsProps) {
+export function SummaryActions({
+  status,
+  nextRecallMinutes,
+  onKeepGoing,
+  onViewTree,
+}: SummaryActionsProps) {
   const color = useCardTextColor();
-  const line = statusLine(status);
+  const line = statusLine(status, nextRecallMinutes);
   useAnnounceChange(line);
 
   return (

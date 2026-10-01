@@ -15,6 +15,12 @@ import { json, network, type Answer } from '../testing/network';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
+/** The saved response's cards with its first concept card first (the API serves reviews first). */
+function conceptFirst(): typeof response.cards {
+  const concept = response.cards.filter((card) => card.type === 'concept').slice(0, 1);
+  return [...concept, ...response.cards.filter((card) => !concept.includes(card))];
+}
+
 const TOPIC = 'strudel';
 const TODAY = `/feed/today?topic=${TOPIC}`;
 const NEXT = `/feed/next?topic=${TOPIC}`;
@@ -166,7 +172,7 @@ describe('createApiSource: failures', () => {
   });
 
   it('fails with kind schema for a set the schema refuses, logging the paths, not the content', async () => {
-    const [first, ...rest] = response.cards;
+    const [first, ...rest] = conceptFirst();
     const { id: _id, ...anonymous } = first ?? {};
     const bad = {
       ...response,
@@ -187,7 +193,7 @@ describe('createApiSource: failures', () => {
 
 describe('createApiSource: cards it cannot show', () => {
   it('serves the set without them and names their ids', async () => {
-    const [first, ...rest] = response.cards;
+    const [first, ...rest] = conceptFirst();
     const bad = {
       ...response,
       cards: [{ ...first, title: 42 }, { type: 'video', id: 'x' }, ...rest],

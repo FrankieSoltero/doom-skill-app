@@ -234,10 +234,10 @@ describe('SummaryCard buttons', () => {
     expect(button('View skill tree')).toBeEnabled();
   });
 
-  it("with no more sets: That's everything for now. in place of the button", () => {
+  it('with no more sets and no recall due: the end line in place of the button', () => {
     renderSummary('none');
 
-    expect(screen.getByText("That's everything for now.")).toBeOnTheScreen();
+    expect(screen.getByText("You've seen everything that's open today.")).toBeOnTheScreen();
     const labels = screen
       .getAllByRole('button')
       .map((each) => String(each.props.accessibilityLabel));
@@ -255,13 +255,35 @@ describe('SummaryCard buttons', () => {
   });
 });
 
+describe('SummaryCard next recall', () => {
+  it('with no more sets: the minutes to the next recall, from the recorded summary first', () => {
+    const set = summarySet();
+    renderSummary('none', { ...set, summary: { ...set.summary, nextRecallMinutes: 42 } });
+
+    const line = 'Nothing more is open right now. Your next recall is in 42 minutes.';
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    act(() => {
+      useFeedStore.setState({ recordedSummary: { ...set.summary, nextRecallMinutes: 1 } });
+    });
+    const one = 'Nothing more is open right now. Your next recall is in 1 minute.';
+    expect(screen.getByText(one)).toBeOnTheScreen();
+  });
+
+  it('a recall time does not show while there is a next set', () => {
+    const set = summarySet();
+    renderSummary('idle', { ...set, summary: { ...set.summary, nextRecallMinutes: 42 } });
+
+    expect(screen.queryByText(/next recall/)).toBeNull();
+  });
+});
+
 describe('SummaryCard status for screen readers', () => {
   it('holds the status line and the buttons in one polite live region', () => {
     renderSummary('none');
 
     const status = screen.getByTestId('summary-status');
     expect(status.props).toHaveProperty('accessibilityLiveRegion', 'polite');
-    expect(status).toHaveTextContent("That's everything for now.View skill tree");
+    expect(status).toHaveTextContent("You've seen everything that's open today.View skill tree");
   });
 
   it('announces a change to none or error on iOS, once each, and nothing for idle or loading', () => {
@@ -276,7 +298,7 @@ describe('SummaryCard status for screen readers', () => {
 
     expect(accessibility.announceForAccessibility.mock.calls).toStrictEqual([
       ["Couldn't load more cards."],
-      ["That's everything for now."],
+      ["You've seen everything that's open today."],
     ]);
   });
 

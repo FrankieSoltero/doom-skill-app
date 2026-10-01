@@ -11,6 +11,35 @@
   "feed_date": "2026-09-30",
   "cards": [
     {
+      "id": "00000000-0000-4000-8000-000000000301",
+      "node": "Rests ~",
+      "est_seconds": 30,
+      "sources": [],
+      "type": "review",
+      "last_seen_days": 11,
+      "prompt": "What does ~ mean in mini-notation?",
+      "answer": "A **rest**. It keeps a step silent while holding its place in the cycle.",
+      "snippet": "s(\"bd ~ sd ~\")",
+      "ratings": [
+        [
+          "Again",
+          "10 min"
+        ],
+        [
+          "Hard",
+          "12 d"
+        ],
+        [
+          "Good",
+          "25 d"
+        ],
+        [
+          "Easy",
+          "33 d"
+        ]
+      ]
+    },
+    {
       "id": "00000000-0000-4000-8000-000000000302",
       "node": "Alternation < >",
       "est_seconds": 45,
@@ -137,35 +166,6 @@
       "fail_msg": "Change how many times hh repeats inside the cycle."
     },
     {
-      "id": "00000000-0000-4000-8000-000000000301",
-      "node": "Rests ~",
-      "est_seconds": 30,
-      "sources": [],
-      "type": "review",
-      "last_seen_days": 11,
-      "prompt": "What does ~ mean in mini-notation?",
-      "answer": "A **rest**. It keeps a step silent while holding its place in the cycle.",
-      "snippet": "s(\"bd ~ sd ~\")",
-      "ratings": [
-        [
-          "Again",
-          "10 min"
-        ],
-        [
-          "Hard",
-          "12 d"
-        ],
-        [
-          "Good",
-          "25 d"
-        ],
-        [
-          "Easy",
-          "33 d"
-        ]
-      ]
-    },
-    {
       "id": "00000000-0000-4000-8000-000000000201",
       "type": "checkpoint",
       "est_seconds": 180,
@@ -201,6 +201,11 @@
     "progress_after": 0.4880952380952381,
     "moved": [
       [
+        "Rests ~",
+        0.7142857142857143,
+        1.0
+      ],
+      [
         "Alternation < >",
         0.0,
         0.42857142857142855
@@ -209,14 +214,10 @@
         "Speed * and /",
         0.0,
         0.03571428571428571
-      ],
-      [
-        "Rests ~",
-        0.7142857142857143,
-        1.0
       ]
     ],
     "tomorrow": "1 node to review",
-    "reminder": "8:30 pm"
+    "reminder": "8:30 pm",
+    "next_recall_minutes": null
   }
 }

@@ -148,7 +148,7 @@ describe('Keep going', () => {
     source.resolve(null);
     await settle();
 
-    expect(screen.getByText("That's everything for now.")).toBeOnTheScreen();
+    expect(screen.getByText("You've seen everything that's open today.")).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Keep going' })).toBeNull();
     expect(store()).toMatchObject({ set: secondSet, index: 2 });
   });

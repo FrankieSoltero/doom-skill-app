@@ -274,8 +274,19 @@ export const copy = deepFreeze({
   viewSkillTree: 'View skill tree',
   /** The Keep going button while the next set loads. */
   loadingMore: 'Loading…',
-  /** Shown in place of Keep going when the source has no more sets (spec section 1a). */
-  thatsEverything: "That's everything for now.",
+  /**
+   * Shown in place of Keep going when no next set is open and no recall is due later (M8 spec,
+   * section 5).
+   */
+  nothingLeft: "You've seen everything that's open today.",
+  /**
+   * Shown in place of Keep going when no next set is open: the whole minutes until the next
+   * recall comes due (M8 spec, section 5), "1 minute" for one.
+   */
+  nothingLeftRecall: (minutes: number) =>
+    `Nothing more is open right now. Your next recall is in ${String(minutes)} ${
+      minutes === 1 ? 'minute' : 'minutes'
+    }.`,
   /** Shown over Retry when the next set failed to load (spec section 1a). */
   couldNotLoadMore: "Couldn't load more cards.",
   /** Tab bar labels, docs/design/card-feed/README.md:32. */

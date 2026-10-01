@@ -85,7 +85,7 @@ function MasteryList({ moved }: { moved: Summary['moved'] }) {
  * reads them. The progress tile shows the topic's progress after the set beside the set's delta
  * (`progressAfterSet`). The progress, its delta, the mastery rows and tomorrow come from the set's
  * recorded summary once the store holds it (`useSummary`), else from the projected one the set
- * came with.
+ * came with; so do the minutes to the next recall that the foot says when no next set is open.
  */
 export function SummaryCard({
   set,
@@ -123,7 +123,12 @@ export function SummaryCard({
       <MasteryList moved={summary.moved} />
       <View style={styles.fill} />
       <BoldText text={copy.tomorrow(summary.tomorrow, summary.reminder)} style={styles.footer} />
-      <SummaryActions status={nextSetStatus} onKeepGoing={onKeepGoing} onViewTree={onViewTree} />
+      <SummaryActions
+        status={nextSetStatus}
+        nextRecallMinutes={summary.nextRecallMinutes}
+        onKeepGoing={onKeepGoing}
+        onViewTree={onViewTree}
+      />
     </CardFrame>
   );
 }

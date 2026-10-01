@@ -186,6 +186,9 @@ export const cardSchema = z.discriminatedUnion('type', [
 /**
  * A set's summary. `progressAfter` is the topic's progress after the set, which the API sends and
  * the bundled demo sets lack. `reminder` is null when the user set no reminder time.
+ * `nextRecallMinutes` is the whole minutes until the topic's next recall comes due, null when
+ * none is due later; the recorded summary has it, the feed's projected one sends null and the
+ * demo sets lack it.
  */
 export const summarySchema = z.object({
   title: text,
@@ -194,6 +197,7 @@ export const summarySchema = z.object({
   moved: z.array(z.tuple([text, fraction, fraction])),
   tomorrow: text,
   reminder: text.nullable(),
+  nextRecallMinutes: z.number().int().positive().nullable().optional(),
 });
 
 const knownCardTypes: ReadonlySet<string> = new Set(

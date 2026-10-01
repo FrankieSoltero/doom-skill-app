@@ -1114,6 +1114,8 @@ export interface components {
                 components["schemas"]["Fraction"],
                 components["schemas"]["Fraction"]
             ][];
+            /** Next Recall Minutes */
+            next_recall_minutes: number | null;
             progress_after: components["schemas"]["Fraction"];
             /** Progress Delta */
             progress_delta: number;
@@ -1528,17 +1530,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Too many requests */
-            429: {
-                headers: {
-                    /** @description Seconds */
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Service unavailable */
