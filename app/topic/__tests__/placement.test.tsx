@@ -8,6 +8,8 @@ import { ApiError } from '../../../src/api/errors';
 import { useSession } from '../../../src/auth/useSession';
 import { advance, renderScreen } from '../../../src/components/testing/screen';
 import { placement, type PlacementQuiz } from '../../../src/data';
+import { useFeedStore } from '../../../src/feed/store';
+import { cardsByType, makeSet } from '../../../src/feed/testing/sets';
 import { activeTopic, loadActiveTopic } from '../../../src/feed/useActiveTopic';
 import { logError, logWarning } from '../../../src/log';
 import PlacementScreen from '../[slug]/placement';
@@ -75,6 +77,7 @@ beforeEach(async () => {
   calls().load.mockReset();
   calls().send.mockReset();
   await AsyncStorage.clear();
+  useFeedStore.setState(useFeedStore.getInitialState(), true);
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
   await loadActiveTopic();
 });
@@ -99,6 +102,13 @@ async function answerBoth(first: string, second: string) {
   await press('Start');
   await press(first);
   await press(second);
+}
+
+/** Makes the topic active already, with a set of its feed loaded. */
+async function activeWithSet() {
+  await AsyncStorage.setItem('activeTopic', JSON.stringify({ owner: 'user-1', slug: 'strudel' }));
+  await loadActiveTopic();
+  useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
 }
 
 /** The feed opened on the topic: it is the active topic and the stack went back to Today. */
@@ -215,7 +225,6 @@ describe('Placement: submit', () => {
     expect(write.mock.calls.map(([key]) => key)).toStrictEqual(['activeTopic']);
     expect(logWarning).not.toHaveBeenCalled();
     expect(logError).not.toHaveBeenCalled();
-    write.mockRestore();
   });
 });
 
@@ -255,6 +264,54 @@ describe('Placement: skip', () => {
       screen.getByText('Could not save your starting point. Starting from the beginning.'),
     ).toBeOnTheScreen();
     expect(router.dismissTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('Placement: the feed afterwards', () => {
+  it.each([
+    { name: 'a placement', submit: () => answerBoth('s("bd")', '4') },
+    { name: 'a skip', submit: () => open().then(() => press('Skip')) },
+  ])("drops the topic's loaded set after $name, so the feed asks again", async ({ submit }) => {
+    await activeWithSet();
+    calls().send.mockResolvedValue({
+      kind: 'result',
+      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
+    });
+    await submit();
+    await press("Go to today's set");
+
+    expect(useFeedStore.getState().set).toBeNull();
+    expectFeedOpened();
+  });
+
+  it('drops it after the silent skip of a set with no card', async () => {
+    await activeWithSet();
+    calls().send.mockResolvedValue({
+      kind: 'result',
+      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
+    });
+    await open({ bands: BANDS, cards: [] });
+
+    expect(useFeedStore.getState().set).toBeNull();
+  });
+
+  it('keeps it when the topic was placed already: the server dropped nothing', async () => {
+    await activeWithSet();
+    calls().load.mockResolvedValue({ kind: 'placed' });
+    await renderScreen(<PlacementScreen />);
+
+    expectFeedOpened();
+    expect(useFeedStore.getState().set).not.toBeNull();
+  });
+
+  it('keeps it when the answers failed to save', async () => {
+    await activeWithSet();
+    calls().send.mockRejectedValue(new ApiError('server', 500));
+    await answerBoth('s("bd")', '4');
+    await press("Go to today's set");
+
+    expectFeedOpened();
+    expect(useFeedStore.getState().set).not.toBeNull();
   });
 });
 

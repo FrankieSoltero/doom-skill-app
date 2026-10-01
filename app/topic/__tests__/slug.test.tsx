@@ -14,6 +14,8 @@ import {
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { ApiError } from '../../../src/api/errors';
 import type { Placement } from '../../../src/data';
+import { useFeedStore } from '../../../src/feed/store';
+import { cardsByType, makeSet } from '../../../src/feed/testing/sets';
 import { activeTopic, loadActiveTopic } from '../../../src/feed/useActiveTopic';
 import { colors } from '../../../src/theme';
 import TopicScreen from '../[slug]';
@@ -73,6 +75,7 @@ beforeEach(async () => {
   jest.mocked(router.back).mockClear();
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
   await AsyncStorage.clear();
+  useFeedStore.setState(useFeedStore.getInitialState(), true);
   await loadActiveTopic();
 });
 
@@ -244,7 +247,13 @@ describe('Topic detail: placement (API)', () => {
     expect(screen.queryByRole('button', { name: 'Start from the beginning' })).toBeNull();
   });
 
-  it.each(['reset', 'nothing'] as const)('on a %s, says so and stops offering it', async (done) => {
+  it.each([
+    { done: 'reset' as const, refreshed: true },
+    { done: 'nothing' as const, refreshed: false },
+  ])('on a $done, says so and stops offering it', async ({ done, refreshed }) => {
+    await AsyncStorage.setItem('activeTopic', JSON.stringify({ owner: 'user-1', slug: 'strudel' }));
+    await loadActiveTopic();
+    useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
     const calls = withPlacement(true);
     calls.reset.mockResolvedValue(done);
     await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
@@ -257,6 +266,8 @@ describe('Topic detail: placement (API)', () => {
     expect(screen.getByText('Starting from the beginning.')).toBeOnTheScreen();
     expect(calls.load).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('button', { name: 'Start from the beginning' })).toBeNull();
+    // The server drops the topic's stored sets on a reset: the feed must ask again.
+    expect(useFeedStore.getState().set === null).toBe(refreshed);
   });
 
   it.each([

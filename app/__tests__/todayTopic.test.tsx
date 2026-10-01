@@ -4,10 +4,11 @@ import { act, render, renderHook, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useSession } from '../../src/auth/useSession';
+import { layout } from '../../src/components/testing/pager';
 import { cardSource } from '../../src/data';
 import { useFeedStore } from '../../src/feed/store';
 import { cardsByType, makeSet } from '../../src/feed/testing/sets';
-import { loadActiveTopic, useActiveTopic } from '../../src/feed/useActiveTopic';
+import { loadActiveTopic, refreshFeed, useActiveTopic } from '../../src/feed/useActiveTopic';
 import TodayScreen from '../(tabs)/index';
 
 jest.mock('react-native-safe-area-context', () => {
@@ -43,6 +44,33 @@ describe('Today and the active topic', () => {
     await act(() => result.current.setActive('rust-ownership'));
 
     await screen.findByTestId('feed-header');
+    expect(getNextSet).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks for a fresh set when the active topic's feed is refreshed, and drops the old one", async () => {
+    const getNextSet = jest
+      .spyOn(cardSource, 'getNextSet')
+      .mockResolvedValueOnce(makeSet(1, [cardsByType.concept]))
+      .mockResolvedValue(makeSet(1, [cardsByType.quiz]));
+    const { result } = renderHook(() => useActiveTopic());
+    await act(() => result.current.setActive('strudel'));
+    render(
+      <SafeAreaProvider>
+        <TodayScreen />
+      </SafeAreaProvider>,
+    );
+    await screen.findByTestId('feed-pager');
+    await layout(700);
+    expect(screen.getByText(cardsByType.concept.title)).toBeOnTheScreen();
+
+    act(() => {
+      refreshFeed('strudel');
+    });
+
+    await screen.findByTestId('feed-pager');
+    await layout(700);
+    expect(screen.getByText(cardsByType.quiz.title)).toBeOnTheScreen();
+    expect(screen.queryByText(cardsByType.concept.title)).toBeNull();
     expect(getNextSet).toHaveBeenCalledTimes(2);
   });
 

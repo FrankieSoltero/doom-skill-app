@@ -45,11 +45,17 @@ function TopicStandIn() {
   return <Text testID="topic-screen">topic</Text>;
 }
 
+/** The placement screen's stand-in. */
+function PlacementStandIn() {
+  return <Text testID="placement-screen">placement</Text>;
+}
+
 const ROUTES = {
   _layout: RootLayout,
   '(tabs)/_layout': () => <Slot />,
   '(tabs)/index': TodayStandIn,
   'topic/[slug]': TopicStandIn,
+  'topic/[slug]/placement': PlacementStandIn,
   ...AUTH_ROUTES,
 };
 
@@ -94,6 +100,7 @@ describe('RootLayout with the API source', () => {
 
     expectRefused('/', 'sign-in-screen', 'today-screen');
     expectRefused('/topic/strudel', 'sign-in-screen', 'topic-screen');
+    expectRefused('/topic/strudel/placement', 'sign-in-screen', 'placement-screen');
     expect(rendered.getSegments()).toStrictEqual(['(auth)']);
   });
 

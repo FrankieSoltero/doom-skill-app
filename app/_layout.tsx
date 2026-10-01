@@ -91,9 +91,10 @@ export default function RootLayout() {
 }
 
 /**
- * The routes the session allows. With the API source, the tabs and a topic's detail need a
- * session: while the stored session is read, only the paper ground shows; without a session, only
- * the sign-in group (`(auth)`) can be reached; with one, only the tabs and a topic's detail. The
+ * The routes the session allows. With the API source, the tabs, a topic's detail and its placement
+ * quiz need a session: while the stored session is read, only the paper ground shows; without a
+ * session, only the sign-in group (`(auth)`) can be reached; with one, only the tabs, a topic's
+ * detail and its placement quiz (every route the stack does not name is outside the guard). The
  * guards also move a person who is on a route that closes, so signing in shows the tabs and
  * signing out shows the email step. With the fixture source there is no sign-in, and only the tabs
  * and a topic's detail can be reached.
@@ -111,6 +112,7 @@ function Routes() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="topic/[slug]" />
+        <Stack.Screen name="topic/[slug]/placement" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />

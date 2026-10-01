@@ -7,7 +7,7 @@ import { signOut, useSession } from '../../auth/useSession';
 import { logWarning } from '../../log';
 import { useFeedStore } from '../store';
 import { cardsByType, makeSet } from '../testing/sets';
-import { activeTopic, loadActiveTopic, useActiveTopic } from '../useActiveTopic';
+import { activeTopic, loadActiveTopic, refreshFeed, useActiveTopic } from '../useActiveTopic';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -106,6 +106,37 @@ describe('setting the active topic', () => {
 
     expect(result.current.slug).toBe('strudel');
     expect(logWarning).toHaveBeenCalledWith('active_topic_write_failed', { kind: 'Error' });
+  });
+});
+
+describe('refreshing the feed', () => {
+  it("clears the active topic's set and counts a refresh, for the feed to start again", async () => {
+    await startWith(stored('user-1', 'strudel'));
+    useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
+    const { result } = renderHook(() => useActiveTopic());
+    const before = result.current.refreshes;
+
+    act(() => {
+      refreshFeed('strudel');
+    });
+
+    expect(useFeedStore.getState().set).toBeNull();
+    expect(result.current.refreshes).toBe(before + 1);
+    expect(result.current.slug).toBe('strudel');
+  });
+
+  it('leaves the feed alone for a topic that is not the active one', async () => {
+    await startWith(stored('user-1', 'strudel'));
+    useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
+    const { result } = renderHook(() => useActiveTopic());
+    const before = result.current.refreshes;
+
+    act(() => {
+      refreshFeed('rust-ownership');
+    });
+
+    expect(useFeedStore.getState().set).not.toBeNull();
+    expect(result.current.refreshes).toBe(before);
   });
 });
 

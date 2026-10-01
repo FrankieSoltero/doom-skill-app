@@ -11,6 +11,10 @@
  *   stored still holds for this run.
  * - Choosing a different topic resets the feed store first, so the feed starts the new topic
  *   instead of resuming the old topic's set.
+ * - `refreshFeed(slug)`, after the server dropped the topic's stored sets (a placement, a skip or
+ *   a reset of either), resets the feed store and counts a refresh (`refreshes`), when `slug` is
+ *   the active topic; the Today screen keys its feed by both, so the feed asks for a set again
+ *   instead of showing (and answering) one the server no longer has. Another topic is left alone.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -27,9 +31,9 @@ const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 /** The stored choice: the topic, and the user who chose it (`null` with the demo sets). */
 type Choice = { owner: string | null; slug: string };
 
-type State = { choice: Choice | null; loaded: boolean };
+type State = { choice: Choice | null; loaded: boolean; refreshes: number };
 
-const useChoice = create<State>()(() => ({ choice: null, loaded: false }));
+const useChoice = create<State>()(() => ({ choice: null, loaded: false, refreshes: 0 }));
 
 function kindOf(error: unknown): string {
   return error instanceof Error ? error.name : typeof error;
@@ -83,12 +87,23 @@ async function setActive(slug: string): Promise<void> {
   }
 }
 
-/** The active topic for a screen: its slug, whether it has been read, and `setActive`. */
+/** Starts the feed again when `slug` is the active topic (see the module comment). */
+export function refreshFeed(slug: string): void {
+  if (activeTopic() !== slug) return;
+  useFeedStore.getState().reset();
+  useChoice.setState((state) => ({ refreshes: state.refreshes + 1 }));
+}
+
+/**
+ * The active topic for a screen: its slug, whether it has been read, how many times its feed was
+ * refreshed (`refreshFeed`), and `setActive`.
+ */
 export function useActiveTopic() {
   const choice = useChoice((state) => state.choice);
   const loaded = useChoice((state) => state.loaded);
+  const refreshes = useChoice((state) => state.refreshes);
   const userId = useSession((state) => state.userId);
-  return { slug: slugFor(choice, userId), loaded, setActive };
+  return { slug: slugFor(choice, userId), loaded, refreshes, setActive };
 }
 
 onSignOut(() => {
