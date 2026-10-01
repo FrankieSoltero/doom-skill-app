@@ -25,10 +25,17 @@ describe('fetchSummary', () => {
     expect(summary).toStrictEqual({
       title: response.summary.title,
       progressDelta: response.summary.progress_delta,
+      progressAfter: response.summary.progress_after,
       moved: response.summary.moved,
       tomorrow: response.summary.tomorrow,
       reminder: response.summary.reminder,
     });
+  });
+
+  it('reads a summary without a reminder time as a null reminder', async () => {
+    const { api } = network(json(200, { ...response.summary, reminder: null }));
+
+    expect((await fetchSummary(api, ASKED)).reminder).toBeNull();
   });
 
   it('fails with the kind of the API error', async () => {

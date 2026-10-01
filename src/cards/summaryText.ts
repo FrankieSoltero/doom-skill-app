@@ -4,6 +4,7 @@
  * rendering. Every word and every sentence shape comes from `copy`.
  */
 import { copy } from '../copy';
+import type { Summary } from '../data';
 
 /** `value` when it is a finite number above 0, else 0. */
 function orZero(value: number): number {
@@ -47,4 +48,19 @@ export function summaryTitle(cards: number, seconds: number): string {
  */
 export function progressPercent(progress: number): string {
   return copy.percent(Math.round(Math.min(orZero(progress), 1) * 100));
+}
+
+/** Percent points in a whole: the summary's delta is in points, a topic's progress a fraction. */
+const POINTS = 100;
+
+/**
+ * The progress tile's value: the topic's progress after the set, beside the set's delta. The API
+ * sends it (`progressAfter`); without it (the demo sets) it is `topicProgress`, the progress when
+ * the set was served, plus the delta. Written as `progressPercent` writes it, limited to 0 to 100%.
+ */
+export function progressAfterSet(
+  topicProgress: number,
+  summary: Pick<Summary, 'progressAfter' | 'progressDelta'>,
+): string {
+  return progressPercent(summary.progressAfter ?? topicProgress + summary.progressDelta / POINTS);
 }

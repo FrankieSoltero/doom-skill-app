@@ -1,4 +1,4 @@
-import { progressPercent, summaryTitle } from '../summaryText';
+import { progressAfterSet, progressPercent, summaryTitle } from '../summaryText';
 
 describe('summaryTitle', () => {
   it.each([
@@ -61,5 +61,21 @@ describe('progressPercent', () => {
     { progress: Number.NaN, text: '0%' },
   ])('writes $progress as $text', ({ progress, text }) => {
     expect(progressPercent(progress)).toBe(text);
+  });
+});
+
+describe('progressAfterSet', () => {
+  it("writes the API's progress after the set when the summary has it", () => {
+    expect(progressAfterSet(0, { progressAfter: 0.05, progressDelta: 5 })).toBe('5%');
+  });
+
+  it("adds the delta to the topic's progress when the summary has no progress after it", () => {
+    expect(progressAfterSet(0.34, { progressDelta: 3 })).toBe('37%');
+    expect(progressAfterSet(0.34, { progressDelta: -2 })).toBe('32%');
+  });
+
+  it('limits the sum to 0 to 100%', () => {
+    expect(progressAfterSet(0.99, { progressDelta: 5 })).toBe('100%');
+    expect(progressAfterSet(0.01, { progressDelta: -5 })).toBe('0%');
   });
 });

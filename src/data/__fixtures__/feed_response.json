@@ -146,6 +146,7 @@
   "summary": {
     "title": "7 cards. 8 minutes.",
     "progress_delta": 25,
+    "progress_after": 0.4880952380952381,
     "moved": [
       [
         "Alternation < >",

@@ -732,10 +732,11 @@ export interface components {
                 components["schemas"]["Fraction"],
                 components["schemas"]["Fraction"]
             ][];
+            progress_after: components["schemas"]["Fraction"];
             /** Progress Delta */
             progress_delta: number;
             /** Reminder */
-            reminder: string;
+            reminder: string | null;
             /** Title */
             title: string;
             /** Tomorrow */

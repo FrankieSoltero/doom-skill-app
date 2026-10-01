@@ -299,6 +299,7 @@ describe('copy for the Summary card', () => {
     expect(copy.tomorrow('Euclidean rhythms', '8:30 pm')).toBe(
       'Tomorrow: **Euclidean rhythms** · reminder at 8:30 pm',
     );
+    expect(copy.tomorrow('Euclidean rhythms', null)).toBe('Tomorrow: **Euclidean rhythms**');
   });
 
   it('holds the number words one to twenty, the nouns, and the title templates', () => {

@@ -155,12 +155,17 @@ export const cardSchema = z.discriminatedUnion('type', [
   checkpointCardSchema,
 ]);
 
+/**
+ * A set's summary. `progressAfter` is the topic's progress after the set, which the API sends and
+ * the bundled demo sets lack. `reminder` is null when the user set no reminder time.
+ */
 export const summarySchema = z.object({
   title: text,
   progressDelta: z.number(),
+  progressAfter: fraction.optional(),
   moved: z.array(z.tuple([text, fraction, fraction])),
   tomorrow: text,
-  reminder: text,
+  reminder: text.nullable(),
 });
 
 const knownCardTypes: ReadonlySet<string> = new Set(

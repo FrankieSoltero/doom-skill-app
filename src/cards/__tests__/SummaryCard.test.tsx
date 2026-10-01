@@ -78,7 +78,8 @@ describe('SummaryCard content', () => {
     expect(others).toHaveLength(0);
     expect(streak).toHaveTextContent('13day streak');
     expect(viewStyleOf(streak).backgroundColor).toBe(colors.coral);
-    expect(progress).toHaveTextContent('34%topic progress, +3');
+    // The set has no progress after it from the API: 34% and the delta of 3.
+    expect(progress).toHaveTextContent('37%topic progress, +3');
     expect(viewStyleOf(progress).backgroundColor).toBe(colors.aqua);
   });
 

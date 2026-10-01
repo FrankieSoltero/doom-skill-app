@@ -42,6 +42,7 @@ describe('the API feed response', () => {
     });
     expect(parsed.setNumber).toBe(response.set_number);
     expect(parsed.summary.progressDelta).toBe(response.summary.progress_delta);
+    expect(parsed.summary.progressAfter).toBe(response.summary.progress_after);
     expect(parsed.summary.moved).toEqual(response.summary.moved);
   });
 

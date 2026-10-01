@@ -12,7 +12,7 @@ import type { NextSetStatus } from '../feed/useFeedSession';
 import { useSummary } from '../feed/useSummary';
 import { colors, type } from '../theme';
 import { SummaryActions } from './SummaryActions';
-import { progressPercent, summaryTitle } from './summaryText';
+import { progressAfterSet, summaryTitle } from './summaryText';
 
 // Summary values from docs/design/card-feed/README.md:143-153 and the prototype,
 // docs/design/card-feed/reference/LearnLoop Card Feed v2.dc.html:243-265, that the theme lacks.
@@ -79,11 +79,13 @@ function MasteryList({ moved }: { moved: Summary['moved'] }) {
  * The last page of every set (docs/design/card-feed/README.md:143-153, spec section 1a): on the
  * ink card, the kicker "DAY 4 COMPLETE"; the title, counting every card and minute of the session
  * so far from the store's totals; the streak (coral) and topic progress (aqua) tiles; the mastery
- * rows; tomorrow's node and reminder; and the buttons. Everything is static: the title is lime,
+ * rows; tomorrow's node and reminder (left out when none is set); and the buttons. Everything is static: the title is lime,
  * with no gradient, shine or count-up, and the bars are drawn at their final values. The session
  * adds the set to the totals and raises the streak when this page is reached; this card only
- * reads them. The progress delta, the mastery rows and tomorrow come from the set's recorded
- * summary once the store holds it (`useSummary`), else from the projected one the set came with.
+ * reads them. The progress tile shows the topic's progress after the set beside the set's delta
+ * (`progressAfterSet`). The progress, its delta, the mastery rows and tomorrow come from the set's
+ * recorded summary once the store holds it (`useSummary`), else from the projected one the set
+ * came with.
  */
 export function SummaryCard({
   set,
@@ -113,7 +115,7 @@ export function SummaryCard({
       <View style={styles.tiles}>
         <StatTile value={String(streakCount(streak))} label={copy.dayStreak} fill={colors.coral} />
         <StatTile
-          value={progressPercent(topic.progress)}
+          value={progressAfterSet(topic.progress, summary)}
           label={copy.topicProgress(summary.progressDelta)}
           fill={colors.aqua}
         />

@@ -244,9 +244,10 @@ export const copy = deepFreeze({
   masteryOf: (name: string) => `${name} mastery`,
   /**
    * The Summary's footer, README.md:152. The node is in bold markers (rule SS-11), drawn through
-   * `BoldText`.
+   * `BoldText`. Without a reminder time (`null`) the reminder phrase is left out.
    */
-  tomorrow: (node: string, time: string) => `Tomorrow: **${node}** · reminder at ${time}`,
+  tomorrow: (node: string, time: string | null) =>
+    time === null ? `Tomorrow: **${node}**` : `Tomorrow: **${node}** · reminder at ${time}`,
   /** The Summary's button that loads the next set (spec section 1a). */
   keepGoing: 'Keep going',
   /** The Summary's button that switches to the Tree tab, README.md:152. */
