@@ -17,7 +17,11 @@ const mockConfig = { apiUrl: '', supabaseUrl: '', supabaseAnonKey: '', dataSourc
 jest.mock('../../src/config', () => ({ config: mockConfig, configError: null }));
 jest.mock('../../src/auth/useSession', () => {
   const { create } = jest.requireActual<typeof import('zustand')>('zustand');
-  return { useSession: create(() => ({ status: 'loading', userId: null })) };
+  return {
+    useSession: create(() => ({ status: 'loading', userId: null })),
+    // The server-state cache (src/api/query.ts), which the layout provides, registers here.
+    onSignOut: () => () => undefined,
+  };
 });
 jest.mock('../../src/auth/supabase', () => ({
   supabase: { auth: { signInWithOtp: jest.fn(), verifyOtp: jest.fn() } },

@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import type { ComponentType } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { queryWrapper } from '../../src/api/testing/fakeApi';
 import { openSkillTree } from '../../src/components/FeedScreen';
 import { textStyleOf, viewStyleOf } from '../../src/components/testing/styles';
 import { cardSource, FeedLoadError } from '../../src/data';
@@ -47,9 +48,24 @@ const ROUTES = {
 
 const PLACEHOLDERS = [
   { path: '/tree', tab: 'Tree', title: 'Skill tree', Screen: TreeScreen },
-  { path: '/explore', tab: 'Explore', title: 'Explore', Screen: ExploreScreen },
   { path: '/profile', tab: 'Profile', title: 'Profile', Screen: ProfileScreen },
 ];
+
+/** The built tab screens, each with its root's test id and its title. */
+const SCREENS = [
+  {
+    path: '/explore',
+    tab: 'Explore',
+    title: 'Explore',
+    Screen: ExploreScreen,
+    testID: 'explore-screen',
+  },
+];
+
+/** Renders the tab routes at `initialUrl`, with a fresh server-state cache. */
+function renderTabs(initialUrl: string) {
+  return renderRouter(ROUTES, { initialUrl, wrapper: queryWrapper().wrapper });
+}
 
 const TOP_INSET = 47;
 
@@ -59,9 +75,12 @@ function renderWithTopInset(Screen: ComponentType) {
     frame: { x: 0, y: 0, width: 390, height: 844 },
     insets: { top: TOP_INSET, right: 0, bottom: 34, left: 0 },
   };
+  const { wrapper: Cache } = queryWrapper();
   render(
     <SafeAreaProvider initialMetrics={metrics}>
-      <Screen />
+      <Cache>
+        <Screen />
+      </Cache>
     </SafeAreaProvider>,
   );
 }
@@ -69,7 +88,7 @@ function renderWithTopInset(Screen: ComponentType) {
 describe('tab routes', () => {
   it('renders the Today screen at /', async () => {
     getNextSet.mockResolvedValueOnce(makeSet(12, [cardsByType.concept]));
-    const router = renderRouter(ROUTES, { initialUrl: '/' });
+    const router = renderTabs('/');
 
     expect(router.getPathname()).toBe('/');
     const header = await screen.findByTestId('feed-header');
@@ -79,7 +98,7 @@ describe('tab routes', () => {
   });
 
   it('draws the tab bar with no navigation header above the screen', () => {
-    renderRouter(ROUTES, { initialUrl: '/' });
+    renderTabs('/');
 
     expect(screen.getByTestId('tab-bar')).toBeOnTheScreen();
     // React Navigation's header draws the screen title as a heading; the Today screen has none.
@@ -87,7 +106,7 @@ describe('tab routes', () => {
   });
 
   it('orders the tabs Today, Tree, Explore, Profile, with Today selected at /', () => {
-    renderRouter(ROUTES, { initialUrl: '/' });
+    renderTabs('/');
 
     const tabs = screen.getAllByRole('tab');
     ['Today', 'Tree', 'Explore', 'Profile'].forEach((name, position) => {
@@ -98,7 +117,7 @@ describe('tab routes', () => {
   });
 
   it.each(PLACEHOLDERS)('pressing the $tab tab renders $path', ({ path, tab, title }) => {
-    const router = renderRouter(ROUTES, { initialUrl: '/' });
+    const router = renderTabs('/');
 
     fireEvent.press(screen.getByRole('tab', { name: tab }));
 
@@ -107,8 +126,18 @@ describe('tab routes', () => {
     expect(screen.getByTestId('placeholder-screen')).toHaveTextContent(title);
   });
 
+  it.each(SCREENS)('pressing the $tab tab renders its screen at $path', ({ path, tab, testID }) => {
+    const router = renderTabs('/');
+
+    fireEvent.press(screen.getByRole('tab', { name: tab }));
+
+    expect(router.getPathname()).toBe(path);
+    expect(screen.getByRole('tab', { name: tab })).toBeSelected();
+    expect(screen.getByTestId(testID)).toBeOnTheScreen();
+  });
+
   it("the Summary's View skill tree action switches to the Tree tab", () => {
-    const router = renderRouter(ROUTES, { initialUrl: '/' });
+    const router = renderTabs('/');
 
     act(() => {
       openSkillTree();
@@ -121,7 +150,7 @@ describe('tab routes', () => {
 
   it("with no active topic, the Today screen's Explore button switches to the Explore tab", async () => {
     getNextSet.mockRejectedValueOnce(new FeedLoadError('No active topic', { kind: 'noTopic' }));
-    const router = renderRouter(ROUTES, { initialUrl: '/' });
+    const router = renderTabs('/');
 
     fireEvent.press(await screen.findByRole('button', { name: 'Explore topics' }));
 
@@ -130,7 +159,7 @@ describe('tab routes', () => {
   });
 
   it('pressing the Today tab from another tab renders /', () => {
-    const router = renderRouter(ROUTES, { initialUrl: '/profile' });
+    const router = renderTabs('/profile');
 
     fireEvent.press(screen.getByRole('tab', { name: 'Today' }));
 
@@ -139,7 +168,7 @@ describe('tab routes', () => {
   });
 
   it.each(PLACEHOLDERS)('$path shows only its title, $title', ({ path, title }) => {
-    renderRouter(ROUTES, { initialUrl: path });
+    renderTabs(path);
 
     const placeholder = screen.getByTestId('placeholder-screen');
     expect(placeholder).toHaveTextContent(title, { exact: true });
@@ -150,6 +179,7 @@ describe('tab screens', () => {
   it.each([
     { name: 'Today', Screen: TodayScreen, testID: 'today-screen' },
     ...PLACEHOLDERS.map(({ tab, Screen }) => ({ name: tab, Screen, testID: 'placeholder-screen' })),
+    ...SCREENS.map(({ tab, Screen, testID }) => ({ name: tab, Screen, testID })),
   ])('$name: paper ground, padded by the top safe-area inset', ({ Screen, testID }) => {
     renderWithTopInset(Screen);
 
@@ -160,12 +190,15 @@ describe('tab screens', () => {
     });
   });
 
-  it.each(PLACEHOLDERS)('$tab: the title in the tab title style, in ink', ({ title, Screen }) => {
-    renderWithTopInset(Screen);
+  it.each([...PLACEHOLDERS, ...SCREENS])(
+    '$tab: the title in the tab title style, in ink',
+    ({ title, Screen }) => {
+      renderWithTopInset(Screen);
 
-    expect(textStyleOf(screen.getByText(title))).toMatchObject({
-      ...type.tabTitle,
-      color: colors.ink,
-    });
-  });
+      expect(textStyleOf(screen.getByText(title))).toMatchObject({
+        ...type.tabTitle,
+        color: colors.ink,
+      });
+    },
+  );
 });

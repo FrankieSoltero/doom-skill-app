@@ -3,6 +3,7 @@
 import 'react-native-get-random-values';
 import { BarlowCondensed_600SemiBold } from '@expo-google-fonts/barlow-condensed';
 import { Barlow_400Regular, Barlow_500Medium, Barlow_700Bold } from '@expo-google-fonts/barlow';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +13,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { queryClient } from '../src/api/query';
 import { useSession } from '../src/auth/useSession';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { ErrorScreen } from '../src/components/ErrorScreen';
@@ -70,13 +72,16 @@ export default function RootLayout() {
 
   // The gesture root sits as close to the app's root as possible, as Gesture Handler asks, so the
   // feed pager's pan works on every screen. A configuration problem (src/config.ts, logged there)
-  // shows one fixed message in place of the routes: nothing in the app can work without it.
+  // shows one fixed message in place of the routes: nothing in the app can work without it. The
+  // server-state cache (src/api/query.ts) is given to every route.
   return (
     <GestureHandlerRootView style={styles.root}>
       {configError === null ? (
-        <RootBoundary>
-          <Routes />
-        </RootBoundary>
+        <QueryClientProvider client={queryClient}>
+          <RootBoundary>
+            <Routes />
+          </RootBoundary>
+        </QueryClientProvider>
       ) : (
         <ErrorScreen message={copy.configFailed} />
       )}

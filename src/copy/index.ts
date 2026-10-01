@@ -5,7 +5,11 @@
  * Plain strings are values. A string that needs data is a function that returns the string, for
  * example `cardsLeft: (count: number) => ...`. Related strings may be grouped in nested objects;
  * `deepFreeze` freezes every level, and `as const` makes every level read-only to the compiler.
+ * A screen's group may live in a sibling file of this folder (`topics.ts`), merged into `copy`
+ * here; screens still read it through `copy`.
  */
+
+import { explore, pendingTopic } from './topics';
 
 /** Freezes every nested object under `value`. Functions and primitives are left as they are. */
 function freezeChildren(value: object): void {
@@ -290,7 +294,8 @@ export const copy = deepFreeze({
   /** Titles of the placeholder tabs (spec section 10 approves a title only). */
   placeholder: {
     tree: 'Skill tree',
-    explore: 'Explore',
     profile: 'Profile',
   },
+  explore,
+  pendingTopic,
 } as const);

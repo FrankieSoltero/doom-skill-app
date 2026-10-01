@@ -78,10 +78,9 @@ describe('copy', () => {
     });
   });
 
-  it('titles the three placeholder tabs', () => {
+  it('titles the two placeholder tabs', () => {
     expect(copy.placeholder).toStrictEqual({
       tree: 'Skill tree',
-      explore: 'Explore',
       profile: 'Profile',
     });
   });
@@ -94,6 +93,8 @@ describe('copy', () => {
     expect(Object.isFrozen(copy.tabs)).toBe(true);
     expect(Object.isFrozen(copy.placeholder)).toBe(true);
     expect(Object.isFrozen(copy.cardTypes)).toBe(true);
+    expect(Object.isFrozen(copy.explore)).toBe(true);
+    expect(Object.isFrozen(copy.pendingTopic)).toBe(true);
   });
 });
 
