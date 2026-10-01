@@ -39,6 +39,8 @@ type RatingRowProps = {
   rating: Rating | null;
   /** Called with the position of a pressed button, while no rating is stored. */
   onRate: (rating: Rating) => void;
+  /** True to show the hint line under the buttons (`copy.ratingHint`). */
+  showHint: boolean;
 };
 
 type RatingButtonProps = {
@@ -82,11 +84,12 @@ function RatingButton({ label, interval, selected, locked, onPress }: RatingButt
 }
 
 /**
- * The foot of a revealed review card (README.md:119-121): the caption "How well did you
- * remember?" over a row of up to four rating buttons in equal columns, from the card's first
- * four ratings. The stored rating shows ink with yellow text. Render it inside a `CardFrame`.
+ * The foot of a revealed review card (README.md:119-121): the caption `copy.howWell` over a row
+ * of up to four rating buttons in equal columns, from the card's first four ratings, then, with
+ * `showHint`, the hint line `copy.ratingHint` in the caption style. The stored rating shows ink
+ * with yellow text. Render it inside a `CardFrame`.
  */
-export function RatingRow({ ratings, rating, onRate }: RatingRowProps) {
+export function RatingRow({ ratings, rating, onRate, showHint }: RatingRowProps) {
   const color = useCardTextColor();
   const shown = POSITIONS.flatMap((position) => {
     const pair = ratings[position];
@@ -111,6 +114,11 @@ export function RatingRow({ ratings, rating, onRate }: RatingRowProps) {
           </View>
         ))}
       </View>
+      {showHint ? (
+        <Text testID="rating-hint" style={[type.caption, { color }]}>
+          {copy.ratingHint}
+        </Text>
+      ) : null}
     </View>
   );
 }

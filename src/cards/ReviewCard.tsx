@@ -1,5 +1,5 @@
 import { Eye } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { announce } from '../components/announce';
@@ -46,6 +46,8 @@ const ANSWER_SIZE = 17;
 const ANSWER_LINE_HEIGHT = 26;
 /** Space between the answer and its code block, prototype line 193 ("gap:10px"). */
 const ANSWER_GAP = 10;
+/** The rating hint shows while fewer review ratings than this were made on the phone. */
+const HINT_RATINGS = 3;
 
 type ReviewCardProps = {
   card: ReviewCardData;
@@ -115,6 +117,23 @@ function RevealedAnswer({ answer, snippet }: { answer: string; snippet: string }
   );
 }
 
+type RatingFootProps = {
+  ratings: ReviewCardData['ratings'];
+  rating: Rating | null;
+  onRate: (rating: Rating) => void;
+};
+
+/**
+ * The rating row of a revealed card, with the hint line while fewer than `HINT_RATINGS` review
+ * ratings were made on the phone. The hint is decided once, from the count when the row first
+ * appears (the reveal), so the rating that raises the count does not take it away under the
+ * learner's finger. Not when the card is first drawn: the feed draws every card of a set at once.
+ */
+function RatingFoot({ ratings, rating, onRate }: RatingFootProps) {
+  const [showHint] = useState(() => useFeedStore.getState().ratingsMade < HINT_RATINGS);
+  return <RatingRow ratings={ratings} rating={rating} onRate={onRate} showHint={showHint} />;
+}
+
 /**
  * The review card (README.md:114-121): kicker row, the prompt as the title, and a dashed reveal
  * button. Once revealed: the answer and its code, a flex spacer, then the rating row pinned at
@@ -151,7 +170,7 @@ export function ReviewCard({ card, index, onNext }: ReviewCardProps) {
         <RevealButton onPress={onReveal} />
       )}
       <View testID="review-spacer" style={styles.spacer} />
-      {revealed ? <RatingRow ratings={card.ratings} rating={rating} onRate={onRate} /> : null}
+      {revealed ? <RatingFoot ratings={card.ratings} rating={rating} onRate={onRate} /> : null}
     </CardFrame>
   );
 }

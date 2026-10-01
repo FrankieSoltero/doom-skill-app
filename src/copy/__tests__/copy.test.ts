@@ -143,9 +143,10 @@ describe('copy for cards', () => {
 });
 
 describe('copy for the review card', () => {
-  it('words the reveal button and the rating caption, README.md:116 and :119', () => {
+  it('words the reveal button, the rating caption and the rating hint', () => {
     expect(copy.recallThenReveal).toBe('Recall it, then tap to reveal');
-    expect(copy.howWell).toBe('How well did you remember?');
+    expect(copy.howWell).toBe('How easily did it come back?');
+    expect(copy.ratingHint).toBe("Your answer decides when you'll see this again.");
   });
 
   it.each([

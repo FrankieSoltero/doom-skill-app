@@ -129,7 +129,7 @@ describe('ReviewCard reveal', () => {
     expect(screen.getByTestId('review-answer-text')).toHaveTextContent(ANSWER, { exact: true });
     expect(screen.getByTestId('bold-span')).toHaveTextContent('rest', { exact: true });
     expect(screen.getByTestId('code-block-code')).toHaveTextContent('s("bd ~ sd ~")');
-    expect(screen.getByText('How well did you remember?')).toBeOnTheScreen();
+    expect(screen.getByText('How easily did it come back?')).toBeOnTheScreen();
     const ratings = within(screen.getByTestId('rating-buttons')).getAllByRole('button');
     expect(ratings.map((button) => String(button.props.accessibilityLabel))).toStrictEqual([
       'Again, next review in <1 min',

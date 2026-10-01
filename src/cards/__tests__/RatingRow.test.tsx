@@ -23,9 +23,16 @@ const TOUCH = {
 /** A pressed button's offset, README.md:18 and prototype line 204. */
 const PRESSED = { transform: [{ translateX: 2 }, { translateY: 2 }] };
 
-function renderRow(rating: Rating | null = null, ratings: [string, string][] = FOUR) {
+/** The line under the buttons for a learner's first ratings. */
+const HINT = "Your answer decides when you'll see this again.";
+
+function renderRow(
+  rating: Rating | null = null,
+  ratings: [string, string][] = FOUR,
+  showHint = false,
+) {
   const onRate = jest.fn<undefined, [Rating]>();
-  render(<RatingRow ratings={ratings} rating={rating} onRate={onRate} />);
+  render(<RatingRow ratings={ratings} rating={rating} onRate={onRate} showHint={showHint} />);
   return onRate;
 }
 
@@ -52,7 +59,7 @@ describe('RatingRow content', () => {
   it('shows the caption, then each label over its interval, in order', () => {
     renderRow();
 
-    expect(textStyleOf(screen.getByText('How well did you remember?'))).toStrictEqual({
+    expect(textStyleOf(screen.getByText('How easily did it come back?'))).toStrictEqual({
       ...type.caption,
       color: colors.ink,
     });
@@ -60,6 +67,30 @@ describe('RatingRow content', () => {
       .getAllByText(/./)
       .map((text) => String(text.props.children));
     expect(texts).toStrictEqual(FOUR.flat());
+  });
+
+  it('with showHint, puts the hint line under the buttons in the caption style', () => {
+    renderRow(null, FOUR, true);
+
+    const parts = within(screen.getByTestId('rating-row')).getAllByTestId(
+      /^(rating-buttons|rating-hint)$/,
+    );
+    expect(parts.map((part) => part.props.testID as unknown)).toStrictEqual([
+      'rating-buttons',
+      'rating-hint',
+    ]);
+    expect(screen.getByTestId('rating-hint')).toHaveTextContent(HINT, { exact: true });
+    expect(textStyleOf(screen.getByText(HINT))).toStrictEqual({
+      ...type.caption,
+      color: colors.ink,
+    });
+  });
+
+  it('without showHint, shows no hint line', () => {
+    renderRow();
+
+    expect(screen.queryByText(HINT)).toBeNull();
+    expect(screen.queryByTestId('rating-hint')).toBeNull();
   });
 
   it('shows two ratings in two equal columns when the card gives two', () => {

@@ -101,7 +101,7 @@ appId: com.frankiesoltero.doomskill
     visible: 'Card 5 of 7'
     timeout: 5000
 - tapOn: 'Recall it, then tap to reveal'
-- assertVisible: 'How well did you remember?'
+- assertVisible: 'How easily did it come back?'
 - runFlow:
     when:
       true: ${SHOTS == 'true'}

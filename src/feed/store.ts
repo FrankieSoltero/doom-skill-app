@@ -1,13 +1,16 @@
 // The feed session: the set being worked through, the current page, the answers so far, and the
-// day's totals and streak. Held in memory only; the store is not persisted, so "today" means
-// since the store was created or last reset (the set round alone keeps counting across a reset).
+// day's totals and streak. Held in memory only, so "today" means since the store was created or
+// last reset (the set round alone keeps counting across a reset). The one field kept on the phone
+// is `ratingsMade`, saved in async storage under `feedState` (`loadFeedState`).
 // Each answered card of a set the API served is also handed to the attempt outbox, which sends it
 // on its own (`sendAttemptsTo`, src/feed/outbox.ts), and so is each card the app dropped from a
 // set (`droppedIds`), as skipped, when the session is served the set (`skipDropped`): the server
 // finishes a set only when every card of it has an attempt.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 import type { Card, FeedSet, Summary } from '../data';
+import { logWarning } from '../log';
 import type { CardAnswer } from './answers';
 import type { Attempt } from './outbox';
 
@@ -44,6 +47,11 @@ type FeedState = {
    * `set.summary`; `null` until then. Set at most once per set, so the numbers change once.
    */
   recordedSummary: Summary | null;
+  /**
+   * The review ratings ever made on this phone: each review rating stored adds one (a card
+   * counts once). Kept in async storage and read back when the app starts; `reset` keeps it.
+   */
+  ratingsMade: number;
 };
 
 type FeedActions = {
@@ -74,6 +82,7 @@ const initialState: FeedState = {
   shownAt: {},
   seenSent: {},
   recordedSummary: null,
+  ratingsMade: 0,
 };
 
 /** Where the store hands each answered card: the attempt outbox, which installs itself. */
@@ -169,6 +178,41 @@ function conceptLeft(state: FeedState, to: number): number | null {
   return leaving && state.seenSent[from] === undefined ? from : null;
 }
 
+/** True for a review answer with a rating. */
+function rated(answer: CardAnswer | undefined): boolean {
+  return answer?.kind === 'review' && answer.rating !== null;
+}
+
+/** The storage key of the fields kept on the phone, stored as `{"ratingsMade": n}`. */
+const STORAGE_KEY = 'feedState';
+
+function kindOf(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
+/**
+ * The count in a stored `text`: 0 for a state stored without it (an older app); `null` when the
+ * text does not fit (not JSON, not an object, a count that is not a whole number from 0).
+ */
+function parseRatingsMade(text: string): number | null {
+  try {
+    const value: unknown = JSON.parse(text);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+    const { ratingsMade = 0 } = value as Record<string, unknown>;
+    const fits = typeof ratingsMade === 'number' && Number.isSafeInteger(ratingsMade);
+    return fits && ratingsMade >= 0 ? ratingsMade : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Stores `ratingsMade`. A failure is logged by its class name; the count still holds for this run. */
+function saveRatingsMade(ratingsMade: number): void {
+  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ratingsMade })).catch((error: unknown) => {
+    logWarning('feed_state_write_failed', { kind: kindOf(error) });
+  });
+}
+
 /** The pages of a set: one per card, then the Summary page. */
 export function pageCount(set: FeedSet): number {
   return set.cards.length + 1;
@@ -240,11 +284,15 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     });
     if (left !== null) send(attemptAt(state, left, { seen: true }, now));
   },
-  // The answer is stored at once, for the card and the gate; the outbox sends it on its own.
+  // The answer is stored at once, for the card and the gate; the outbox sends it on its own. A
+  // card's first review rating adds one to `ratingsMade`, which is saved.
   setAnswer: (cardIndex, answer) => {
     const state = getState();
     const card = state.set?.cards[cardIndex];
-    setState({ answers: { ...state.answers, [cardIndex]: answer } });
+    const counted = rated(answer) && !rated(state.answers[cardIndex]);
+    const ratingsMade = state.ratingsMade + (counted ? 1 : 0);
+    setState({ answers: { ...state.answers, [cardIndex]: answer }, ratingsMade });
+    if (counted) saveRatingsMade(ratingsMade);
     const response = card === undefined ? null : responses[card.type](answer);
     send(attemptAt(state, cardIndex, response, Date.now()));
   },
@@ -259,8 +307,34 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     );
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a
-  // reset must not reuse the page keys of a set started before it. `resets` counts up.
+  // reset must not reuse the page keys of a set started before it. `resets` counts up, and
+  // `ratingsMade` belongs to the phone, not the session.
   reset: () => {
-    setState((state) => ({ ...initialState, round: state.round, resets: state.resets + 1 }));
+    setState((state) => ({
+      ...initialState,
+      round: state.round,
+      resets: state.resets + 1,
+      ratingsMade: state.ratingsMade,
+    }));
   },
 }));
+
+/**
+ * Reads the stored `ratingsMade` into the store. Runs once when this module loads. Nothing stored
+ * reads as 0; a stored value that does not fit reads as 0 and is logged, and so is a failed read
+ * (by its class name). A count already made in this run is never lowered.
+ */
+export async function loadFeedState(): Promise<void> {
+  let stored = 0;
+  try {
+    const text = await AsyncStorage.getItem(STORAGE_KEY);
+    const parsed = text === null ? 0 : parseRatingsMade(text);
+    if (parsed === null) logWarning('feed_state_invalid', {});
+    stored = parsed ?? 0;
+  } catch (error) {
+    logWarning('feed_state_read_failed', { kind: kindOf(error) });
+  }
+  useFeedStore.setState((state) => (stored > state.ratingsMade ? { ratingsMade: stored } : state));
+}
+
+void loadFeedState();

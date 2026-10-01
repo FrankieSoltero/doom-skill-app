@@ -111,8 +111,10 @@ export const copy = deepFreeze({
   verdict: (verdict: string, explanation: string) => `**${verdict}** ${explanation}`,
   /** The review card's reveal button, README.md:116. */
   recallThenReveal: 'Recall it, then tap to reveal',
-  /** The caption over the review card's rating buttons, README.md:119. */
-  howWell: 'How well did you remember?',
+  /** The caption over the review card's rating buttons, README.md:119 (reworded in M8). */
+  howWell: 'How easily did it come back?',
+  /** The line under the rating buttons for the first three review ratings made on the phone. */
+  ratingHint: "Your answer decides when you'll see this again.",
   /**
    * When a review card was last seen, the node part of its kicker, README.md:115 ("SEEN 3 DAYS
    * AGO" by style). `days` is a whole number, 0 or more.
