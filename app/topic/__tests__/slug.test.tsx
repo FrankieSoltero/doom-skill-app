@@ -20,7 +20,7 @@ jest.mock('react-native-safe-area-context', () => {
   return mock.default;
 });
 jest.mock('expo-router', () => ({
-  router: { back: jest.fn(), navigate: jest.fn() },
+  router: { back: jest.fn(), dismissTo: jest.fn() },
   useLocalSearchParams: () => ({ slug: 'strudel' }),
 }));
 jest.mock('../../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -58,7 +58,7 @@ const ENROLLMENT = {
 
 beforeEach(async () => {
   jest.useFakeTimers();
-  jest.mocked(router.navigate).mockClear();
+  jest.mocked(router.dismissTo).mockClear();
   jest.mocked(router.back).mockClear();
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
   await loadActiveTopic();
@@ -148,7 +148,7 @@ describe('Topic detail: Start', () => {
       daily_minutes: 15,
     });
     expect(activeTopic()).toBe('strudel');
-    expect(router.navigate).toHaveBeenCalledWith('/');
+    expect(router.dismissTo).toHaveBeenCalledWith('/');
   });
 
   it.each([
@@ -165,6 +165,6 @@ describe('Topic detail: Start', () => {
     await advance(0);
 
     expect(screen.getByText(line)).toBeOnTheScreen();
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(router.dismissTo).not.toHaveBeenCalled();
   });
 });

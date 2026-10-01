@@ -29,7 +29,11 @@ function enrollFailure(error: unknown): string {
     : copy.topic.enrollFailed;
 }
 
-/** Start: enrolls, then opens the Today tab, which starts the topic. */
+/**
+ * Start: enrolls, then goes back to the Today tab, which starts the topic. It closes this screen
+ * (`dismissTo`) rather than navigating: React Navigation 7's `navigate` pushes a second copy of
+ * the tabs over this screen, and both Today feeds would ask for the set and its summary.
+ */
 function StartButton({ slug }: { slug: string }) {
   const enrollment = useEnroll(slug);
   const [failure, setFailure] = useState<string | null>(null);
@@ -38,7 +42,7 @@ function StartButton({ slug }: { slug: string }) {
     setFailure(null);
     try {
       await enrollment.enroll();
-      router.navigate('/');
+      router.dismissTo('/');
     } catch (error) {
       setFailure(enrollFailure(error));
     }
