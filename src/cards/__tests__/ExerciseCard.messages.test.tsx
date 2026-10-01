@@ -3,7 +3,7 @@
 // from ExerciseCard.audio.test.tsx, which is at the file size limit.
 import { screen } from '@testing-library/react-native';
 
-import { STRUDEL_ERROR } from '../../strudel/useStrudel';
+import { STRUDEL_ERROR, useStrudel } from '../../strudel/useStrudel';
 import {
   badges,
   FAIL,
@@ -156,5 +156,19 @@ describe('ExerciseCard over a page that stopped answering', () => {
     setAudio({ status: 'unavailable' });
 
     expect(badges()).toStrictEqual(['Audio unavailable']);
+  });
+});
+
+describe('ExerciseCard and its player', () => {
+  it('names itself to its player: its page, and its id when the API served it', () => {
+    renderExerciseCard(demo());
+    renderExerciseCard({ ...demo(), id: '00000000-0000-4000-8000-000000000305' });
+
+    expect(useStrudel).toHaveBeenCalledWith({ cardIndex: INDEX });
+    expect(useStrudel).toHaveBeenCalledWith({
+      cardIndex: INDEX,
+      cardId: '00000000-0000-4000-8000-000000000305',
+    });
+    expect(useStrudel).not.toHaveBeenCalledWith();
   });
 });

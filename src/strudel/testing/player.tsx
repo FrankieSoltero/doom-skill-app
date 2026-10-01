@@ -2,7 +2,7 @@
 // WebView stand-in) in a second root, then drives it inside `act`. Not app code.
 import { act, render, renderHook } from '@testing-library/react-native';
 
-import { useStrudel, type Strudel } from '../useStrudel';
+import { useStrudel, type PlayerOwner, type Strudel } from '../useStrudel';
 import { pagePosts } from './webview';
 
 /** Code for tests that do not care what is played. */
@@ -12,12 +12,12 @@ interface HookResult {
   current: Strudel;
 }
 
-/** The hook, with its player rendered, still waiting for the page. */
-export function mountPlayer() {
+/** The hook, with its player rendered, still waiting for the page; `owner` names its card. */
+export function mountPlayer(owner?: PlayerOwner) {
   let renders = 0;
   const hook = renderHook(() => {
     renders += 1;
-    return useStrudel();
+    return useStrudel(owner);
   });
   const view = render(hook.result.current.player);
   /** Renders the hook's current player in place of the old one, as a screen would. */

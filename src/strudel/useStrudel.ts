@@ -88,6 +88,12 @@ function logDroppedMessage(): void {
 
 type Publish = (state: PlayerState, page: number) => void;
 
+/**
+ * The card a player belongs to, named in its `strudel_unavailable` log so a page that did not
+ * answer can be traced to its card: the card's page in the set, and its id when the API served it.
+ */
+export type PlayerOwner = { cardIndex: number; cardId?: string };
+
 /** One player's state, WebView and timers. Its public members are stable functions. */
 class Session {
   private state = INITIAL;
@@ -110,9 +116,11 @@ class Session {
     this.update({ step });
   });
   private readonly publish: Publish;
+  private readonly owner: PlayerOwner | undefined;
 
-  constructor(publish: Publish) {
+  constructor(publish: Publish, owner: PlayerOwner | undefined) {
     this.publish = publish;
+    this.owner = owner;
   }
 
   private update(change: Partial<PlayerState>): void {
@@ -238,7 +246,7 @@ class Session {
     }
     this.clearTimers();
     this.update({ status: 'unavailable', playing: false, step: null });
-    logWarning('strudel_unavailable', { reason });
+    logWarning('strudel_unavailable', { reason, ...this.owner });
   };
 
   readonly play = (code: string): void => {
@@ -297,8 +305,9 @@ class Session {
 }
 
 /**
- * The Strudel player for one card. Render the returned `player` once; until it is rendered the
- * page never loads, and the hook turns `unavailable` after 5 seconds.
+ * The Strudel player for one card, `owner` (named in the log when the player becomes
+ * unavailable). Render the returned `player` once; until it is rendered the page never loads, and
+ * the hook turns `unavailable` after 5 seconds.
  *
  * - `status`: `starting` until the page posts `ready`; `unavailable` if it does not within 5
  *   seconds, or if the page's process ends or it fails to load. `reset` starts again.
@@ -315,13 +324,13 @@ class Session {
  * - After the hook unmounts, `play`, `stop`, `reset` and `clearError` do nothing. Unmounting (or
  *   hiding the card, which runs the same cleanup) sends `stop` if playing and leaves it stopped.
  */
-export function useStrudel(): Strudel {
+export function useStrudel(owner?: PlayerOwner): Strudel {
   const [{ state, page }, setView] = useState({ state: INITIAL, page: 0 });
   const [session] = useState(
     () =>
       new Session((next, nextPage) => {
         setView({ state: next, page: nextPage });
-      }),
+      }, owner),
   );
   // A layout effect: on unmount it runs before React detaches the WebView's ref, so the stop
   // message still reaches the page.

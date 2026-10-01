@@ -1,12 +1,16 @@
 // Starting a topic from its detail screen, through the app's routes, its API card source and the
-// real API client over a fake network: the Today feed asks for the day's set once, and its Summary
-// asks for the recorded summary once. Nothing leaves the test.
+// real API client over a fake network: one Today feed is mounted, so it asks for the day's set
+// once, its Summary asks for the recorded summary once, and an exercise card has one Strudel
+// player. Nothing leaves the test.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
+import { queryClient } from '../../src/api/query';
 import { useSession } from '../../src/auth/useSession';
 import { useFeedStore } from '../../src/feed/store';
 import { loadActiveTopic } from '../../src/feed/useActiveTopic';
+import { mountedWebViews } from '../../src/strudel/__mocks__/webview';
 import TabsLayout from '../(tabs)/_layout';
 import ExploreScreen from '../(tabs)/explore';
 import TodayScreen from '../(tabs)/index';
@@ -107,6 +111,28 @@ const SET = {
   summary: SUMMARY,
 };
 
+/** A day's set of one exercise card, as `GET /feed/today` writes it. */
+const EXERCISE_SET = {
+  ...SET,
+  cards: [
+    {
+      id: '00000000-0000-4000-8000-000000000306',
+      node: 'Speed * and /',
+      est_seconds: 90,
+      type: 'exercise',
+      lang: 'strudel',
+      title: 'Double the hi-hats to eight per cycle',
+      starter_code: 's("hh*4")',
+      checks: [{ kind: 'contains', value: 'hh*8', ignore_whitespace: true }],
+      pass_msg: 'Eight per cycle.',
+      fail_msg: 'Not eight yet.',
+    },
+  ],
+};
+
+/** What `GET /feed/today` answers in the current test. */
+let today: object = SET;
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -115,9 +141,16 @@ const ANSWERS: Record<string, () => Response> = {
   'GET /topics/strudel': () => json(200, TOPIC),
   'GET /me': () => json(200, ME),
   'POST /topics/strudel/enroll': () => json(201, {}),
-  'GET /feed/today': () => json(200, SET),
+  'GET /feed/today': () => json(200, today),
+  // The app's card source outlives a test: once it has served the topic, it asks for the next set.
+  'GET /feed/next': () => json(200, today),
   'GET /feed/summary': () => json(200, SUMMARY),
 };
+
+/** The requests for a set: the first of the day, or the next one. */
+function setRequests(): number {
+  return sentTo('GET /feed/today') + sentTo('GET /feed/next');
+}
 
 function sentTo(route: string): number {
   return mockSend.mock.calls.filter(([request]) => {
@@ -126,7 +159,35 @@ function sentTo(route: string): number {
   }).length;
 }
 
+/** Renders the app's routes at `url`, opens the topic and presses Start. */
+async function startFrom(url: string): Promise<void> {
+  renderRouter(ROUTES, { initialUrl: url });
+  act(() => {
+    router.push('/topic/strudel');
+  });
+  fireEvent.press(await screen.findByRole('button', { name: 'Start' }));
+}
+
+/**
+ * Waits until no Today feed is loading, then gives every feed pager a size: a pager draws its
+ * pages once it has one.
+ */
+async function layOutPagers(): Promise<void> {
+  await waitFor(() => {
+    expect(screen.queryAllByTestId('feed-loading', HIDDEN)).toHaveLength(0);
+    expect(screen.queryAllByTestId('feed-pager', HIDDEN).length).toBeGreaterThan(0);
+  });
+  for (const pager of screen.getAllByTestId('feed-pager', HIDDEN)) {
+    fireEvent(pager, 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 700 } },
+    });
+  }
+}
+
+const HIDDEN = { includeHiddenElements: true };
+
 beforeEach(async () => {
+  today = SET;
   mockSend.mockReset();
   mockSend.mockImplementation((request) => {
     const { pathname } = new URL(request.url);
@@ -134,6 +195,9 @@ beforeEach(async () => {
     const answer = route.startsWith('POST /cards/') ? () => json(200, {}) : ANSWERS[route];
     return Promise.resolve(answer === undefined ? json(404, { detail: 'Not found' }) : answer());
   });
+  // Each test starts with no topic chosen and an empty server-state cache.
+  queryClient.clear();
+  await AsyncStorage.clear();
   useFeedStore.setState(useFeedStore.getInitialState(), true);
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
   await loadActiveTopic();
@@ -141,24 +205,11 @@ beforeEach(async () => {
 
 describe('starting a topic', () => {
   it('asks for the day set once and, at the Summary, for the recorded summary once', async () => {
-    renderRouter(ROUTES, { initialUrl: '/' });
-    await screen.findByText('Pick a topic to start learning.');
-    act(() => {
-      router.push('/topic/strudel');
-    });
+    await startFrom('/');
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Start' }));
-
-    // Each feed pager draws its pages once it has a size.
-    for (const pager of await screen.findAllByTestId('feed-pager', {
-      includeHiddenElements: true,
-    })) {
-      fireEvent(pager, 'layout', {
-        nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 700 } },
-      });
-    }
+    await layOutPagers();
     const [gotIt, ...others] = await screen.findAllByRole('button', { name: 'Got it' });
-    expect(sentTo('GET /feed/today')).toBe(1);
+    expect(setRequests()).toBe(1);
     expect(others).toHaveLength(0);
     if (gotIt === undefined) throw new Error('The concept card is not shown');
     fireEvent.press(gotIt);
@@ -166,22 +217,27 @@ describe('starting a topic', () => {
     await waitFor(() => {
       expect(useFeedStore.getState().recordedSummary).not.toBeNull();
     });
-    expect(sentTo('GET /feed/today')).toBe(1);
+    expect(setRequests()).toBe(1);
     expect(sentTo('GET /feed/summary')).toBe(1);
   });
 
   it('from the Explore tab, closes the topic and shows the Today tab, once', async () => {
-    renderRouter(ROUTES, { initialUrl: '/explore' });
-    act(() => {
-      router.push('/topic/strudel');
-    });
-
-    fireEvent.press(await screen.findByRole('button', { name: 'Start' }));
+    await startFrom('/explore');
 
     expect(await screen.findByTestId('today-screen')).toBeOnTheScreen();
-    expect(screen.queryAllByTestId('today-screen', { includeHiddenElements: true })).toHaveLength(
-      1,
-    );
-    expect(screen.queryByTestId('topic-screen', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryAllByTestId('today-screen', HIDDEN)).toHaveLength(1);
+    expect(screen.queryByTestId('topic-screen', HIDDEN)).toBeNull();
+  });
+
+  // The simulator run's one strudel_unavailable timeout: the second Today feed, under the topic
+  // screen, mounted a second player for the same exercise card, in a screen the stack had covered.
+  it('mounts one Strudel player for an exercise card', async () => {
+    today = EXERCISE_SET;
+    await startFrom('/');
+
+    await layOutPagers();
+    await screen.findAllByTestId('strudel-player', HIDDEN);
+
+    expect(mountedWebViews()).toHaveLength(1);
   });
 });

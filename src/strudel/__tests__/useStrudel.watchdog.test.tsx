@@ -7,7 +7,7 @@ import { ExerciseCard } from '../../cards/ExerciseCard';
 import { demoCard } from '../../cards/testing/demoCards';
 import { useFeedStore } from '../../feed/store';
 import { logWarning } from '../../log';
-import { advance, call, play, playingPlayer } from '../testing/player';
+import { advance, call, mountPlayer, play, playingPlayer } from '../testing/player';
 import { pagePosts, sentToPage } from '../testing/webview';
 import { STRUDEL_ERROR } from '../useStrudel';
 
@@ -144,5 +144,20 @@ describe('the exercise card over a page that stops answering', () => {
     expect(screen.queryByTestId('result-badge-message')).toBeNull();
     expect(screen.getByRole('button', { name: 'Reset audio' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
+  });
+});
+
+describe('useStrudel: the card a player belongs to', () => {
+  it('names its card in the timeout log, so a page that did not answer can be traced', () => {
+    mountPlayer({ cardId: '00000000-0000-4000-8000-000000000305', cardIndex: 2 });
+
+    advance(5000);
+
+    expect(warnings()).toStrictEqual([
+      [
+        'strudel_unavailable',
+        { reason: 'timeout', cardId: '00000000-0000-4000-8000-000000000305', cardIndex: 2 },
+      ],
+    ]);
   });
 });

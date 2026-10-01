@@ -14,7 +14,7 @@ import type { ExerciseCard as ExerciseCardData } from '../data';
 import type { CardAnswer } from '../feed/answers';
 import { checkExercise, parseGrid } from '../feed/exercise';
 import { useFeedStore } from '../feed/store';
-import { useStrudel } from '../strudel/useStrudel';
+import { useStrudel, type PlayerOwner } from '../strudel/useStrudel';
 import { border, colors } from '../theme';
 import { AudioNotice } from './AudioNotice';
 import { cardKickerText, cardMetaText } from './cardLabels';
@@ -70,6 +70,11 @@ function EditorFrame({ code, onChange, step }: EditorFrameProps) {
   );
 }
 
+/** The card as its player names it in the log: its page, and its id when the API served it. */
+function playerOwner(card: ExerciseCardData, index: number): PlayerOwner {
+  return card.id === undefined ? { cardIndex: index } : { cardIndex: index, cardId: card.id };
+}
+
 type ExerciseCardProps = {
   card: ExerciseCardData;
   /** The card's position in its set: its key in the store's answers. */
@@ -89,13 +94,13 @@ type ExerciseCardProps = {
  *
  * The answer lives in the feed store at `index`: before the first edit there is none and the editor
  * shows the starter code; an edit stores the code with no result; Check stores the result for the
- * code. The audio comes from `useStrudel`, whose player is rendered once, last, in every state, so
- * it is never remounted. Play needs a ready player, no audio error and some code; editing clears
+ * code. The audio comes from `useStrudel`, named after this card (its page, and its id when the
+ * API served it), whose player is rendered once, last, in every state, so it is never remounted. Play needs a ready player, no audio error and some code; editing clears
  * an audio error, and playing goes on until the learner presses Play again or Stop. The audio
  * stops when the card is left, its screen loses focus or the app leaves the foreground.
  */
 export function ExerciseCard({ card, index, active, onNext }: ExerciseCardProps) {
-  const strudel = useStrudel();
+  const strudel = useStrudel(playerOwner(card, index));
   const code = useFeedStore((state) => exerciseOf(state.answers[index])?.code ?? card.starterCode);
   const result = useFeedStore((state) => exerciseOf(state.answers[index])?.result ?? null);
   const setAnswer = useFeedStore((state) => state.setAnswer);
