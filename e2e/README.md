@@ -138,4 +138,6 @@ than remove it.
   `feed.yaml` takes two pictures of the grid a moment apart instead.
 - With the demo cards the app keeps no state between launches, so `feed.yaml` and
   `keep-going.yaml` start on set 1. `signed-in-feed.yaml` clears the app's state itself.
-- These are simulator runs on the owner's Mac. Rule REPO-7 applies: no build goes to anyone else.
+- These are simulator runs on the owner's Mac. Rule REPO-7 applies: a distribution build is given
+  out only once the exact source it was built from is published under its tag
+  (`docs/publishing.md`).
