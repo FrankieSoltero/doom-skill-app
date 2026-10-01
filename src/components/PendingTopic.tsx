@@ -16,12 +16,14 @@ type PendingTopicProps = {
   title: string;
   /** Called once, when the job is done. */
   onReady: () => void;
+  /** A topic outside the registry: its job proposes sources, which a person approves next. */
+  proposed?: boolean;
 };
 
 /** The line under the title for the job's state. Never the job's own reason, which is internal. */
-function statusLine(status: JobView['status']): string {
+function statusLine(status: JobView['status'], proposed: boolean): string {
   if (status === 'running') return copy.pendingTopic.running;
-  if (status === 'done') return copy.pendingTopic.done;
+  if (status === 'done') return proposed ? copy.pendingTopic.proposed : copy.pendingTopic.done;
   if (status === 'failed') return copy.pendingTopic.failed;
   if (status === 'timeout') return copy.pendingTopic.timeout;
   return copy.pendingTopic.queued;
@@ -30,9 +32,10 @@ function statusLine(status: JobView['status']): string {
 /**
  * The Explore tab's card for a topic being built (README.md:163): a violet card with an ink
  * border and hard shadow, the kicker "BUILDING YOUR TREE", the topic's title and a line for its
- * job's state (`useJob`). Screen readers hear the line when it changes.
+ * job's state (`useJob`). Screen readers hear the line when it changes. For a `proposed` topic the
+ * job proposes its sources, and once it is done the line says the topic waits for approval.
  */
-export function PendingTopic({ jobId, title, onReady }: PendingTopicProps) {
+export function PendingTopic({ jobId, title, onReady, proposed = false }: PendingTopicProps) {
   const { status } = useJob(jobId);
   const ready = useEffectEvent(onReady);
   const done = status === 'done';
@@ -47,7 +50,7 @@ export function PendingTopic({ jobId, title, onReady }: PendingTopicProps) {
         <Text style={styles.kicker}>{copy.pendingTopic.kicker}</Text>
         <Text style={styles.title}>{title}</Text>
         <View accessibilityLiveRegion="polite">
-          <Text style={styles.line}>{statusLine(status)}</Text>
+          <Text style={styles.line}>{statusLine(status, proposed)}</Text>
         </View>
       </View>
     </View>

@@ -4,6 +4,9 @@
  * through `copy`, not from here.
  */
 
+/** A topic outside the registry whose sources a person has not approved yet (status `proposed`). */
+const WAITING_FOR_APPROVAL = 'Waiting for approval';
+
 /** The Explore tab (app/(tabs)/explore.tsx). */
 export const explore = {
   title: 'Explore',
@@ -29,6 +32,8 @@ export const explore = {
   ready: 'Ready',
   /** The meta line of a topic that is still being built. */
   building: 'Being built',
+  /** The meta line of a proposed topic. */
+  proposed: WAITING_FOR_APPROVAL,
   failed: 'Failed to build',
   /** Spoken label of a topic row that opens the topic. */
   openTopic: (title: string) => `Open ${title}`,
@@ -40,6 +45,8 @@ export const pendingTopic = {
   queued: 'Waiting to start…',
   running: 'Reading sources…',
   done: 'Ready. Tap to open.',
+  /** A proposed topic whose sources were proposed: a person approves them next. */
+  proposed: WAITING_FOR_APPROVAL,
   failed: "Couldn't build this topic.",
   timeout: 'Still building. Check back later.',
 } as const;
@@ -59,6 +66,8 @@ export const topic = {
   notFound: 'This topic does not exist.',
   /** The topic has no tree yet: it cannot be started. */
   notReady: 'This topic is still being built. Check back soon.',
+  /** A proposed topic: its sources wait for a person's approval. */
+  proposed: WAITING_FOR_APPROVAL,
   enrollFailed: "Couldn't start this topic. Try again.",
 } as const;
 

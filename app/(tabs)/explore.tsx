@@ -134,6 +134,7 @@ export default function ExploreScreen() {
             <PendingTopic
               jobId={pending.jobId}
               title={pending.title}
+              proposed={pending.status === 'proposed'}
               onReady={() => {
                 setPending({ ...pending, ready: true });
               }}

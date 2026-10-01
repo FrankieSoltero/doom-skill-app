@@ -105,6 +105,14 @@ describe('Topic detail: states', () => {
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
   });
 
+  it('says a proposed topic is waiting for approval, with no Start button', async () => {
+    await renderTopic({ 'GET /topics/strudel': [json(200, { ...BUILDING, status: 'proposed' })] });
+
+    expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
+    expect(screen.queryByText('This topic is still being built. Check back soon.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+  });
+
   it('shows a failed load with Retry, which asks again', async () => {
     const requests = await renderTopic({
       'GET /topics/strudel': [json(500, {}), json(200, READY)],

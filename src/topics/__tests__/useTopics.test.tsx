@@ -109,24 +109,32 @@ describe('useCreateTopic', () => {
   it.each([
     { status: 202, jobId: 'job-1' },
     { status: 200, jobId: null },
-  ])('posts the query and gives the slug and job id of a $status', async ({ status, jobId }) => {
-    const topic = { ...STRUDEL, status: 'pending' };
-    const requests = serveApi({ 'POST /topics': [json(status, { topic, job_id: jobId })] });
-    const { result } = renderCreate();
+  ])(
+    'posts the query and gives the slug, status and job id of a $status',
+    async ({ status, jobId }) => {
+      const topic = { ...STRUDEL, status: 'pending' };
+      const requests = serveApi({ 'POST /topics': [json(status, { topic, job_id: jobId })] });
+      const { result } = renderCreate();
 
-    expect(result.current.status).toBe('idle');
-    let created: unknown = null;
-    await act(async () => {
-      created = await result.current.create('Strudel');
-    });
-    await advance(0);
+      expect(result.current.status).toBe('idle');
+      let created: unknown = null;
+      await act(async () => {
+        created = await result.current.create('Strudel');
+      });
+      await advance(0);
 
-    expect(created).toStrictEqual({ slug: 'strudel', title: 'Strudel', jobId });
-    expect(requests).toStrictEqual([
-      { method: 'POST', path: '/topics', query: '', body: { query: 'Strudel' } },
-    ]);
-    expect(result.current.status).toBe('ready');
-  });
+      expect(created).toStrictEqual({
+        slug: 'strudel',
+        title: 'Strudel',
+        status: 'pending',
+        jobId,
+      });
+      expect(requests).toStrictEqual([
+        { method: 'POST', path: '/topics', query: '', body: { query: 'Strudel' } },
+      ]);
+      expect(result.current.status).toBe('ready');
+    },
+  );
 
   it.each([
     { status: 422, kind: 'invalid' },

@@ -34,6 +34,7 @@ const topic = (slug: string, title: string, status: string) => ({
 const STRUDEL = topic('strudel', 'Strudel', 'ready');
 const BUILDING = topic('sql', 'SQL window functions', 'ingesting');
 const RUST = topic('rust-ownership', 'Rust ownership', 'pending');
+const PROPOSED = topic('c-templates', 'C++ templates', 'proposed');
 const job = (status: string) =>
   json(200, { id: 'job-1', kind: 'k', progress: {}, reason: null, status });
 
@@ -84,7 +85,7 @@ describe('Explore: idle and loading', () => {
 describe('Explore: results', () => {
   it('lists the topics found; a ready one opens its detail, one being built does not', async () => {
     const requests = await renderExplore({
-      'GET /topics': [json(200, { topics: [STRUDEL, BUILDING] })],
+      'GET /topics': [json(200, { topics: [STRUDEL, BUILDING, PROPOSED] })],
     });
     await search('s');
 
@@ -92,6 +93,8 @@ describe('Explore: results', () => {
     expect(screen.getByText('SQL window functions')).toBeOnTheScreen();
     expect(screen.getByText('Being built')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Open SQL window functions' })).toBeNull();
+    expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Open C++ templates' })).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: 'Open Strudel' }));
 
     expect(router.push).toHaveBeenCalledWith({
@@ -140,6 +143,22 @@ describe('Explore: creating a topic', () => {
       pathname: '/topic/[slug]',
       params: { slug: 'rust-ownership' },
     });
+  });
+
+  it('says a proposed topic waits for approval once its sources are proposed', async () => {
+    await renderExplore({
+      'GET /topics': [json(200, { topics: [] }), json(200, { topics: [PROPOSED] })],
+      'POST /topics': [json(202, { topic: PROPOSED, job_id: 'job-1' })],
+      'GET /jobs/job-1': [job('done')],
+    });
+    await search('C++ templates');
+
+    fireEvent.press(screen.getByRole('button', { name: 'Create this topic' }));
+    await advance(0);
+    await advance(3000);
+
+    expect(screen.getAllByText('Waiting for approval')).not.toHaveLength(0);
+    expect(screen.queryByText('Ready. Tap to open.')).toBeNull();
   });
 
   it('opens a topic that already exists', async () => {

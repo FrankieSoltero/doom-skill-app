@@ -17,6 +17,7 @@ type TopicRowProps = {
 function statusLook(status: TopicSummary['status']): { label: string; fill: string } {
   if (status === 'ready') return { label: copy.explore.ready, fill: colors.lime };
   if (status === 'failed') return { label: copy.explore.failed, fill: colors.coral };
+  if (status === 'proposed') return { label: copy.explore.proposed, fill: colors.violet };
   return { label: copy.explore.building, fill: colors.yellow };
 }
 

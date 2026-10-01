@@ -73,6 +73,18 @@ describe('PendingTopic', () => {
     expect(onReady).toHaveBeenCalledTimes(1);
   });
 
+  it('says a proposed topic waits for approval once its job is done', async () => {
+    serveApi({ [`GET /jobs/${JOB_ID}`]: [job('done')] });
+    const { wrapper } = queryWrapper();
+    render(<PendingTopic jobId={JOB_ID} title="C++" onReady={jest.fn()} proposed />, { wrapper });
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
+    expect(screen.queryByText('Ready. Tap to open.')).toBeNull();
+  });
+
   it('says to check back after 10 minutes', async () => {
     await renderPending([job('running')]);
     await act(async () => {

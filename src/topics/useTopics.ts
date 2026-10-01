@@ -78,13 +78,22 @@ export function useTopics(query: string): TopicsState {
   return { status: 'ready', topics: result.data ?? [], retry };
 }
 
-/** What a topic request gives: the topic, and its ingestion job's id when one was queued. */
-export type CreatedTopic = { slug: string; title: string; jobId: string | null };
+/**
+ * What a topic request gives: the topic, its status, and its job's id when one was queued (an
+ * ingestion, or for a `proposed` topic the job that proposes its sources).
+ */
+export type CreatedTopic = {
+  slug: string;
+  title: string;
+  status: TopicSummary['status'];
+  jobId: string | null;
+};
 
 async function requestTopic(query: string): Promise<CreatedTopic> {
   const { data } = await requireApi().POST('/topics', { body: { query } });
   if (data === undefined) throw new Error('The topic request gave no body');
-  return { slug: data.topic.slug, title: data.topic.title, jobId: data.job_id };
+  const { slug, title, status } = data.topic;
+  return { slug, title, status, jobId: data.job_id };
 }
 
 /** Requests the topic a query names (see the module comment). */

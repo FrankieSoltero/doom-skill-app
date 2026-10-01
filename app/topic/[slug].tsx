@@ -113,7 +113,9 @@ function TopicContent({ topic }: { topic: TopicDetail }) {
       {ready ? (
         <StartButton slug={topic.slug} />
       ) : (
-        <Text style={styles.body}>{copy.topic.notReady}</Text>
+        <Text style={styles.body}>
+          {topic.status === 'proposed' ? copy.topic.proposed : copy.topic.notReady}
+        </Text>
       )}
     </ScrollView>
   );
