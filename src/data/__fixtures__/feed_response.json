@@ -14,6 +14,18 @@
       "id": "00000000-0000-4000-8000-000000000302",
       "node": "Alternation < >",
       "est_seconds": 45,
+      "sources": [
+        {
+          "title": "Mini-notation",
+          "url": "https://strudel.cc/learn/mini-notation/",
+          "license": "AGPL-3.0-or-later"
+        },
+        {
+          "title": "Polymeter",
+          "url": "https://en.wikipedia.org/wiki/Polymeter",
+          "license": "CC BY-SA 4.0"
+        }
+      ],
       "type": "concept",
       "title": "Alternate with angle brackets",
       "body": "Wrap steps in **< >** and Strudel plays one of them per cycle.",
@@ -29,6 +41,18 @@
       "id": "00000000-0000-4000-8000-000000000303",
       "node": "Alternation < >",
       "est_seconds": 40,
+      "sources": [
+        {
+          "title": "Mini-notation",
+          "url": "https://strudel.cc/learn/mini-notation/",
+          "license": "AGPL-3.0-or-later"
+        },
+        {
+          "title": "Polymeter",
+          "url": "https://en.wikipedia.org/wiki/Polymeter",
+          "license": "CC BY-SA 4.0"
+        }
+      ],
       "type": "quiz",
       "title": "Which pattern plays four kicks in every cycle?",
       "options": [
@@ -44,6 +68,18 @@
       "id": "00000000-0000-4000-8000-000000000304",
       "node": "Alternation < >",
       "est_seconds": 40,
+      "sources": [
+        {
+          "title": "Mini-notation",
+          "url": "https://strudel.cc/learn/mini-notation/",
+          "license": "AGPL-3.0-or-later"
+        },
+        {
+          "title": "Polymeter",
+          "url": "https://en.wikipedia.org/wiki/Polymeter",
+          "license": "CC BY-SA 4.0"
+        }
+      ],
       "type": "predict",
       "title": "What plays in cycles 1 and 2?",
       "code": "note(\"c3 <e3 g3>\")",
@@ -58,6 +94,13 @@
       "id": "00000000-0000-4000-8000-000000000305",
       "node": "Speed * and /",
       "est_seconds": 45,
+      "sources": [
+        {
+          "title": "Tempo",
+          "url": "https://strudel.cc/understand/cycles/",
+          "license": null
+        }
+      ],
       "type": "concept",
       "title": "Repeat a step with *",
       "body": "A number after a star plays that step that many times inside **one cycle**.",
@@ -72,6 +115,13 @@
       "id": "00000000-0000-4000-8000-000000000306",
       "node": "Speed * and /",
       "est_seconds": 90,
+      "sources": [
+        {
+          "title": "Tempo",
+          "url": "https://strudel.cc/understand/cycles/",
+          "license": null
+        }
+      ],
       "type": "exercise",
       "lang": "strudel",
       "title": "Double the hi-hats to eight per cycle",
@@ -90,6 +140,7 @@
       "id": "00000000-0000-4000-8000-000000000301",
       "node": "Rests ~",
       "est_seconds": 30,
+      "sources": [],
       "type": "review",
       "last_seen_days": 11,
       "prompt": "What does ~ mean in mini-notation?",
@@ -140,7 +191,8 @@
           "label": "Pattern changes across bars (< > or .every)",
           "regex": "<[^>]+>|\\.every\\("
         }
-      ]
+      ],
+      "sources": []
     }
   ],
   "summary": {

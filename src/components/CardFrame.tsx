@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FlagButton, useFlaggable, useThanksLine } from '../cards/FlagButton';
+import { SourcesButton, useHasSources } from '../cards/SourcesButton';
 import { copy } from '../copy';
 import { border, cardTheme, colors, hardShadow, space, type } from '../theme';
 import type { CardType } from '../theme';
@@ -35,12 +36,16 @@ type CardFrameProps = {
  * A card the feed drew from the API gets the flag action at the right end of the kicker row
  * (src/cards/FlagButton.tsx); once a reason is chosen, the thank-you line shows over the bottom
  * of the frame for a few seconds. The demo cards and the Summary have no flag action.
+ *
+ * A card with sources (from the API; src/cards/SourcesButton.tsx) gets the Sources action there
+ * too, before the flag; it opens the sheet that lists them. The demo cards have none.
  */
 export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
   const kickerStyle = [styles.kicker, { color: theme.kicker }];
   const [thanked, showThanks] = useThanksLine();
   const flaggable = useFlaggable();
+  const hasSources = useHasSources();
 
   return (
     <CardTextColorProvider color={theme.fg}>
@@ -53,6 +58,7 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
           <View testID="card-kicker-row" style={styles.kickerRow}>
             <Text style={[kickerStyle, styles.lead]}>{kicker}</Text>
             {meta ? <Text style={kickerStyle}>{meta}</Text> : null}
+            {hasSources ? <SourcesButton /> : null}
             {flaggable ? <FlagButton onFlagged={showThanks} /> : null}
           </View>
           {children}

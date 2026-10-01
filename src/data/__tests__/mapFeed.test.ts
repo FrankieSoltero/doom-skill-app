@@ -32,3 +32,26 @@ describe('mapFeed on a concept card with no cycles', () => {
     expect(set.cards[0]).toMatchObject({ type: 'concept', snippetComment: '' });
   });
 });
+
+describe('mapFeed on a card with sources', () => {
+  it('keeps each source, its URL and a null licence as sent, and an empty list', () => {
+    const sources = [
+      { title: 'Snake_case title', url: 'https://a.test/x_y?q_r=1', license: 'CC BY-SA 4.0' },
+      { title: 'Tempo', url: 'https://b.test/', license: null },
+    ];
+    const cards = [
+      { type: 'quiz', sources },
+      { type: 'checkpoint', sources: [] },
+    ];
+
+    expect(mapFeed({ cards })).toStrictEqual({ cards });
+  });
+
+  it('gives the served cards their sources, and the checkpoint none', () => {
+    const set = feedSetSchema.parse(mapFeed(response));
+    const sent = response.cards.map((card) => card.sources);
+
+    expect(set.cards.map((card) => card.sources)).toStrictEqual(sent);
+    expect(sent.some((sources) => sources.length > 0)).toBe(true);
+  });
+});

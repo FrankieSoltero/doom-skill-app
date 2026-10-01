@@ -53,6 +53,7 @@ export type {
   PredictCard,
   QuizCard,
   ReviewCard,
+  SourceLink,
   Summary,
   Topic,
 } from './schema';

@@ -19,6 +19,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 const cardId = z.string().regex(UUID).optional();
 
+/** An `https` URL with a host and no white space; nothing else is ever opened. */
+const HTTPS_URL = /^https:\/\/[^\s/?#\\]+\S*$/;
+
+/**
+ * A source the card's node was built from (M6 hardening Task 12): its title, its `https` URL and
+ * its licence (null when none was recorded). A card has at most 3; a source with another URL
+ * fails its card. Optional: the bundled demo cards have none, and a checkpoint sends `[]`.
+ */
+const sourceLinkSchema = z.object({
+  title: text,
+  url: z.string().regex(HTTPS_URL),
+  license: text.nullable(),
+});
+const cardSources = z.array(sourceLinkSchema).max(3).optional();
+
 /**
  * The exercise languages: the server's `Lang` (services/api/app/llm/resolve_model.py; kept in step
  * by services/api/tests/test_lang_sync.py). The app plays `strudel` and only checks the others (M6
@@ -65,6 +80,7 @@ const correctOutOfRange = {
 // draws no code block and no cycle tiles (M6 hardening Task 8).
 const conceptCardSchema = z.object({
   id: cardId,
+  sources: cardSources,
   type: z.literal('concept'),
   node: text,
   estSeconds: seconds,
@@ -78,6 +94,7 @@ const conceptCardSchema = z.object({
 const quizCardSchema = z
   .object({
     id: cardId,
+    sources: cardSources,
     type: z.literal('quiz'),
     node: text,
     estSeconds: seconds,
@@ -91,6 +108,7 @@ const quizCardSchema = z
 const predictCardSchema = z
   .object({
     id: cardId,
+    sources: cardSources,
     type: z.literal('predict'),
     node: text,
     estSeconds: seconds,
@@ -104,6 +122,7 @@ const predictCardSchema = z
 
 const exerciseCardSchema = z.object({
   id: cardId,
+  sources: cardSources,
   type: z.literal('exercise'),
   lang: exerciseLang,
   node: text,
@@ -125,6 +144,7 @@ const exerciseCardSchema = z.object({
 
 const reviewCardSchema = z.object({
   id: cardId,
+  sources: cardSources,
   type: z.literal('review'),
   node: text,
   lastSeenDays: count,
@@ -138,6 +158,7 @@ const reviewCardSchema = z.object({
 const checkpointCardSchema = z
   .object({
     id: cardId,
+    sources: cardSources,
     type: z.literal('checkpoint'),
     milestone: z.number().int().positive(),
     milestoneCount: z.number().int().positive(),
@@ -301,4 +322,5 @@ export type ExerciseCard = z.infer<typeof exerciseCardSchema>;
 export type ReviewCard = z.infer<typeof reviewCardSchema>;
 export type CheckpointCard = z.infer<typeof checkpointCardSchema>;
 export type Summary = z.infer<typeof summarySchema>;
+export type SourceLink = z.infer<typeof sourceLinkSchema>;
 export type FeedSet = z.infer<typeof feedSetSchema>;

@@ -400,6 +400,19 @@ export interface components {
             score: number | null;
         };
         Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["CheckpointCard"];
+        /**
+         * CardSource
+         * @description A source the card's node was built from: its title, its `https` URL, and its licence as
+         *     stored (null when none was recorded).
+         */
+        CardSource: {
+            /** License */
+            license: string | null;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
         /** CheckpointCard */
         CheckpointCard: {
             /** Est Seconds */
@@ -417,6 +430,8 @@ export interface components {
             pass_threshold: number;
             /** Rubric */
             rubric: components["schemas"]["RubricRow"][];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Starter Code */
             starter_code: string;
             /** Title */
@@ -451,6 +466,8 @@ export interface components {
             prompt: string;
             /** Rubric */
             rubric: components["schemas"]["RubricRow"][];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Starter Code */
             starter_code: string;
             /** Title */
@@ -511,6 +528,8 @@ export interface components {
             snippet: string;
             /** Snippet Comment */
             snippet_comment: string;
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Title */
             title: string;
             /**
@@ -630,6 +649,8 @@ export interface components {
             node: string;
             /** Pass Msg */
             pass_msg: string;
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Starter Code */
             starter_code: string;
             /** Title */
@@ -746,6 +767,8 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Title */
             title: string;
             /**
@@ -814,6 +837,8 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /** Title */
             title: string;
             /**
@@ -855,6 +880,8 @@ export interface components {
             ][];
             /** Snippet */
             snippet: string;
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}

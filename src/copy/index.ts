@@ -11,6 +11,7 @@
 
 import { flag } from './flag';
 import { profile, reminder } from './profile';
+import { sources } from './sources';
 import { explore, pendingTopic, topic, tree } from './topics';
 
 /** Freezes every nested object under `value`. Functions and primitives are left as they are. */
@@ -317,4 +318,5 @@ export const copy = deepFreeze({
   profile,
   reminder,
   flag,
+  sources,
 } as const);

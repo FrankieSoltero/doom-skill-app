@@ -58,4 +58,12 @@ describe('FeedScreen flag target', () => {
     expect(screen.getByText('drawn')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Flag this card' })).toBeNull();
   });
+
+  it("gives a drawn card's frame its sources, for the Sources action", async () => {
+    const sources = [{ title: 'Docs', url: 'https://strudel.cc/', license: null }];
+    await renderFeed(scriptedSource(makeSet(1, [{ ...cardsByType.quiz, sources }])), frameCard);
+    await layout(700);
+
+    expect(screen.getByRole('button', { name: 'Sources' })).toBeOnTheScreen();
+  });
 });
