@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/checkpoints/{submission_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Grade
+         * @description The submission's status and grade.
+         */
+        get: operations["get_checkpoint_grade"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feed/next": {
         parameters: {
             query?: never;
@@ -162,6 +182,46 @@ export interface paths {
         get: operations["list_enrollments"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/milestones/{milestone_id}/checkpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Checkpoint
+         * @description The milestone's checkpoint card, task and criteria.
+         */
+        get: operations["get_checkpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/milestones/{milestone_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Checkpoint
+         * @description Store the submission and queue its grading (module docstring).
+         */
+        post: operations["submit_checkpoint"];
         delete?: never;
         options?: never;
         head?: never;
@@ -333,6 +393,54 @@ export interface components {
             type: "checkpoint";
         };
         /**
+         * CheckpointDetail
+         * @description The checkpoint card, with the milestone's task and its rubric's criteria.
+         */
+        CheckpointDetail: {
+            /** Criteria */
+            criteria: components["schemas"]["CriterionText"][];
+            /** Est Seconds */
+            est_seconds: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Milestone */
+            milestone: number;
+            /** Milestone Count */
+            milestone_count: number;
+            /** Pass Threshold */
+            pass_threshold: number;
+            /** Prompt */
+            prompt: string;
+            /** Rubric */
+            rubric: components["schemas"]["RubricRow"][];
+            /** Starter Code */
+            starter_code: string;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @constant
+             */
+            type: "checkpoint";
+        };
+        /**
+         * CheckpointGrade
+         * @description A submission's status and grade; the grade's fields are null until it is graded.
+         */
+        CheckpointGrade: {
+            /** Criteria */
+            criteria: components["schemas"]["CriterionGrade"][] | null;
+            /** Feedback */
+            feedback: string | null;
+            /** Passed */
+            passed: boolean | null;
+            score: components["schemas"]["Fraction"] | null;
+            status: components["schemas"]["SubmissionStatus"];
+        };
+        /**
          * ChoiceAnswer
          * @description A quiz or predict card's answer: the index of the option chosen.
          */
@@ -390,6 +498,27 @@ export interface components {
              */
             kind: "contains";
             value: components["schemas"]["Code"];
+        };
+        /**
+         * CriterionGrade
+         * @description One criterion's score and the model's sentence about it.
+         */
+        CriterionGrade: {
+            /** Justification */
+            justification: string;
+            /** Name */
+            name: string;
+            score: components["schemas"]["Fraction"];
+        };
+        /**
+         * CriterionText
+         * @description One rubric criterion as the learner reads it: no weight.
+         */
+        CriterionText: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
         };
         /**
          * EnrollRequest
@@ -721,6 +850,35 @@ export interface components {
             skipped: true;
         };
         /**
+         * SubmissionReceipt
+         * @description The submission the request stored, or the one stored first with its client id.
+         */
+        SubmissionReceipt: {
+            status: components["schemas"]["SubmissionStatus"];
+            /**
+             * Submission Id
+             * Format: uuid
+             */
+            submission_id: string;
+        };
+        /**
+         * SubmissionRequest
+         * @description `POST /milestones/{id}/submit`.
+         */
+        SubmissionRequest: {
+            /**
+             * Client Submission Id
+             * Format: uuid
+             */
+            client_submission_id: string;
+            code: components["schemas"]["SubmittedCode"];
+            /** Local Passed */
+            local_passed: boolean;
+        };
+        /** @enum {string} */
+        SubmissionStatus: "pending" | "graded" | "failed";
+        SubmittedCode: string;
+        /**
          * Summary
          * @description What the set would do if every card were answered correctly (K12's projected summary), in
          *     `FeedSet`; what its recorded attempts did, in `GET /feed/summary` (M3 plan, Task 11).
@@ -929,6 +1087,64 @@ export interface operations {
             };
             /** @description Not in feed */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_checkpoint_grade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckpointGrade"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1374,6 +1590,146 @@ export interface operations {
             /** @description Not authenticated */
             401: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_checkpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                milestone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckpointDetail"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    submit_checkpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                milestone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Submitted already; the stored submission */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionReceipt"];
+                };
+            };
+            /** @description Stored, and its grading queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionReceipt"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    /** @description Seconds */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
