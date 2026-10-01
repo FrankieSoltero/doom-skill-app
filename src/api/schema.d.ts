@@ -316,6 +316,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/{slug}/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Placement
+         * @description The learner's placement set (module docstring).
+         */
+        get: operations["get_placement"];
+        put?: never;
+        /**
+         * Place Learner
+         * @description Grade the answers, or take the skip, and store the placement (module docstring).
+         */
+        post: operations["place_learner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/topics/{slug}/placement/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Placement
+         * @description Undo the placement (module docstring).
+         */
+        post: operations["reset_placement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}/tree": {
         parameters: {
             query?: never;
@@ -500,6 +544,8 @@ export interface components {
             /** Choice */
             choice: number;
         };
+        /** @enum {string} */
+        ChoiceType: "quiz" | "predict";
         Code: string;
         /**
          * CodeAnswer
@@ -747,6 +793,113 @@ export interface components {
             position: number;
             /** Title */
             title: string;
+        };
+        /**
+         * PlacementAnswer
+         * @description The option the learner chose for one card of the set.
+         */
+        PlacementAnswer: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Choice */
+            choice: number;
+        };
+        /**
+         * PlacementAnswers
+         * @description `POST /topics/{slug}/placement` with answers.
+         */
+        PlacementAnswers: {
+            /** Answers */
+            answers: components["schemas"]["PlacementAnswer"][];
+        };
+        /**
+         * PlacementBand
+         * @description One band of the quiz: a milestone's position and title.
+         */
+        PlacementBand: {
+            /** Milestone */
+            milestone: number;
+            /** Title */
+            title: string;
+        };
+        /**
+         * PlacementCard
+         * @description A quiz or predict card as the placement serves it: without its right option.
+         */
+        PlacementCard: {
+            /** Band Index */
+            band_index: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Milestone */
+            milestone: number;
+            /** Options */
+            options: string[];
+            /** Prompt */
+            prompt: string | null;
+            /** Title */
+            title: string;
+            type: components["schemas"]["ChoiceType"];
+        };
+        /**
+         * PlacementQuiz
+         * @description The bands and the cards of the learner's placement set.
+         */
+        PlacementQuiz: {
+            /** Bands */
+            bands: components["schemas"]["PlacementBand"][];
+            /** Cards */
+            cards: components["schemas"]["PlacementCard"][];
+        };
+        /**
+         * PlacementRefused
+         * @description The enrollment has a card attempt: placement is only before the first feed.
+         */
+        PlacementRefused: {
+            /**
+             * Reason
+             * @constant
+             */
+            reason: "attempts";
+        };
+        /**
+         * PlacementReset
+         * @description How many node states the reset removed.
+         */
+        PlacementReset: {
+            /** Removed Nodes */
+            removed_nodes: number;
+        };
+        /**
+         * PlacementResult
+         * @description Where the placement put the learner.
+         */
+        PlacementResult: {
+            /** Bands */
+            bands: number;
+            /** Known Nodes */
+            known_nodes: number;
+            /** Milestone Title */
+            milestone_title: string | null;
+            /** Placed */
+            placed: number;
+        };
+        /**
+         * PlacementSkip
+         * @description `POST /topics/{slug}/placement` without a quiz: start from the beginning.
+         */
+        PlacementSkip: {
+            /**
+             * Skip
+             * @constant
+             */
+            skip: true;
         };
         /** PredictCard */
         PredictCard: {
@@ -2183,6 +2336,222 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_placement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementQuiz"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Placed already; the stored result */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    place_learner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementAnswers"] | components["schemas"]["PlacementSkip"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementResult"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Placed already; the stored result, or attempts */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementResult"] | components["schemas"]["PlacementRefused"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reset_placement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementReset"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Nothing to reset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    /** @description Seconds */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Service unavailable */
