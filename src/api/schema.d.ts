@@ -178,7 +178,11 @@ export interface paths {
         get: operations["get_me"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Me
+         * @description Delete the signed-in user's account and everything they learned.
+         */
+        delete: operations["delete_me"];
         options?: never;
         head?: never;
         /**
@@ -336,6 +340,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AccountDeletion
+         * @description `DELETE /me`: the body `{"confirm": "delete"}`, exactly; anything else is the 422.
+         */
+        AccountDeletion: {
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: "delete";
+        };
         /**
          * AttemptNode
          * @description The attempted card's node: its title, and the user's mastery of it before and after.
@@ -1599,6 +1614,55 @@ export interface operations {
                 };
             };
             /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeletion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable, with Retry-After */
             503: {
                 headers: {
                     [name: string]: unknown;
