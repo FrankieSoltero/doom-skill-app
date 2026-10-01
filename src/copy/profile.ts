@@ -29,6 +29,16 @@ export const profile = {
   signOut: 'Sign out',
   loadFailed: "Couldn't load your profile.",
   saveFailed: "Couldn't save your change. Try again.",
+  /** The Delete account action and its confirmation sheet (src/profile/DeleteAccountSheet.tsx). */
+  deleteAccount: 'Delete account',
+  deleteTitle: 'Delete your account?',
+  deleteBody: 'This removes your account and everything you learned. Type delete to confirm.',
+  /** The word the person types to confirm, compared without case or surrounding spaces. */
+  deleteWord: 'delete',
+  /** The confirmation field's spoken label. */
+  deleteField: 'Type delete to confirm',
+  deleteFailed: 'Could not delete your account. Try again later.',
+  cancel: 'Cancel',
 } as const;
 
 /** The daily reminder's notification (src/profile/reminders.ts). */

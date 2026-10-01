@@ -8,6 +8,7 @@ import { OutlineButton } from '../../src/components/OutlineButton';
 import { TabScreen } from '../../src/components/TabScreen';
 import { copy } from '../../src/copy';
 import { logWarning } from '../../src/log';
+import { DeleteAccountSheet } from '../../src/profile/DeleteAccountSheet';
 import type { Profile } from '../../src/profile/me';
 import { MinutesPicker } from '../../src/profile/MinutesPicker';
 import { ProfileField, Setting } from '../../src/profile/ProfileField';
@@ -75,6 +76,7 @@ function TimezoneSetting({
  */
 function ProfileForm({ profile, update }: FormProps) {
   const [failure, setFailure] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const save = async (patch: ProfilePatch): Promise<boolean> => {
     setFailure(null);
     try {
@@ -104,6 +106,19 @@ function ProfileForm({ profile, update }: FormProps) {
       <ReminderSetting key={profile.push_time ?? 'off'} pushTime={profile.push_time} save={save} />
       <TimezoneSetting timezone={profile.timezone} save={save} />
       <OutlineButton label={copy.profile.signOut} onPress={() => void signOut()} />
+      <OutlineButton
+        label={copy.profile.deleteAccount}
+        onPress={() => {
+          setDeleting(true);
+        }}
+      />
+      {deleting ? (
+        <DeleteAccountSheet
+          onClose={() => {
+            setDeleting(false);
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -111,8 +126,10 @@ function ProfileForm({ profile, update }: FormProps) {
 /**
  * The Profile tab (README.md:165-168): the display name, the daily time budget (5 to 60 minutes),
  * the daily reminder and its time (a local notification, src/profile/reminders.ts), and the
- * timezone, offering the device's, all through `GET /me` and `PATCH /me`; then Sign out. While the
- * profile loads a busy line shows; a failed load shows a fixed line with Retry.
+ * timezone, offering the device's, all through `GET /me` and `PATCH /me`; then Sign out, and
+ * Delete account, which opens a sheet that asks the person to type `delete`
+ * (src/profile/DeleteAccountSheet.tsx) before `DELETE /me`. While the profile loads a busy line
+ * shows; a failed load shows a fixed line with Retry.
  */
 export default function ProfileScreen() {
   const state = useProfile();
