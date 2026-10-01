@@ -1,6 +1,7 @@
 /**
- * UI strings of the topic screens: the Explore tab and the pending topic card. Part of `copy`
- * (src/copy/index.ts), which freezes them; read them through `copy`, not from here.
+ * UI strings of the topic screens: the Explore tab, the pending topic card and the topic detail
+ * screen. Part of `copy` (src/copy/index.ts), which freezes them; read them through `copy`, not
+ * from here.
  */
 
 /** The Explore tab (app/(tabs)/explore.tsx). */
@@ -41,4 +42,22 @@ export const pendingTopic = {
   done: 'Ready. Tap to open.',
   failed: "Couldn't build this topic.",
   timeout: 'Still building. Check back later.',
+} as const;
+
+/** The topic detail screen (app/topic/[slug].tsx). */
+export const topic = {
+  /** Spoken label of the back button. */
+  back: 'Back',
+  kicker: 'Topic',
+  endState: 'Where you will end up',
+  milestones: 'Milestones',
+  /** A milestone row as a screen reader hears it. */
+  milestone: (position: number, title: string) => `Milestone ${String(position)}: ${title}`,
+  start: 'Start',
+  starting: 'Starting…',
+  loadFailed: "Couldn't load this topic.",
+  notFound: 'This topic does not exist.',
+  /** The topic has no tree yet: it cannot be started. */
+  notReady: 'This topic is still being built. Check back soon.',
+  enrollFailed: "Couldn't start this topic. Try again.",
 } as const;

@@ -40,10 +40,16 @@ function TodayStandIn() {
   return <Text testID="today-screen">today</Text>;
 }
 
+/** The topic detail screen's stand-in. */
+function TopicStandIn() {
+  return <Text testID="topic-screen">topic</Text>;
+}
+
 const ROUTES = {
   _layout: RootLayout,
   '(tabs)/_layout': () => <Slot />,
   '(tabs)/index': TodayStandIn,
+  'topic/[slug]': TopicStandIn,
   ...AUTH_ROUTES,
 };
 
@@ -87,7 +93,21 @@ describe('RootLayout with the API source', () => {
     expect(screen.queryByTestId('today-screen')).toBeNull();
 
     expectRefused('/', 'sign-in-screen', 'today-screen');
+    expectRefused('/topic/strudel', 'sign-in-screen', 'topic-screen');
     expect(rendered.getSegments()).toStrictEqual(['(auth)']);
+  });
+
+  it("opens a topic's detail once signed in", async () => {
+    sessionIs('signedIn');
+    const rendered = renderRouter(ROUTES, { initialUrl: '/' });
+    await screen.findByTestId('today-screen');
+
+    act(() => {
+      router.push('/topic/strudel');
+    });
+
+    expect(await screen.findByTestId('topic-screen')).toBeOnTheScreen();
+    expect(rendered.getPathname()).toBe('/topic/strudel');
   });
 
   it('shows the tabs once signed in, and the sign-in screens cannot be reached', async () => {

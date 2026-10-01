@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import type { ApiError } from '../api/errors';
-import { asApiError, requireApi } from '../api/query';
+import { asApiError, MUTATION_STATUS, requireApi } from '../api/query';
 import type { components } from '../api/schema';
 
 export type TopicSummary = components['schemas']['TopicSummary'];
@@ -86,13 +86,6 @@ async function requestTopic(query: string): Promise<CreatedTopic> {
   if (data === undefined) throw new Error('The topic request gave no body');
   return { slug: data.topic.slug, title: data.topic.title, jobId: data.job_id };
 }
-
-const MUTATION_STATUS = {
-  idle: 'idle',
-  pending: 'loading',
-  success: 'ready',
-  error: 'error',
-} as const;
 
 /** Requests the topic a query names (see the module comment). */
 export function useCreateTopic() {

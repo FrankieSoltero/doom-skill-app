@@ -9,6 +9,9 @@ jest.mock('../../auth/useSession', () => ({
   signOut: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+// The active topic the API source asks for; a test sets it.
+const mockActiveTopic = jest.fn<string | null, []>(() => null);
+jest.mock('../../feed/useActiveTopic', () => ({ activeTopic: () => mockActiveTopic() }));
 
 /** The `cardSource` that src/data/index.ts exports under `dataSource`. */
 function cardSourceFor(dataSource: 'api' | 'fixture'): CardSource {
@@ -34,7 +37,7 @@ afterEach(() => {
 });
 
 describe('cardSource', () => {
-  it('is the API source with the api data source: no topic yet, so it asks nothing', async () => {
+  it('is the API source with the api data source: with no active topic it asks nothing', async () => {
     const send = jest.spyOn(globalThis, 'fetch');
     const source = cardSourceFor('api');
 
@@ -44,6 +47,21 @@ describe('cardSource', () => {
     });
     expect('currentSet' in source).toBe(true);
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("asks the API for the learner's active topic, read on each request", async () => {
+    const send = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 500 }));
+    const source = cardSourceFor('api');
+    mockActiveTopic.mockReturnValue('strudel');
+
+    await expect(source.getNextSet()).rejects.toMatchObject({ kind: 'server' });
+    mockActiveTopic.mockReturnValue(null);
+
+    const asked = send.mock.calls.map(([request]) => new URL((request as Request).url));
+    expect(asked[0]?.pathname).toBe('/feed/today');
+    expect(asked[0]?.searchParams.get('topic')).toBe('strudel');
   });
 
   it('is the demo fixture source with the fixture data source', async () => {

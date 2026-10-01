@@ -9,7 +9,7 @@
  * here; screens still read it through `copy`.
  */
 
-import { explore, pendingTopic } from './topics';
+import { explore, pendingTopic, topic } from './topics';
 
 /** Freezes every nested object under `value`. Functions and primitives are left as they are. */
 function freezeChildren(value: object): void {
@@ -298,4 +298,5 @@ export const copy = deepFreeze({
   },
   explore,
   pendingTopic,
+  topic,
 } as const);

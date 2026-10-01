@@ -35,6 +35,14 @@ onSignOut(() => {
   queryClient.clear();
 });
 
+/** A mutation's status as the screens' hooks report it. */
+export const MUTATION_STATUS = {
+  idle: 'idle',
+  pending: 'loading',
+  success: 'ready',
+  error: 'error',
+} as const;
+
 /** The API client; throws when the app has none (the demo sets). */
 export function requireApi(): ApiClient {
   if (api === null) {
