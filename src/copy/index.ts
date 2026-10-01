@@ -186,6 +186,22 @@ export const copy = deepFreeze({
       `Passes with ${String(threshold)} of ${String(rows)} needed. Meet the struck-out items to make it stronger.`,
     fail: (threshold: number, rows: number) =>
       `Needs at least ${String(threshold)} of ${String(rows)}. Check the struck-out items and resubmit.`,
+    /** The quiet line under the on-phone result while the server grades the submission (M5). */
+    detailPending: 'Getting detailed feedback…',
+    /**
+     * The one line shown when the server's grade will not come: a refused or failed submission,
+     * no connection, or no grade within 2 minutes. Fixed text; the server's own is never shown.
+     */
+    detailUnavailable: "Detailed feedback isn't available right now.",
+    /** The server's verdict, with its score as a whole percent when it gave one. */
+    detailVerdict: (passed: boolean, percent: number | null) => {
+      const verdict = passed ? 'Detailed grade: passed' : 'Detailed grade: not yet';
+      return percent === null ? verdict : `${verdict} · ${String(percent)}%`;
+    },
+    /** One criterion of the server's grade: its name and its score as a whole percent. */
+    detailCriterion: (name: string, percent: number) => `${name} · ${String(percent)}%`,
+    /** Shown when the on-phone result and the server's grade differ. */
+    detailDecides: 'Your milestone progress follows the detailed grade.',
   },
   /** Spoken label of a checkpoint rubric row: its label, then whether it was met. */
   rubricItem: (label: string, state: 'passed' | 'failed' | 'notGraded') => {
