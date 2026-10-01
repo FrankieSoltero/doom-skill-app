@@ -5,6 +5,36 @@
       "distribution": "internal",
       "node": "22.23.3",
       "pnpm": "11.8.0"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "node": "22.23.3",
+      "pnpm": "11.8.0",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_DATA_SOURCE": "api"
+      }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true,
+      "node": "22.23.3",
+      "pnpm": "11.8.0",
+      "env": {
+        "EXPO_PUBLIC_DATA_SOURCE": "api"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "REPLACE_ME",
+        "ascAppId": "REPLACE_ME",
+        "appleTeamId": "REPLACE_ME"
+      }
     }
   }
 }
