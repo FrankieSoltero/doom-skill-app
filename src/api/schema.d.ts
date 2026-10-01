@@ -263,7 +263,7 @@ export interface paths {
         put?: never;
         /**
          * Request Topic
-         * @description The registry topic the query names: the one that exists, or a new one (module docstring).
+         * @description The topic the query names: the one that exists, or a new one (module docstring).
          */
         post: operations["create_topic"];
         delete?: never;
@@ -971,7 +971,7 @@ export interface components {
             query: components["schemas"]["QueryText"];
         };
         /** @enum {string} */
-        TopicStatus: "pending" | "ingesting" | "synthesizing" | "ready" | "failed";
+        TopicStatus: "proposed" | "pending" | "ingesting" | "synthesizing" | "ready" | "failed";
         /**
          * TopicSummary
          * @description A topic in a list, or the topic `POST /topics` found or created.
