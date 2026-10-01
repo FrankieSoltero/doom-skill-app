@@ -129,6 +129,32 @@ function envText(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/**
+ * The app's public source repository (`apps/mobile/README.md`'s Licence section); the only place
+ * the host appears, so a changed repository name or owner is a one-line change.
+ */
+export const SOURCE_REPOSITORY = 'https://github.com/FrankieSoltero/learnloop-app';
+
+/** A release build tag as the app's build step writes it: `app-v<semver>+<7-40 hex sha>`. */
+const BUILD_TAG = /^app-v\d+\.\d+\.\d+\+[0-9a-f]{7,40}$/;
+
+/**
+ * `EXPO_PUBLIC_BUILD_TAG` when it is shaped like a build tag; `null` when it is unset or any other
+ * shape (a development build never sets it).
+ */
+export function buildTag(): string | null {
+  const raw = envText(process.env.EXPO_PUBLIC_BUILD_TAG)?.trim() ?? '';
+  return BUILD_TAG.test(raw) ? raw : null;
+}
+
+/**
+ * The source for `tag`: the tagged tree on GitHub, or the repository's root when there is no tag
+ * (a development build).
+ */
+export function sourceUrl(tag: string | null): string {
+  return tag === null ? SOURCE_REPOSITORY : `${SOURCE_REPOSITORY}/tree/${tag}`;
+}
+
 const parsed = parseConfig(
   {
     apiUrl: envText(process.env.EXPO_PUBLIC_API_URL),

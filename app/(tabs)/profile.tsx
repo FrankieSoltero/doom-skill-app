@@ -13,6 +13,7 @@ import type { Profile } from '../../src/profile/me';
 import { MinutesPicker } from '../../src/profile/MinutesPicker';
 import { ProfileField, Setting } from '../../src/profile/ProfileField';
 import { ReminderSetting } from '../../src/profile/ReminderSetting';
+import { SourceLink } from '../../src/profile/SourceLink';
 import { deviceTimezone, useProfile, type ProfilePatch } from '../../src/profile/useProfile';
 import { colors, space, type } from '../../src/theme';
 
@@ -105,6 +106,7 @@ function ProfileForm({ profile, update }: FormProps) {
       </Setting>
       <ReminderSetting key={profile.push_time ?? 'off'} pushTime={profile.push_time} save={save} />
       <TimezoneSetting timezone={profile.timezone} save={save} />
+      <SourceLink />
       <OutlineButton label={copy.profile.signOut} onPress={() => void signOut()} />
       <OutlineButton
         label={copy.profile.deleteAccount}
@@ -126,8 +128,9 @@ function ProfileForm({ profile, update }: FormProps) {
 /**
  * The Profile tab (README.md:165-168): the display name, the daily time budget (5 to 60 minutes),
  * the daily reminder and its time (a local notification, src/profile/reminders.ts), and the
- * timezone, offering the device's, all through `GET /me` and `PATCH /me`; then Sign out, and
- * Delete account, which opens a sheet that asks the person to type `delete`
+ * timezone, offering the device's, all through `GET /me` and `PATCH /me`; then the app's source
+ * link (src/profile/SourceLink.tsx, M7 open client); then Sign out, and Delete account, which
+ * opens a sheet that asks the person to type `delete`
  * (src/profile/DeleteAccountSheet.tsx) before `DELETE /me`. While the profile loads a busy line
  * shows; a failed load shows a fixed line with Retry.
  */

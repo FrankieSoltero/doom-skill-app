@@ -1,4 +1,10 @@
-import { config as loadedConfig, parseConfig, type RawConfig } from '../config';
+import {
+  config as loadedConfig,
+  parseConfig,
+  SOURCE_REPOSITORY,
+  sourceUrl,
+  type RawConfig,
+} from '../config';
 
 const API = 'https://api.learnloop.example';
 const SUPABASE = 'https://project.supabase.example';
@@ -207,6 +213,61 @@ describe('config, read once when the module loads', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith('config_invalid', { problem: configError });
     expect(JSON.stringify(warn.mock.calls)).not.toContain('secret-marker');
+  });
+});
+
+describe('buildTag, read fresh on every call', () => {
+  const TAG = 'app-v1.0.0+abc1234';
+
+  /**
+   * `buildTag()` as it reads `tag` from the environment. A fresh module is required (the module
+   * pattern `loadWith` above uses) because `EXPO_PUBLIC_` variables are inlined when the module
+   * is first evaluated, so mutating `process.env` after this file's own top-level import would
+   * not change what the already-loaded `buildTag` sees.
+   */
+  function tagWith(tag: string | undefined): string | null {
+    jest.replaceProperty(process, 'env', { NODE_ENV: 'test', EXPO_PUBLIC_BUILD_TAG: tag });
+    let loaded: typeof import('../config') | undefined;
+    jest.isolateModules(() => {
+      loaded = jest.requireActual<typeof import('../config')>('../config');
+    });
+    if (loaded === undefined) {
+      throw new Error('the config module did not load');
+    }
+    return loaded.buildTag();
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('reads a validly shaped tag', () => {
+    expect(tagWith(TAG)).toBe(TAG);
+  });
+
+  it('is null when unset', () => {
+    expect(tagWith(undefined)).toBeNull();
+  });
+
+  it.each([
+    'app-v1.0+abc1234', // missing the patch version
+    'app-v1.0.0+ab', // sha too short
+    'app-v1.0.0', // no sha at all
+    'v1.0.0+abc1234', // missing the "app-" prefix
+    'app-v1.0.0+ABCDEFG', // uppercase is not hex here
+    '   ', // blank after trimming
+  ])('treats %p as unset', (invalid) => {
+    expect(tagWith(invalid)).toBeNull();
+  });
+});
+
+describe('sourceUrl', () => {
+  it('is the tagged tree for a known tag', () => {
+    expect(sourceUrl('app-v1.0.0+abc1234')).toBe(`${SOURCE_REPOSITORY}/tree/app-v1.0.0+abc1234`);
+  });
+
+  it('is the repository itself with no tag', () => {
+    expect(sourceUrl(null)).toBe(SOURCE_REPOSITORY);
   });
 });
 

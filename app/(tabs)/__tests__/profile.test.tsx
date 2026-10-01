@@ -2,6 +2,7 @@
 // expo-notifications stand-in (src/profile/__mocks__/notifications.ts).
 import { fireEvent, screen } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
+import { Linking } from 'react-native';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
 import * as session from '../../../src/auth/useSession';
@@ -12,6 +13,7 @@ import {
   SCREEN_TOP_INSET,
 } from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
+import { SOURCE_REPOSITORY } from '../../../src/config';
 import { deviceTimezone } from '../../../src/profile/useProfile';
 import { colors } from '../../../src/theme';
 import ProfileScreen from '../profile';
@@ -84,6 +86,13 @@ describe('Profile: states', () => {
     });
   });
 
+  it('shows the source link row, below the reminder and above Sign out', async () => {
+    await renderProfile(FRESH);
+
+    expect(screen.getByRole('link', { name: 'Source code' })).toBeOnTheScreen();
+    expect(screen.getByText('development build')).toBeOnTheScreen();
+  });
+
   it('shows a set-up profile: its name and its reminder time', async () => {
     await renderProfile(SET_UP);
 
@@ -137,6 +146,16 @@ describe('Profile: changes', () => {
     await advance(0);
 
     expect(screen.getByText("Couldn't save your change. Try again.")).toBeOnTheScreen();
+  });
+
+  it('opens the source repository on the system browser', async () => {
+    const linking = jest.mocked(Linking);
+    linking.openURL.mockResolvedValueOnce(true);
+    await renderProfile(FRESH);
+
+    fireEvent.press(screen.getByRole('link', { name: 'Source code' }));
+
+    expect(linking.openURL.mock.calls).toStrictEqual([[SOURCE_REPOSITORY]]);
   });
 
   it('signs out', async () => {

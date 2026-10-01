@@ -26,6 +26,10 @@ export const profile = {
   timezone: 'Timezone',
   /** The button that sets the profile's timezone to the device's. */
   useDeviceTimezone: (zone: string) => `Use this device's timezone (${zone})`,
+  /** The row that links to the app's source (M7 open client): its label. */
+  sourceCode: 'Source code',
+  /** The row's subtitle when the running build carries no tag (a development build). */
+  developmentBuild: 'development build',
   signOut: 'Sign out',
   loadFailed: "Couldn't load your profile.",
   saveFailed: "Couldn't save your change. Try again.",
