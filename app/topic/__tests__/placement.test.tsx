@@ -192,7 +192,9 @@ describe('Placement: submit', () => {
     expectFeedOpened();
   });
 
-  it("names the last band's milestone when every band passed", async () => {
+  it("names the last band's milestone for a placement stored with every band passed", async () => {
+    // The server no longer passes the last band (K19, M8 final review I1); a result stored before
+    // that rule still names the last band.
     calls().send.mockResolvedValue({
       kind: 'result',
       result: { placed: 2, bands: 2, knownNodes: 5, milestoneTitle: 'Mini-notation' },

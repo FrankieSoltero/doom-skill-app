@@ -34,7 +34,9 @@ type Phase = 'intro' | 'sending' | 'failed' | { index: number } | { line: string
 
 /**
  * The result line: the milestone number of the band the learner starts at (the band after the
- * last one passed, or the last band when every band passed) with the title the server sent.
+ * last one passed) with the title the server sent. The server never passes the last band (K19),
+ * so with every answer right the learner starts at the last band; `Math.min` keeps a placement
+ * stored before that rule on the last band too.
  */
 function resultLine(result: PlacementResult, quiz: PlacementQuiz | undefined): string {
   if (result.milestoneTitle === null) return placementCopy.fromTheBeginning;
