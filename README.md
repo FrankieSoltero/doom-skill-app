@@ -16,3 +16,6 @@ shipped build is tagged there as `app-v<version>+<sha>`.
 
 The service behind this app (the API, the prompts and the data it serves) is separate and not
 covered by this licence; see the root [`LICENSE-BACKEND.md`](../../LICENSE-BACKEND.md).
+
+This app bundles third-party libraries; their notices are reproduced in [`NOTICE`](NOTICE), in
+this same folder, so they ship with the app's published source.

@@ -1,0 +1,191 @@
+LearnLoop: third-party notices
+==============================
+
+The app itself is licensed AGPL-3.0-or-later (see LICENSE, in this same folder).
+
+The LearnLoop mobile app bundles the third-party libraries listed below into its builds, and this
+file reproduces their notices: for each library, its name, its version, its licence as its
+package.json states it, and the copyright lines of its LICENSE file where the package ships one.
+The full licence text of each library is in the LICENSE file of its package as published on npm.
+
+How this list was made (2026-10-01): the app's JavaScript bundle was built for iOS and for
+Android with `expo export --source-maps`, and every package with a file in either source map
+is listed under "App bundle". The Strudel player's page is built by
+scripts/build-strudel.mjs from @strudel/web, whose published file dist/index.mjs
+already contains its dependencies; the packages under "Strudel player page" are @strudel/web's
+dependency tree as installed from pnpm-lock.yaml, without the type-only @types packages.
+Native libraries that React Native and Expo compile into the app from CocoaPods and Gradle,
+outside the JavaScript bundle, are not listed here.
+
+
+Strudel
+-------
+
+Strudel (@strudel/web 1.3.0, the other @strudel packages, superdough and supradough, listed
+under "Strudel player page") is licensed AGPL-3.0-or-later. Source:
+https://codeberg.org/uzu/strudel. The @kabelsalat packages there are AGPL-3.0-or-later too. The
+app bundles Strudel into the Strudel player's page (src/strudel/generated/strudelHtml.ts, written
+at build time), whose script starts with the comment
+"@strudel/web 1.3.0 | AGPL-3.0-or-later | https://codeberg.org/uzu/strudel".
+
+Restriction (rule REPO-7 in AGENTS.md and docs/standards.md): builds are for the owner's own
+devices only. No build is given to anyone else, and no TestFlight, App Store or ad hoc
+distribution profile is added, until the licence question is settled.
+
+
+App bundle (92 packages)
+------------------------
+
+- @babel/runtime 7.29.7: MIT. Copyright (c) 2014-present Sebastian McKenzie and other contributors.
+- @expo-google-fonts/barlow 0.4.1: MIT AND OFL-1.1. Copyright (c) 2020 Expo; Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow).
+- @expo-google-fonts/barlow-condensed 0.4.1: MIT AND OFL-1.1. Copyright (c) 2020 Expo; Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow).
+- @expo-google-fonts/material-symbols 0.4.48: MIT AND Apache-2.0. Copyright (c) 2020 Expo.
+- @expo/cli 57.0.27: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- @expo/metro-runtime 57.0.16: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- @expo/ui 57.0.20: MIT. The package ships no LICENSE file.
+- @radix-ui/react-compose-refs 1.1.5: MIT. Copyright (c) 2022 WorkOS.
+- @radix-ui/react-slot 1.3.3: MIT. Copyright (c) 2022 WorkOS.
+- @react-native-async-storage/async-storage 2.2.0: MIT. Copyright (c) 2015-present, Facebook, Inc.
+- @react-native-masked-view/masked-view 0.3.2: MIT. Copyright (c) 2015-present, Facebook, Inc.
+- @react-native/assets-registry 0.86.3: MIT. The package ships no LICENSE file.
+- @react-native/js-polyfills 0.86.3: MIT. The package ships no LICENSE file.
+- @react-native/normalize-colors 0.86.3: MIT. The package ships no LICENSE file.
+- @react-native/virtualized-lists 0.86.3: MIT. The package ships no LICENSE file.
+- @supabase/auth-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @supabase/functions-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @supabase/phoenix 0.4.5: MIT. Copyright (c) 2014 Chris McCord.
+- @supabase/postgrest-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @supabase/realtime-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @supabase/storage-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @supabase/supabase-js 2.117.2: MIT. Copyright (c) 2020 Supabase.
+- @tanstack/query-core 5.104.0: MIT. Copyright (c) 2021-present Tanner Linsley.
+- @tanstack/react-query 5.104.0: MIT. Copyright (c) 2021-present Tanner Linsley.
+- @ungap/structured-clone 1.4.0: ISC. Copyright (c) 2021, Andrea Giammarchi, @WebReflection.
+- abort-controller 3.0.0: MIT. Copyright (c) 2017 Toru Nagashima.
+- aes-js 3.1.2: MIT. Copyright (c) 2015 Richard Moore.
+- base64-js 1.5.1: MIT. Copyright (c) 2014 Jameson Little.
+- color 4.2.3: MIT. Copyright (c) 2012 Heather Arthur.
+- color-convert 2.0.1: MIT. Copyright (c) 2011-2016 Heather Arthur <fayearthur@gmail.com>.
+- color-name 1.1.4: MIT. Copyright (c) 2015 Dmitry Ivanov.
+- color-string 1.9.1: MIT. Copyright (c) 2011 Heather Arthur <fayearthur@gmail.com>.
+- decode-uri-component 0.2.2: MIT. Copyright (c) 2017, Sam Verschueren <sam.verschueren@gmail.com> (github.com/SamVerschueren).
+- escape-string-regexp 4.0.0: MIT. Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com).
+- event-target-shim 5.0.1: MIT. Copyright (c) 2015 Toru Nagashima.
+- expo 57.0.25: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-application 57.0.3: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-asset 57.0.18: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-constants 57.0.19: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-font 57.0.4: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-glass-effect 57.0.4: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-linking 57.0.11: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-modules-core 57.0.19: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-notifications 57.0.21: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-router 57.0.23: MIT. The package ships no LICENSE file.
+- expo-secure-store 57.0.4: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-splash-screen 57.0.9: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-status-bar 57.0.1: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- expo-symbols 57.0.3: MIT. Copyright (c) 2015-present 650 Industries, Inc. (aka Expo).
+- fast-base64-decode 1.0.0: MIT. The package ships no LICENSE file.
+- fast-deep-equal 3.1.3: MIT. Copyright (c) 2017 Evgeny Poberezkin.
+- filter-obj 1.1.0: MIT. Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com).
+- flow-enums-runtime 0.0.6: MIT. Copyright (c) Facebook, Inc. and its affiliates.
+- hoist-non-react-statics 3.3.2: BSD-3-Clause. Copyright (c) 2015, Yahoo! Inc. All rights reserved.
+- iceberg-js 0.8.1: MIT. Copyright (c) 2025 Supabase.
+- invariant 2.2.4: MIT. Copyright (c) 2013-present, Facebook, Inc.
+- is-arrayish 0.3.4: MIT. Copyright (c) 2015 JD Ballard.
+- lucide-react-native 1.48.0: ISC. Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis.
+- memoize-one 5.2.1: MIT. Copyright (c) 2019 Alexander Reardon.
+- nanoid 3.3.19: MIT. Copyright 2017 Andrey Sitnik <andrey@sitnik.ru>.
+- nullthrows 1.1.1: MIT. Copyright (c) 2016 Andres Suarez.
+- openapi-fetch 0.17.0: MIT. Copyright (c) 2023 Drew Powers.
+- promise 8.3.0: MIT. Copyright (c) 2014 Forbes Lindesay.
+- query-string 7.1.3: MIT. Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (http://sindresorhus.com).
+- react 19.2.3: MIT. Copyright (c) Meta Platforms, Inc. and affiliates.
+- react-freeze 1.0.4: MIT. Copyright (c) 2021 Software Mansion.
+- react-is 16.13.1: MIT. Copyright (c) Facebook, Inc. and its affiliates.
+- react-is 19.3.0: MIT. Copyright (c) Meta Platforms, Inc. and affiliates.
+- react-native 0.86.3: MIT. Copyright (c) Meta Platforms, Inc. and affiliates.
+- react-native-gesture-handler 2.32.0: MIT. Copyright (c) 2016 Software Mansion <swmansion.com>.
+- react-native-get-random-values 1.11.0: MIT. Copyright (c) 2018, 2020 Linus Unnebäck.
+- react-native-is-edge-to-edge 1.3.1: MIT. Copyright (c) 2024 Mathieu Acthernoene.
+- react-native-reanimated 4.5.1: MIT. Copyright (c) 2016 Software Mansion <swmansion.com>.
+- react-native-safe-area-context 5.7.0: MIT. Copyright (c) 2019 Th3rd Wave.
+- react-native-screens 4.26.2: MIT. Copyright (c) 2018 Software Mansion <swmansion.com>.
+- react-native-svg 15.15.4: MIT. Copyright (c) [2015-2016] [Horcrux].
+- react-native-webview 13.16.1: MIT. Copyright (c) 2015-present, Facebook, Inc.
+- react-native-worklets 0.10.1: MIT. Copyright (c) 2024 nobody.
+- regenerator-runtime 0.13.11: MIT. Copyright (c) 2014-present, Facebook, Inc.
+- scheduler 0.27.0: MIT. Copyright (c) Meta Platforms, Inc. and affiliates.
+- semver 7.8.5: ISC. Copyright (c) Isaac Z. Schlueter and Contributors.
+- simple-swizzle 0.2.4: MIT. Copyright (c) 2015 Josh Junon.
+- split-on-first 1.1.0: MIT. Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com).
+- stacktrace-parser 0.1.11: MIT. Copyright (c) 2014-2019 Georg Tavonius.
+- standard-navigation 0.0.5: MIT. The package ships no LICENSE file.
+- strict-uri-encode 2.0.0: MIT. Copyright (c) Kevin Martensson <kevinmartensson@gmail.com> (github.com/kevva).
+- tslib 2.8.1: 0BSD. Copyright (c) Microsoft Corporation.
+- warn-once 0.1.1: MIT. Copyright (c) 2022 Satyajit Sahoo.
+- whatwg-fetch 3.6.20: MIT. Copyright (c) 2014-2023 GitHub, Inc.
+- whatwg-url-minimum 0.1.2: MIT. Copyright (c) Phil Pluckthun; Copyright (c) 650 Industries, Inc. (aka Expo); Copyright (c) Sebastian Mayr.
+- zod 4.6.5: MIT. Copyright (c) 2025 Colin McDonnell.
+- zustand 5.0.15: MIT. Copyright (c) 2019 Paul Henschel.
+
+
+Strudel player page (56 packages)
+---------------------------------
+
+- @babel/runtime 7.29.7: MIT. Copyright (c) 2014-present Sebastian McKenzie and other contributors.
+- @kabelsalat/core 0.4.0: AGPL-3.0-or-later. Its package.json names no source repository. Its LICENSE file names no copyright holder.
+- @kabelsalat/lib 0.4.1: AGPL-3.0-or-later. Its package.json names no source repository. Its LICENSE file names no copyright holder.
+- @kabelsalat/web 0.4.1: AGPL-3.0-or-later. Its package.json names no source repository. Its LICENSE file names no copyright holder.
+- @strudel/core 1.2.6: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/draw 1.2.6: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/mini 1.2.6: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/tonal 1.2.6: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/transpiler 1.2.6: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/web 1.3.0: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @strudel/webaudio 1.3.0: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- @tonaljs/abc-notation 4.9.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/array 4.8.4: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/chord 4.10.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/chord 6.1.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/chord-detect 4.9.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/chord-type 4.8.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/chord-type 5.1.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/collection 4.9.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/core 4.10.4: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/duration-value 4.9.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/interval 4.8.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/interval 5.1.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/key 4.11.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/midi 4.10.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/mode 4.9.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/note 4.12.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pcset 4.10.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch 5.0.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch 5.0.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-distance 5.0.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-distance 5.0.5: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-interval 5.0.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-interval 6.1.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-note 5.0.3: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/pitch-note 6.1.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/progression 4.9.2: MIT. The package ships no LICENSE file.
+- @tonaljs/range 4.9.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/roman-numeral 4.9.1: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/scale 4.13.4: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/scale-type 4.9.2: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/time-signature 4.9.0: MIT. Copyright (c) 2015 danigb.
+- @tonaljs/tonal 4.10.0: MIT. Copyright (c) 2015 danigb.
+- acorn 8.18.0: MIT. Copyright (C) 2012-2022 by various contributors (see AUTHORS).
+- chord-voicings 0.0.1: ISC. The package ships no LICENSE file.
+- djipevents 2.0.7: Apache-2.0. Its LICENSE.txt file names no copyright holder.
+- escodegen 2.1.0: BSD-2-Clause. Copyright (C) 2012 Yusuke Suzuki (twitter: @Constellation) and other contributors.
+- esprima 4.0.1: BSD-2-Clause. Copyright JS Foundation and other contributors, https://js.foundation/.
+- estraverse 5.3.0: BSD-2-Clause. Its LICENSE.BSD file names no copyright holder.
+- estree-walker 3.0.3: MIT. Copyright (c) 2015-20 [these people](https://github.com/Rich-Harris/estree-walker/graphs/contributors).
+- esutils 2.0.3: BSD-2-Clause. Its LICENSE.BSD file names no copyright holder.
+- fraction.js 5.3.4: MIT. Copyright (c) 2025 Robert Eisele.
+- nanostores 0.11.4: MIT. Copyright 2020 Andrey Sitnik <andrey@sitnik.ru>.
+- superdough 1.3.0: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- supradough 1.2.4: AGPL-3.0-or-later. Source: https://codeberg.org/uzu/strudel. Its LICENSE file names no copyright holder.
+- webmidi 3.3.1: Apache-2.0. Its LICENSE.txt file names no copyright holder.
