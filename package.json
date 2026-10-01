@@ -10,6 +10,7 @@
     "test": "jest --ci --coverage && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test scripts/__tests__/*.test.mjs",
     "build:strudel": "node scripts/build-strudel.mjs",
     "make:assets": "node scripts/make-assets.mjs",
+    "publish:app": "node scripts/publish-app.mjs",
     "gen:types": "openapi-typescript ../../services/api/openapi.json -o src/api/schema.d.ts",
     "postinstall": "node scripts/build-strudel.mjs --postinstall"
   },
