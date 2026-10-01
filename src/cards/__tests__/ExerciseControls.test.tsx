@@ -159,3 +159,21 @@ describe('ExerciseControls behavior', () => {
     expect(viewStyleOf(button(name)).transform).toBeUndefined();
   });
 });
+
+describe('ExerciseControls with no Play (an exercise the app checks but cannot play)', () => {
+  it('shows Check alone across the row, with no Play icon, and calls onCheck', () => {
+    const onCheck = jest.fn<undefined, []>();
+    render(
+      <CardFrame type="exercise" kicker="Exercise · Window functions">
+        <ExerciseControls onCheck={onCheck} />
+      </CardFrame>,
+    );
+
+    const row = screen.getByTestId('exercise-controls');
+    expect(within(row).getAllByRole('button')).toStrictEqual([button('Check')]);
+    expect(viewStyleOf(button('Check'))).toMatchObject({ flex: 1, height: 46 });
+    expect(screen.queryByTestId('play-icon', HIDDEN)).toBeNull();
+    fireEvent.press(button('Check'));
+    expect(onCheck).toHaveBeenCalledTimes(1);
+  });
+});

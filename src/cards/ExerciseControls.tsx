@@ -39,57 +39,63 @@ function buttonStyle(look: ViewStyle, disabled: boolean) {
   ];
 }
 
-type ExerciseControlsProps = {
+/** Play or Stop: given only for an exercise the app can play (Strudel). */
+type PlayProps = {
   /** Shows Stop instead of Play. */
   playing: boolean;
   /** Whether Play may be pressed; Stop always may. */
   canPlay: boolean;
   onPlay: () => void;
   onStop: () => void;
-  onCheck: () => void;
 };
 
-/**
- * The exercise card's two buttons (README.md:103-105), side by side: Play, or Stop while playing,
- * in lime with ink text and a `Play` or `Square` icon; and Check, transparent with paper text and
- * a paper border at 45%. Play is dimmed and ignores presses unless `canPlay`.
- */
-export function ExerciseControls({
-  playing,
-  canPlay,
-  onPlay,
-  onStop,
-  onCheck,
-}: ExerciseControlsProps) {
+/** No Play: an exercise in a language the app checks but cannot play (M6 hardening Task 8). */
+type NoPlay = { [Name in keyof PlayProps]?: undefined };
+
+type ExerciseControlsProps = { onCheck: () => void } & (PlayProps | NoPlay);
+
+/** Play, or Stop while playing, in lime with ink text and a `Play` or `Square` icon. */
+function PlayButton({ playing, canPlay, onPlay, onStop }: PlayProps) {
   const disabled = !playing && !canPlay;
   const label = playing ? copy.stop : copy.play;
   const Icon = playing ? Square : Play;
   return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={playing ? onStop : onPlay}
+      style={buttonStyle(styles.play, disabled)}
+    >
+      <Icon
+        testID={playing ? 'stop-icon' : 'play-icon'}
+        size={ICON_SIZE}
+        strokeWidth={ICON_STROKE}
+        color={colors.ink}
+        fill={colors.ink}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
+      <Text style={[styles.label, styles.playLabel]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The exercise card's buttons (README.md:103-105), side by side: Play, or Stop while playing (see
+ * `PlayButton`); and Check, transparent with paper text and a paper border at 45%. Play is dimmed
+ * and ignores presses unless `canPlay`. Without the Play props, Check stands alone across the row.
+ */
+export function ExerciseControls(props: ExerciseControlsProps) {
+  return (
     <View testID="exercise-controls" style={styles.row}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={playing ? onStop : onPlay}
-        style={buttonStyle(styles.play, disabled)}
-      >
-        <Icon
-          testID={playing ? 'stop-icon' : 'play-icon'}
-          size={ICON_SIZE}
-          strokeWidth={ICON_STROKE}
-          color={colors.ink}
-          fill={colors.ink}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
-        <Text style={[styles.label, styles.playLabel]}>{label}</Text>
-      </Pressable>
+      {props.onPlay === undefined ? null : <PlayButton {...props} />}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={copy.check}
         accessibilityState={{ disabled: false }}
-        onPress={onCheck}
+        onPress={props.onCheck}
         style={buttonStyle(styles.check, false)}
       >
         <FadedBorder opacity={CHECK_BORDER_OPACITY} />

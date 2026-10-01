@@ -19,8 +19,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 const cardId = z.string().regex(UUID).optional();
 
-/** The only exercise language the app can play and check. */
-const EXERCISE_LANG = 'strudel';
+/**
+ * The exercise languages the app can check: `strudel`, which it can also play, and `sql`, which it
+ * only checks (M6 hardening Task 8). An exercise in any other language is dropped.
+ */
+const EXERCISE_LANGS = ['strudel', 'sql'] as const;
+const exerciseLang = z.enum(EXERCISE_LANGS);
 
 /** Just enough of an exercise to read its language before the card itself is parsed. */
 const exerciseLangSchema = z.object({ type: z.literal('exercise'), lang: z.string() });
@@ -56,6 +60,8 @@ const correctOutOfRange = {
 // Every other field is plain text: titles, `prompt`, `options`, `node`, the rating labels, the
 // checkpoint rubric `label`s (short row labels, README.md:130-134), and every code field
 // (`snippet`, `snippetComment`, `code`, `starterCode`), where `*` is Strudel syntax.
+// A concept card's code is optional: a topic without Strudel may send none, and then the card
+// draws no code block and no cycle tiles (M6 hardening Task 8).
 const conceptCardSchema = z.object({
   id: cardId,
   type: z.literal('concept'),
@@ -63,9 +69,9 @@ const conceptCardSchema = z.object({
   estSeconds: seconds,
   title: text,
   body: text,
-  snippet: text,
-  snippetComment: z.string(),
-  cycles: z.array(text).min(1),
+  snippet: text.optional(),
+  snippetComment: z.string().optional(),
+  cycles: z.array(text).min(1).optional(),
 });
 
 const quizCardSchema = z
@@ -98,7 +104,7 @@ const predictCardSchema = z
 const exerciseCardSchema = z.object({
   id: cardId,
   type: z.literal('exercise'),
-  lang: text,
+  lang: exerciseLang,
   node: text,
   estSeconds: seconds,
   title: text,
@@ -181,12 +187,12 @@ function hasUnknownType(item: unknown): boolean {
 }
 
 /**
- * True for an exercise whose `lang` is a string other than `strudel`: the app cannot play or check
- * it, so it is handled as a card of an unknown kind. Logged without the value, which is card data.
+ * True for an exercise whose `lang` is a string outside `EXERCISE_LANGS`: the app cannot check it,
+ * so it is handled as a card of an unknown kind. Logged without the value, which is card data.
  */
 function isForeignExercise(item: unknown): boolean {
   const exercise = exerciseLangSchema.safeParse(item);
-  const foreign = exercise.success && exercise.data.lang !== EXERCISE_LANG;
+  const foreign = exercise.success && !exerciseLang.safeParse(exercise.data.lang).success;
   if (foreign) {
     logWarning('exercise_lang_unknown');
   }

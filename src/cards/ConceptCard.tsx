@@ -84,16 +84,23 @@ function CycleTiles({ cycles, highlighted }: CycleTilesProps) {
 /**
  * The concept card (README.md:51-57): kicker row, title, body, a code block, the cycle tiles, a
  * flex spacer, then Got it. It is always answered; the screen decides what pressing Got it does.
+ *
+ * A topic without Strudel may send no code (M6 hardening Task 8): the code block shows only with a
+ * snippet, and the tiles only with a snippet and cycles. The spacer still keeps Got it at the foot.
  */
 export function ConceptCard({ card, active, onNext }: ConceptCardProps) {
-  const highlighted = useCycleHighlight(card.cycles.length, active);
+  const { snippet } = card;
+  const cycles = snippet === undefined ? [] : (card.cycles ?? []);
+  const highlighted = useCycleHighlight(cycles.length, active);
 
   return (
     <CardFrame type="concept" kicker={cardKickerText(card)} meta={cardMetaText(card.estSeconds)}>
       <CardTitle size="l">{card.title}</CardTitle>
       <CardBody text={card.body} />
-      <CodeBlock code={card.snippet} comment={card.snippetComment} />
-      <CycleTiles cycles={card.cycles} highlighted={highlighted} />
+      {snippet === undefined ? null : (
+        <CodeBlock code={snippet} comment={card.snippetComment ?? ''} />
+      )}
+      {cycles.length === 0 ? null : <CycleTiles cycles={cycles} highlighted={highlighted} />}
       <View testID="concept-spacer" style={styles.spacer} />
       <PrimaryButton label={copy.gotIt} onPress={onNext} />
     </CardFrame>
