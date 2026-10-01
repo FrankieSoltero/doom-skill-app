@@ -16,6 +16,10 @@ const ENV_FILE = /(^|\/)\.env/;
 const ENV_TEMPLATE = /(^|\/)\.env\.example$/;
 // gitleaks exits with this code on a finding, so a finding is told apart from a failed scan.
 const LEAKS_EXIT = 42;
+// `git log` options that put every commit's own diff in the output: `-m` gives a merge commit a
+// diff against each parent (plain `git log -p` shows none, so a key added while resolving a merge
+// would go unread), and `--root` gives the root commit its diff whatever `log.showRoot` says.
+const HISTORY = ['-m', '--root'];
 const GITHUB_SSH = /^git@github\.com:([\w.-]+)\/([\w.-]+?)(?:\.git)?$/;
 
 /** Thrown for a refusal or a failure with its own message, printed as is; `code` is the exit. */
@@ -66,21 +70,35 @@ export function git(root, ...args) {
 
 /** Every path, in every commit of `branch`, that is a .env file other than a template. */
 export function envFiles(root, branch) {
-  // -m lists a merge's changes against each parent; --no-renames lists a renamed file's old name
-  // too. Names are split on NUL and newline, so an odd name can only split into more names.
-  const names = git(root, 'log', '-z', '-m', '--no-renames', '--name-only', '--format=', branch);
+  // -m lists a merge's changes against each parent, so a file added in a merge resolution is
+  // listed; --root lists the root commit's files even when `log.showRoot` is off; --no-renames
+  // lists a renamed file's old name too. Names are split on NUL and newline, so an odd name can
+  // only split into more names.
+  const names = git(
+    root,
+    'log',
+    '-z',
+    ...HISTORY,
+    '--no-renames',
+    '--name-only',
+    '--format=',
+    branch,
+  );
   const paths = new Set(names.split(/[\0\n]+/).filter((name) => name !== ''));
   return [...paths].filter((path) => ENV_FILE.test(path) && !ENV_TEMPLATE.test(path)).sort();
 }
 
-/** gitleaks' arguments: every commit reachable from `branch`, redacted, with the repo's config. */
+/**
+ * gitleaks' arguments: every commit reachable from `branch`, merges and the root included, redacted,
+ * with the repo's config. gitleaks runs `git log -p -U0 <log-opts>`, split on spaces.
+ */
 function gitleaksArgs(root, branch, report) {
   const config = join(root, '.gitleaks.toml');
   return [
     'git',
     '--no-banner',
     '--redact',
-    `--log-opts=${branch}`,
+    `--log-opts=${[...HISTORY, branch].join(' ')}`,
     '--report-format=json',
     `--report-path=${report}`,
     `--exit-code=${String(LEAKS_EXIT)}`,

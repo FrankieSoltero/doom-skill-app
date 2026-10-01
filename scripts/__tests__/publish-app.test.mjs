@@ -51,8 +51,12 @@ function bare(name) {
   return path;
 }
 
-/** A monorepo with two commits, pushed to its `origin`, so HEAD is origin/main. */
-function makeRepo() {
+/**
+ * A monorepo with two commits, pushed to its `origin`, so HEAD is origin/main. `first` adds files
+ * to the root commit. `log.showRoot` is off, so a scan that relies on it to read the root commit
+ * fails here.
+ */
+function makeRepo(first = {}) {
   count += 1;
   const repo = join(work, `repo-${count}`);
   const origin = bare(`origin-${count}.git`);
@@ -61,12 +65,14 @@ function makeRepo() {
   git(repo, 'config', 'user.email', 'publish-test@example.com');
   git(repo, 'config', 'commit.gpgsign', 'false');
   git(repo, 'config', 'tag.gpgsign', 'false');
+  git(repo, 'config', 'log.showRoot', 'false');
   commit(
     repo,
     {
       'apps/mobile/app.json': JSON.stringify({ expo: { name: 'LearnLoop', version: VERSION } }),
       'apps/mobile/.env.example': 'EXPO_PUBLIC_DATA_SOURCE=fixture\n',
       'services/api/main.py': 'print("not part of the app")\n',
+      ...first,
     },
     'first',
   );
@@ -105,7 +111,10 @@ function fakeAwsKey() {
 
 test('gitleaks is installed: the scan is the safety, so its absence fails', () => {
   const result = spawnSync('gitleaks', ['version'], { encoding: 'utf8' });
-  assert.equal(result.error, undefined, 'gitleaks not on PATH: brew install gitleaks');
+  const install =
+    'gitleaks is not on PATH. Install it: `brew install gitleaks` (macOS), or put the release ' +
+    'binary from https://github.com/gitleaks/gitleaks/releases on PATH (CI pins 8.30.1)';
+  assert.equal(result.error, undefined, install);
   assert.equal(result.status, 0);
 });
 
@@ -210,6 +219,39 @@ test('refuses with exit 2 when a historical commit of the split held a key', () 
   assert.match(result.stderr, /1 secret finding in the split history; nothing was pushed/);
   assert.match(result.stderr, /aws-access-token creds\.txt [0-9a-f]{7}/);
   assert.equal(`${result.stdout}${result.stderr}`.includes(key), false, 'the key was printed');
+  assertClean(repo);
+});
+
+test('refuses with exit 2 when the root commit of the split held a .env file or a key', () => {
+  const cases = [
+    ['apps/mobile/.env', 'TOKEN=placeholder\n', /1 \.env file in the split history/],
+    ['apps/mobile/creds.txt', `aws_access_key_id = ${fakeAwsKey()}\n`, /1 secret finding/],
+  ];
+  for (const [path, text, refusal] of cases) {
+    const repo = makeRepo({ [path]: text });
+    remove(repo, path, 'remove it');
+    sync(repo);
+    const result = run(repo);
+    assert.equal(result.status, 2, path);
+    assert.match(result.stderr, refusal);
+    assertClean(repo);
+  }
+});
+
+test('refuses with exit 2 when only a merge resolution of the split held a key', () => {
+  const repo = makeRepo();
+  git(repo, 'checkout', '--quiet', '-b', 'side');
+  commit(repo, { 'apps/mobile/src/side.js': 'export const side = 1;\n' }, 'side');
+  git(repo, 'checkout', '--quiet', 'main');
+  commit(repo, { 'apps/mobile/src/main.js': 'export const main = 1;\n' }, 'main');
+  git(repo, 'merge', '--quiet', '--no-ff', '--no-commit', 'side');
+  commit(repo, { 'apps/mobile/evil.txt': `aws_access_key_id = ${fakeAwsKey()}\n` }, 'merge');
+  remove(repo, 'apps/mobile/evil.txt', 'remove key');
+  sync(repo);
+  const result = run(repo);
+  assert.equal(result.status, 2, result.stdout);
+  assert.match(result.stderr, /secret findings? in the split history; nothing was pushed/);
+  assert.match(result.stderr, /aws-access-token evil\.txt/);
   assertClean(repo);
 });
 
