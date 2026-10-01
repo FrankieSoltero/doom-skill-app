@@ -78,17 +78,11 @@ describe('copy', () => {
     });
   });
 
-  it('titles the placeholder tab', () => {
-    expect(copy.placeholder).toStrictEqual({ profile: 'Profile' });
-  });
-
   it('freezes the nested groups', () => {
     // `Object.isFrozen` is true for any primitive, so first check that each group is an object.
     expect(copy.tabs).toBeInstanceOf(Object);
-    expect(copy.placeholder).toBeInstanceOf(Object);
     expect(copy.cardTypes).toBeInstanceOf(Object);
     expect(Object.isFrozen(copy.tabs)).toBe(true);
-    expect(Object.isFrozen(copy.placeholder)).toBe(true);
     expect(Object.isFrozen(copy.cardTypes)).toBe(true);
   });
 });

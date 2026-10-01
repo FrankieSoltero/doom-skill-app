@@ -177,7 +177,7 @@ export function Message({ text }: { text: string | null }) {
   );
 }
 
-/** Side padding: the placeholder tabs' left padding (`PlaceholderScreen`). */
+/** Side padding: the tab screens' left padding (`TabScreen`). */
 const CONTENT_PADDING_X = 18;
 
 const styles = StyleSheet.create({

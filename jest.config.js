@@ -19,6 +19,9 @@ module.exports = {
     // in-memory stand-in; see the file. Async storage maps to the in-memory mock the library
     // documents for Jest.
     '^expo-secure-store$': '<rootDir>/src/auth/__mocks__/secureStore.ts',
+    // expo-notifications (the daily reminder, src/profile/reminders.ts) is a native module too;
+    // the stand-in's functions are `jest.fn`s a test scripts. See the file.
+    '^expo-notifications$': '<rootDir>/src/profile/__mocks__/notifications.ts',
     '^@react-native-async-storage/async-storage$':
       require.resolve('@react-native-async-storage/async-storage/jest/async-storage-mock'),
   },

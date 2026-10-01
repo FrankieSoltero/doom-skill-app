@@ -9,7 +9,7 @@
     "ios": {
       "bundleIdentifier": "com.frankiesoltero.learnloop"
     },
-    "plugins": ["expo-router", "expo-status-bar", "expo-secure-store"],
+    "plugins": ["expo-router", "expo-status-bar", "expo-secure-store", "expo-notifications"],
     "extra": {
       "router": {},
       "eas": {

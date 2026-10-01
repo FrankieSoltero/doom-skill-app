@@ -5,11 +5,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryWrapper } from '../../src/api/testing/fakeApi';
 import { openSkillTree } from '../../src/components/FeedScreen';
-import { textStyleOf, viewStyleOf } from '../../src/components/testing/styles';
+import { viewStyleOf } from '../../src/components/testing/styles';
 import { cardSource, FeedLoadError } from '../../src/data';
 import { useFeedStore } from '../../src/feed/store';
 import { cardsByType, makeSet } from '../../src/feed/testing/sets';
-import { colors, type } from '../../src/theme';
+import { colors } from '../../src/theme';
 import TabsLayout from '../(tabs)/_layout';
 import ExploreScreen from '../(tabs)/explore';
 import TodayScreen from '../(tabs)/index';
@@ -46,20 +46,11 @@ const ROUTES = {
   '(tabs)/profile': ProfileScreen,
 };
 
-const PLACEHOLDERS = [
-  { path: '/profile', tab: 'Profile', title: 'Profile', Screen: ProfileScreen },
-];
-
-/** The built tab screens, each with its root's test id and its title. */
+/** The other tab screens, each with its root's test id. */
 const SCREENS = [
-  { path: '/tree', tab: 'Tree', title: 'Skill tree', Screen: TreeScreen, testID: 'tree-screen' },
-  {
-    path: '/explore',
-    tab: 'Explore',
-    title: 'Explore',
-    Screen: ExploreScreen,
-    testID: 'explore-screen',
-  },
+  { path: '/tree', tab: 'Tree', testID: 'tree-screen' },
+  { path: '/explore', tab: 'Explore', testID: 'explore-screen' },
+  { path: '/profile', tab: 'Profile', testID: 'profile-screen' },
 ];
 
 /** Renders the tab routes at `initialUrl`, with a fresh server-state cache. */
@@ -116,16 +107,6 @@ describe('tab routes', () => {
     expect(screen.getByRole('tab', { name: 'Today' })).toBeSelected();
   });
 
-  it.each(PLACEHOLDERS)('pressing the $tab tab renders $path', ({ path, tab, title }) => {
-    const router = renderTabs('/');
-
-    fireEvent.press(screen.getByRole('tab', { name: tab }));
-
-    expect(router.getPathname()).toBe(path);
-    expect(screen.getByRole('tab', { name: tab })).toBeSelected();
-    expect(screen.getByTestId('placeholder-screen')).toHaveTextContent(title);
-  });
-
   it.each(SCREENS)('pressing the $tab tab renders its screen at $path', ({ path, tab, testID }) => {
     const router = renderTabs('/');
 
@@ -166,37 +147,18 @@ describe('tab routes', () => {
     expect(router.getPathname()).toBe('/');
     expect(screen.getByTestId('today-screen')).toBeOnTheScreen();
   });
-
-  it.each(PLACEHOLDERS)('$path shows only its title, $title', ({ path, title }) => {
-    renderTabs(path);
-
-    const placeholder = screen.getByTestId('placeholder-screen');
-    expect(placeholder).toHaveTextContent(title, { exact: true });
-  });
 });
 
-// The built tab screens draw through TabScreen, whose own test covers their ground, inset and
-// title; each screen's test checks its root too. Some need a navigator, so they are not here.
+// The Tree, Explore and Profile screens draw through TabScreen, whose own test covers their
+// ground, inset and title; each screen's test checks its root too. Some need a navigator.
 describe('tab screens', () => {
-  it.each([
-    { name: 'Today', Screen: TodayScreen, testID: 'today-screen' },
-    ...PLACEHOLDERS.map(({ tab, Screen }) => ({ name: tab, Screen, testID: 'placeholder-screen' })),
-  ])('$name: paper ground, padded by the top safe-area inset', ({ Screen, testID }) => {
-    renderWithTopInset(Screen);
+  it('Today: paper ground, padded by the top safe-area inset', () => {
+    renderWithTopInset(TodayScreen);
 
-    expect(viewStyleOf(screen.getByTestId(testID))).toMatchObject({
+    expect(viewStyleOf(screen.getByTestId('today-screen'))).toMatchObject({
       flex: 1,
       paddingTop: TOP_INSET,
       backgroundColor: colors.paper,
-    });
-  });
-
-  it.each(PLACEHOLDERS)('$tab: the title in the tab title style, in ink', ({ title, Screen }) => {
-    renderWithTopInset(Screen);
-
-    expect(textStyleOf(screen.getByText(title))).toMatchObject({
-      ...type.tabTitle,
-      color: colors.ink,
     });
   });
 });
