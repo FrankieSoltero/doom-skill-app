@@ -30,6 +30,11 @@ type FeedState = {
    * it, never show a new set under the keys of an earlier set.
    */
   round: number;
+  /**
+   * Counts the resets since the store was created; `reset` raises it and keeps it. A set asked
+   * for before a reset (a sign-out, another topic) is not started after it (useFeedSession).
+   */
+  resets: number;
   /** When each page of the set was first shown (`Date.now()`), for the time an answer took. */
   shownAt: Record<number, number>;
   /** The concept pages of the set already handed to the outbox as seen. */
@@ -65,6 +70,7 @@ const initialState: FeedState = {
   streakCounted: false,
   setCounted: false,
   round: 0,
+  resets: 0,
   shownAt: {},
   seenSent: {},
   recordedSummary: null,
@@ -253,8 +259,8 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     );
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a
-  // reset must not reuse the page keys of a set started before it.
+  // reset must not reuse the page keys of a set started before it. `resets` counts up.
   reset: () => {
-    setState((state) => ({ ...initialState, round: state.round }));
+    setState((state) => ({ ...initialState, round: state.round, resets: state.resets + 1 }));
   },
 }));

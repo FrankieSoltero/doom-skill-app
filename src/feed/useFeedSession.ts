@@ -57,11 +57,27 @@ type LoadHandlers = {
 };
 
 /**
+ * The source's answer, when the feed store was not reset while it was asked for. After a reset
+ * (a sign-out, another topic) the answer belongs to the feed that was cleared: it is asked for
+ * again while `alive()` holds, else `undefined` drops it.
+ */
+async function answerSinceReset(
+  source: CardSource,
+  alive: () => boolean,
+): Promise<FeedSet | null | undefined> {
+  const resets = useFeedStore.getState().resets;
+  const answer = await source.getNextSet();
+  if (useFeedStore.getState().resets === resets) return answer;
+  return alive() ? answerSinceReset(source, alive) : undefined;
+}
+
+/**
  * A function that asks `source` for a set, one request at a time: a call while one is in flight
  * does nothing. A set that arrives is passed to `onSet` (which starts it in the global store)
  * even after the component unmounted: the source has already moved past it, so dropping it would
  * skip a set. Only the handlers, which update the hook's own state, are skipped after unmount; a
- * failure then is dropped unseen.
+ * failure then is dropped unseen. A set that arrives after the store was reset is never started
+ * (`answerSinceReset`): the next user of the device must not resume the set of a user who left.
  */
 function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: FeedSet) => void) {
   const alive = useRef(false);
@@ -79,7 +95,8 @@ function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: F
     busy.current = true;
     handlers.start();
     try {
-      const answer = await source.getNextSet();
+      const answer = await answerSinceReset(source, () => alive.current);
+      if (answer === undefined) return;
       // Before the filter: a set with no card left to show still has its dropped cards skipped.
       if (answer !== null) useFeedStore.getState().skipDropped(answer);
       const set = answer === null ? null : renderablePart(answer, canRender);

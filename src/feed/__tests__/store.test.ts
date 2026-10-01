@@ -220,7 +220,7 @@ describe('reachSummary', () => {
 });
 
 describe('reset', () => {
-  it('returns to the initial state, streak included, keeping the round', () => {
+  it('returns to the initial state, streak included, keeping the round and counting the reset', () => {
     store().startSet(firstSet);
     store().setIndex(1);
     store().setAnswer(1, { kind: 'choice', picked: 0 });
@@ -229,8 +229,8 @@ describe('reset', () => {
 
     store().reset();
 
-    // Every field is back to its start except the round, which keeps counting.
-    expect(store()).toEqual({ ...useFeedStore.getInitialState(), round: 1 });
+    // Every field is back to its start except the round, which keeps counting, and the resets.
+    expect(store()).toEqual({ ...useFeedStore.getInitialState(), round: 1, resets: 1 });
   });
 
   it('keeps the round rising across a reset, so a new set never reuses old page keys', () => {
