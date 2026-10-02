@@ -280,8 +280,9 @@ export const copy = deepFreeze({
    */
   nothingLeft: "You've seen everything that's open today.",
   /**
-   * Shown in place of Keep going when no next set is open: the whole minutes until the next
-   * recall comes due (M8 spec, section 5), "1 minute" for one.
+   * Shown over Keep going when no next set is open: the whole minutes until the next recall
+   * comes due (M8 spec, section 5), "1 minute" for one. Keep going stays, to ask again once the
+   * recall is due (M8 final review, I2).
    */
   nothingLeftRecall: (minutes: number) =>
     `Nothing more is open right now. Your next recall is in ${String(minutes)} ${

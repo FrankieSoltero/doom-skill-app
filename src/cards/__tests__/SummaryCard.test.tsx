@@ -269,6 +269,22 @@ describe('SummaryCard next recall', () => {
     expect(screen.getByText(one)).toBeOnTheScreen();
   });
 
+  it('with a recall due later: Keep going stays beside View skill tree, to ask again', () => {
+    const set = summarySet();
+    const { onKeepGoing } = renderSummary('none', {
+      ...set,
+      summary: { ...set.summary, nextRecallMinutes: 12 },
+    });
+
+    const labels = screen
+      .getAllByTestId('summary-button-half')
+      .map((half) => String(within(half).getByRole('button').props.accessibilityLabel));
+    expect(labels).toStrictEqual(['Keep going', 'View skill tree']);
+    fireEvent.press(button('Keep going'));
+
+    expect(onKeepGoing).toHaveBeenCalledTimes(1);
+  });
+
   it('a recall time does not show while there is a next set', () => {
     const set = summarySet();
     renderSummary('idle', { ...set, summary: { ...set.summary, nextRecallMinutes: 42 } });

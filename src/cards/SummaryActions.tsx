@@ -50,10 +50,12 @@ function useAnnounceChange(line: string | null): void {
  * The foot of the Summary card (spec section 1a): `Keep going` (lime) and `View skill tree`
  * (outlined) side by side in equal halves, so the card fits its page. While the next set loads,
  * the lime button reads `Loading…` and is disabled. After a failed load an error line sits over
- * the row and the lime button is `Retry`. When there is no next set, a line says so over the row
- * (the minutes to the next recall when one is due later, else that everything open was seen)
- * and `View skill tree` takes the whole row: the line is too wide for a half at the body size
- * (about 167 points against 149). The whole foot is a polite live region for Android; on iOS,
+ * the row and the lime button is `Retry`. When there is no next set, a line says so over the row.
+ * With a recall due later the line gives its minutes and `Keep going` stays in its half: the
+ * recall comes due on the server while the Summary is open, and pressing asks again (the answer
+ * is no set until something is due; M8 final review, I2). When nothing more is due today the line
+ * says everything open was seen and `View skill tree` takes the whole row. The line sits over the
+ * row, so the button adds no height. The whole foot is a polite live region for Android; on iOS,
  * which has no live regions, a change to a status line is announced.
  */
 export function SummaryActions({
@@ -65,6 +67,7 @@ export function SummaryActions({
   const color = useCardTextColor();
   const line = statusLine(status, nextRecallMinutes);
   useAnnounceChange(line);
+  const nothingLeft = status === 'none' && nextRecallMinutes == null;
 
   return (
     <View testID="summary-status" accessibilityLiveRegion="polite" style={styles.actions}>
@@ -74,7 +77,7 @@ export function SummaryActions({
         </Text>
       )}
       <View testID="summary-buttons" style={styles.row}>
-        {status === 'none' ? null : (
+        {nothingLeft ? null : (
           <View testID="summary-button-half" style={styles.half}>
             <PrimaryButton
               label={primaryLabel(status)}
