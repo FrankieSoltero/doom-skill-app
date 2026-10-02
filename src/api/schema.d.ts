@@ -443,7 +443,7 @@ export interface components {
             /** Score */
             score: number | null;
         };
-        Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["ClozeCard"] | components["schemas"]["ScenarioCard"] | components["schemas"]["CheckpointCard"];
+        Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["ClozeCard"] | components["schemas"]["ScenarioCard"] | components["schemas"]["NumericCard"] | components["schemas"]["CheckpointCard"];
         /**
          * CardSource
          * @description A source the card's node was built from: its title, its `https` URL, and its licence as
@@ -823,6 +823,35 @@ export interface components {
             position: number;
             /** Title */
             title: string;
+        };
+        /** NumericCard */
+        NumericCard: {
+            /** Correct */
+            correct: number;
+            /** Est Seconds */
+            est_seconds: number;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Node */
+            node: string;
+            /** Options */
+            options: string[];
+            /** Problem */
+            problem: string;
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
+            /** Title */
+            title: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "numeric";
         };
         /**
          * PlacementAnswer
