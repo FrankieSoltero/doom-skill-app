@@ -1,9 +1,10 @@
 // The logic of a code block that plays (M9 plan I Task 3): the autoplay-once-per-visit rule (X2),
 // Play and Stop, and stopping when the card is left. The player is the Strudel test double.
 import { act, renderHook } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
 
 import { useStrudel } from '../../strudel/useStrudel';
+import { appBecomes } from '../testing/appState';
 import {
   resetStrudelDouble,
   setAudio,
@@ -27,17 +28,6 @@ type Props = { active: boolean; autoplay: boolean };
 function renderPlayable(initial: Props) {
   return renderHook((props: Props) => usePlayableCode({ code: CODE, owner: OWNER, ...props }), {
     initialProps: initial,
-  });
-}
-
-/** Tells every app state listener the hook added that the app is now `state`. */
-function appBecomes(state: AppStateStatus): void {
-  const listeners = jest.mocked(AppState).addEventListener.mock.calls.map((call) => call[1]);
-  expect(listeners.length).toBeGreaterThan(0);
-  act(() => {
-    listeners.forEach((listener) => {
-      listener(state);
-    });
   });
 }
 
@@ -91,6 +81,27 @@ describe('usePlayableCode autoplay (X2)', () => {
     setAudio({ step: 1 });
 
     expect(play).not.toHaveBeenCalled();
+  });
+
+  it('plays once when Reset clears an error that blocked the start, and not after a later reset', () => {
+    setAudio({ error: 'ReferenceError: nope is not defined' });
+    renderPlayable({ active: true, autoplay: true });
+    expect(play).not.toHaveBeenCalled();
+
+    // The notice's Reset: a new page, then the error cleared; the page reports ready.
+    act(() => {
+      strudelActions.reset();
+      strudelActions.clearError();
+    });
+    setAudio({ status: 'ready' });
+    expect(play.mock.calls).toStrictEqual([[CODE]]);
+
+    act(() => {
+      strudelActions.reset();
+    });
+    setAudio({ status: 'ready' });
+
+    expect(play).toHaveBeenCalledTimes(1);
   });
 
   it('never plays by itself without autoplay', () => {

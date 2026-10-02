@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 import { useStrudel, type PlayerOwner, type Strudel } from '../strudel/useStrudel';
+import { useScreenShown } from './useScreenShown';
 import { useStopWhenAway } from './useStopWhenAway';
 
 export type PlayableCodeOptions = {
@@ -33,11 +34,16 @@ type PlayableCodeState = {
  * One `useStrudel` player for `code`, stopped by `useStopWhenAway` when the card is not active,
  * its screen loses focus or the app goes to the background.
  *
- * With `autoplay`, the code plays by itself once per visit (decision X2): when the card is active
- * and the player is ready with no error (as the Play control needs), whichever comes last. Leaving
- * the card arms it again. Within a visit it does not start again: not after the learner taps Stop,
- * and not after the player is reset and is ready again (the learner taps Play then). The flag is a
- * ref, read and written in the effect only.
+ * With `autoplay`, the code plays by itself once per visit (decision X2). A visit is a period in
+ * which the card is shown: it is active, its screen is focused and the app is not in the
+ * background (`useScreenShown`; `inactive` counts as shown). The code starts when the card is
+ * shown and the player is ready with no error (as the Play control needs), whichever comes last.
+ * The card stopping being shown (another page, another screen, the app in the background) ends the
+ * visit and arms it again, so a return plays again. Within a visit it starts at most once: not
+ * again after the learner taps Stop, nor after the player is reset and is ready again (the learner
+ * taps Play then). An error does not use the start up: when Reset clears an error that kept the
+ * code from starting, the code starts once the player is ready again. The flag is a ref, read and
+ * written in the effect only.
  */
 export function usePlayableCode({
   code,
@@ -48,10 +54,12 @@ export function usePlayableCode({
   const strudel = useStrudel(owner);
   const { status, error, play, stop } = strudel;
   useStopWhenAway({ active, stop });
+  const screenShown = useScreenShown();
+  const shown = active && screenShown;
   const startedThisVisit = useRef(false);
 
   useEffect(() => {
-    if (!active) {
+    if (!shown) {
       startedThisVisit.current = false;
       return;
     }
@@ -60,7 +68,7 @@ export function usePlayableCode({
       startedThisVisit.current = true;
       play(code);
     }
-  }, [active, autoplay, status, error, play, code]);
+  }, [shown, autoplay, status, error, play, code]);
 
   const toggle = () => {
     if (strudel.playing) stop();

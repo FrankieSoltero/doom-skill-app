@@ -21,6 +21,7 @@ import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { useStrudel } from '../../strudel/useStrudel';
 import { ReviewCard } from '../ReviewCard';
+import { NOTICE_AUDIO, noticeHeight } from '../testing/noticeHeights';
 import { resetStrudelDouble, setAudio, useStrudelDouble } from '../testing/strudelDouble';
 
 jest.mock('../../strudel/useStrudel', () => ({
@@ -29,8 +30,6 @@ jest.mock('../../strudel/useStrudel', () => ({
 }));
 
 const CARD: ReviewCardData = { ...cardsByType.review, snippet: 's("bd ~ sd ~")' };
-/** The most lines a page's error text takes in the notice (`ResultBadge`'s `ERROR_MAX_LINES`). */
-const ERROR_LINES = 3;
 
 /** Draws CARD revealed, in a set whose topic has `lang`. */
 function renderRevealedIn(lang: FeedSet['topic']['lang']): void {
@@ -54,15 +53,6 @@ function playableRowHeight(): number {
   return Math.max(blockHeight(), control);
 }
 
-/** What a notice adds under the code row: the column's gap and the notice. */
-function noticeHeight(notice: 'unavailable' | 'error' | 'needs network'): number {
-  const gap = Number(viewStyleOf(screen.getByTestId('playable-code')).gap);
-  const line = Number(textStyleOf(screen.getByTestId('result-badge-label')).lineHeight);
-  if (notice === 'needs network') return gap + line;
-  const reset = Number(viewStyleOf(screen.getByRole('button', { name: 'Reset audio' })).minHeight);
-  return gap + Math.max(notice === 'error' ? ERROR_LINES * line : line, reset);
-}
-
 beforeEach(() => {
   jest.mocked(useStrudel).mockImplementation(useStrudelDouble);
   useFeedStore.setState(useFeedStore.getInitialState(), true);
@@ -84,14 +74,16 @@ describe('the revealed review card that plays', () => {
   });
 
   it.each([
-    { notice: 'unavailable', audio: { status: 'unavailable' as const }, added: 57.6 },
-    { notice: 'error', audio: { error: 'x'.repeat(200) }, added: 79.6 },
-    { notice: 'needs network', audio: { playing: true, needsNetwork: true }, added: 35.6 },
+    { notice: 'unavailable', added: 57.6 },
+    { notice: 'error', added: 79.6 },
+    { notice: 'needs network', added: 35.6 },
   ] as const)('adds $added points under the code while "$notice" shows', (row) => {
     renderRevealedIn('strudel');
-    setAudio(row.audio);
+    setAudio(NOTICE_AUDIO[row.notice]);
 
+    // The column's gap, then the notice.
+    const gap = Number(viewStyleOf(screen.getByTestId('playable-code')).gap);
     expect(screen.getByTestId('audio-notice')).toBeOnTheScreen();
-    expect(noticeHeight(row.notice)).toBeCloseTo(row.added, 5);
+    expect(gap + noticeHeight(row.notice)).toBeCloseTo(row.added, 5);
   });
 });
