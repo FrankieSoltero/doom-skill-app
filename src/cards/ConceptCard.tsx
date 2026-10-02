@@ -8,9 +8,12 @@ import { Passage } from '../components/Passage';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { copy } from '../copy';
 import type { ConceptCard as ConceptCardData } from '../data';
+import { selectPlaysStrudel, useFeedStore } from '../feed/store';
+import type { PlayerOwner } from '../strudel/useStrudel';
 import { border, colors, fonts, motion, type } from '../theme';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardBody, CardTitle } from './CardText';
+import { PlayableCode } from './PlayableCode';
 
 // Cycle tile values the theme does not hold, from docs/design/card-feed/README.md:55-56 and,
 // where it gives none, reference/DoomSkill Card Feed v2.dc.html:87-91.
@@ -29,7 +32,9 @@ const NOTE_LINE_HEIGHT = 37;
 
 type ConceptCardProps = {
   card: ConceptCardData;
-  /** True while this card is the one on screen. Only then does the highlight move. */
+  /** The card's position in its set: its page, which names its player in the log. */
+  index: number;
+  /** True while this card is the one on screen. Only then does the highlight move and play. */
   active: boolean;
   /** Called when the learner presses Got it. */
   onNext: () => void;
@@ -92,6 +97,11 @@ function Snippet({ card }: { card: ConceptCardData }) {
   return <CodeBlock code={card.snippet} comment={card.snippetComment ?? ''} />;
 }
 
+/** The card as its player names it in the log: its page, and its id when the API served it. */
+function playerOwner(card: ConceptCardData, index: number): PlayerOwner {
+  return card.id === undefined ? { cardIndex: index } : { cardIndex: index, cardId: card.id };
+}
+
 /**
  * The concept card (README.md:51-57): kicker row, title, body, a code block, the cycle tiles, a
  * flex spacer, then Got it. It is always answered; the screen decides what pressing Got it does.
@@ -99,18 +109,40 @@ function Snippet({ card }: { card: ConceptCardData }) {
  * A topic without Strudel may send no code (M6 hardening Task 8): the code block shows only with a
  * snippet, and the tiles only with a snippet and cycles. The spacer still keeps Got it at the foot.
  * A quoted snippet (M9 plan C) is a source sentence, not a pattern: it has no tiles.
+ *
+ * In a Strudel set (`selectPlaysStrudel`), the code plays (M9 plan I Task 3): it is a
+ * `PlayableCode` that plays by itself once each time the card is shown (X2), with Play / Stop.
+ * While the audio needs attention its notice takes the place of the tiles, which come back when
+ * it is gone; Got it never waits on the audio (X5). Any other snippet mounts no player.
  */
-export function ConceptCard({ card, active, onNext }: ConceptCardProps) {
-  const playable = card.snippet !== undefined && card.snippetStyle !== 'quote';
-  const cycles = playable ? (card.cycles ?? []) : [];
+export function ConceptCard({ card, index, active, onNext }: ConceptCardProps) {
+  const playsStrudel = useFeedStore(selectPlaysStrudel);
+  const code = card.snippetStyle === 'quote' ? undefined : card.snippet;
+  const cycles = code === undefined ? [] : (card.cycles ?? []);
   const highlighted = useCycleHighlight(cycles.length, active);
+  const tiles =
+    cycles.length === 0 ? null : <CycleTiles cycles={cycles} highlighted={highlighted} />;
 
   return (
     <CardFrame type="concept" kicker={cardKickerText(card)} meta={cardMetaText(card.estSeconds)}>
       <CardTitle size="l">{card.title}</CardTitle>
       <CardBody text={card.body} />
-      <Snippet card={card} />
-      {cycles.length === 0 ? null : <CycleTiles cycles={cycles} highlighted={highlighted} />}
+      {playsStrudel && code !== undefined ? (
+        <PlayableCode
+          code={code}
+          comment={card.snippetComment ?? ''}
+          owner={playerOwner(card, index)}
+          active={active}
+          autoplay
+        >
+          {tiles}
+        </PlayableCode>
+      ) : (
+        <>
+          <Snippet card={card} />
+          {tiles}
+        </>
+      )}
       <View testID="concept-spacer" style={styles.spacer} />
       <PrimaryButton label={copy.gotIt} onPress={onNext} />
     </CardFrame>

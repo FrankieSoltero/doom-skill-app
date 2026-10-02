@@ -18,7 +18,7 @@ const QUERY = 'SELECT rank() OVER (PARTITION BY depname ORDER BY salary DESC) FR
 
 function renderCard(card: ConceptCardData, active = true) {
   const onNext = jest.fn<undefined, []>();
-  render(<ConceptCard card={card} active={active} onNext={onNext} />);
+  render(<ConceptCard card={card} index={0} active={active} onNext={onNext} />);
   return onNext;
 }
 

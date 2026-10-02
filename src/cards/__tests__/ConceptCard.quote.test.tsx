@@ -16,7 +16,7 @@ const CODED: ConceptCardData = {
 const QUOTED: ConceptCardData = { ...CODED, snippet: QUOTE, snippetStyle: 'quote' };
 
 function renderCard(card: ConceptCardData) {
-  render(<ConceptCard card={card} active onNext={jest.fn<undefined, []>()} />);
+  render(<ConceptCard card={card} index={0} active onNext={jest.fn<undefined, []>()} />);
 }
 
 /** The test ids of the body's parts, in order. */

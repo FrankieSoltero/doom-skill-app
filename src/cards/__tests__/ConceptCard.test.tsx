@@ -25,9 +25,9 @@ const THREE_CYCLES: ConceptCardData = { ...cardsByType.concept, cycles: ['c3', '
 /** Renders the card, inactive unless asked, so tests that do not watch the timer start none. */
 function renderCard(card: ConceptCardData = THREE_CYCLES, active = false) {
   const onNext = jest.fn<undefined, []>();
-  const view = render(<ConceptCard card={card} active={active} onNext={onNext} />);
+  const view = render(<ConceptCard card={card} index={0} active={active} onNext={onNext} />);
   const rerender = (nextActive: boolean) => {
-    view.rerender(<ConceptCard card={card} active={nextActive} onNext={onNext} />);
+    view.rerender(<ConceptCard card={card} index={0} active={nextActive} onNext={onNext} />);
   };
   return { onNext, rerender, unmount: view.unmount };
 }

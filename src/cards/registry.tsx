@@ -33,8 +33,8 @@ type Renderer<Name extends CardTypeName> = (card: CardOfType[Name], slot: CardSl
 
 // One entry per card type in the schema: a new type fails to compile until it has a component.
 const renderers: { [Name in CardTypeName]: Renderer<Name> } = {
-  concept: (card, { active, onNext }) => (
-    <ConceptCard card={card} active={active} onNext={onNext} />
+  concept: (card, { index, active, onNext }) => (
+    <ConceptCard card={card} index={index} active={active} onNext={onNext} />
   ),
   quiz: (card, { index, onNext }) => <QuizCard card={card} index={index} onNext={onNext} />,
   predict: (card, { index, onNext }) => <PredictCard card={card} index={index} onNext={onNext} />,

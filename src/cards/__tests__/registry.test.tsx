@@ -24,15 +24,16 @@ const { concept, quiz, predict, cloze, scenario, numeric, exercise, review, chec
 const UNKNOWN = { ...concept, type: 'flashcard' } as unknown as Card;
 
 describe('renderCard', () => {
-  it('renders a concept card with the card, its active flag and onNext', () => {
+  it('renders a concept card with the card, its index, its active flag and onNext', () => {
     const onNext = jest.fn<undefined, []>();
 
-    const element = renderCard(concept, { index: 0, active: true, onNext });
+    const element = renderCard(concept, { index: 3, active: true, onNext });
 
     expect(isValidElement(element)).toBe(true);
     expect(isValidElement(element) && element.type).toBe(ConceptCard);
     expect(isValidElement<object>(element) && element.props).toStrictEqual({
       card: concept,
+      index: 3,
       active: true,
       onNext,
     });
