@@ -299,6 +299,25 @@ describe('part schemas', () => {
     expect(summarySchema.parse(fixture.summary)).toEqual(fixture.summary);
   });
 
+  it("give the demo fixture's topic the language strudel, as the real topic has", () => {
+    expect(fixture.topic.lang).toBe('strudel');
+    expect(feedSetSchema.parse(feedSetInput()).topic.lang).toBe('strudel');
+  });
+
+  it.each([
+    ['strudel', 'strudel'],
+    ['another language', 'sql'],
+    ['null', null],
+  ])("keep a topic's language as sent: %s", (_name, lang) => {
+    expect(topicSchema.parse({ ...fixture.topic, lang }).lang).toBe(lang);
+  });
+
+  it('parse a topic without a language (an older API), leaving it absent', () => {
+    const { lang: _lang, ...older } = fixture.topic;
+
+    expect(topicSchema.parse(older)).not.toHaveProperty('lang');
+  });
+
   it('reject topic progress outside 0 to 1', () => {
     const result = topicSchema.safeParse({ ...fixture.topic, progress: 1.5 });
 

@@ -1,5 +1,5 @@
 {
-  "topic": { "slug": "strudel", "title": "Strudel", "day": 4, "horizonDays": 14, "streak": 12, "progress": 0.34 },
+  "topic": { "slug": "strudel", "title": "Strudel", "day": 4, "horizonDays": 14, "streak": 12, "progress": 0.34, "lang": "strudel" },
   "cards": [
     { "type": "concept", "node": "Mini-notation", "estSeconds": 40,
       "title": "Alternate with angle brackets",

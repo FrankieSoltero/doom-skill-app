@@ -39,6 +39,7 @@ describe('the API feed response', () => {
       horizonDays: response.topic.horizon_days,
       streak: response.topic.streak,
       progress: response.topic.progress,
+      lang: 'strudel',
     });
     expect(parsed.setNumber).toBe(response.set_number);
     expect(parsed.summary.progressDelta).toBe(response.summary.progress_delta);

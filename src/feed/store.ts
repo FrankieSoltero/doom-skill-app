@@ -216,6 +216,13 @@ function saveRatingsMade(ratingsMade: number): void {
   });
 }
 
+/**
+ * True when the current set's topic is Strudel's (`topic.lang`), whose cards play their code;
+ * false for any other language, none, an older API that sends none, and no set.
+ */
+export const selectPlaysStrudel = (state: FeedState): boolean =>
+  state.set?.topic.lang === 'strudel';
+
 /** The pages of a set: one per card, then the Summary page. */
 export function pageCount(set: FeedSet): number {
   return set.cards.length + 1;

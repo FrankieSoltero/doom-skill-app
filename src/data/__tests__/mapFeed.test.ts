@@ -3,7 +3,7 @@
 // the card as one with no cycles and the card draws no tiles (ConceptCard.plain.test.tsx).
 import response from '../__fixtures__/feed_response.json';
 import { mapFeed } from '../mapFeed';
-import { feedSetSchema } from '../schema';
+import { apiSetSchema, feedSetSchema } from '../schema';
 
 const served = response.cards.find((card) => card.type === 'concept');
 
@@ -30,6 +30,16 @@ describe('mapFeed on a concept card with no cycles', () => {
     expect(set.cards).toHaveLength(1);
     expect(set.cards[0]).not.toHaveProperty('cycles');
     expect(set.cards[0]).toMatchObject({ type: 'concept', snippetComment: '' });
+  });
+});
+
+describe("mapFeed on the set's topic", () => {
+  it('keeps the language the API sends, as the app reads it', () => {
+    const set = apiSetSchema.parse(mapFeed(response));
+
+    expect(response.topic.lang).toBe('strudel');
+    expect(set.topic.lang).toBe('strudel');
+    expect(set.topic).toMatchObject({ slug: 'strudel', horizonDays: 14 });
   });
 });
 

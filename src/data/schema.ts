@@ -45,6 +45,11 @@ const exerciseLang = z.enum(EXERCISE_LANGS);
 /** Just enough of an exercise to read its language before the card itself is parsed. */
 const exerciseLangSchema = z.object({ type: z.literal('exercise'), lang: z.string() });
 
+/**
+ * A set's topic. `lang` is the topic's code language as the API decides it (`strudel` for the
+ * Strudel topic, whose cards play their code), null for a topic without one; absent from an older
+ * API. Any string parses: only `strudel` changes what the app does (`selectPlaysStrudel`).
+ */
 export const topicSchema = z.object({
   slug: text,
   title: text,
@@ -52,6 +57,7 @@ export const topicSchema = z.object({
   horizonDays: z.number().int().positive(),
   streak: count,
   progress: fraction,
+  lang: z.string().nullable().optional(),
 });
 
 /** Rejects a choice card whose `correct` is not an index of its `options`. */
