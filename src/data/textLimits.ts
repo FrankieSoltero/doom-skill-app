@@ -71,13 +71,13 @@ const CHOICE_LIMITS = {
 
 /**
  * A passage: a source sentence quoted word for word (a quoted concept or review snippet, a cloze's
- * text) or a scenario's situation, 4 lines of the passage block.
+ * text), a scenario's situation or a numeric card's problem, 4 lines of the passage block.
  */
 const PASSAGE = charsIn(4, CHARS_PER_LINE.passage);
 
 /**
- * A cloze's and a scenario's choices: the quiz's title and explanation, and four options in a grid
- * of two columns, each at most 2 lines of a grid cell.
+ * A cloze's, a scenario's and a numeric card's choices: the quiz's title and explanation, and four
+ * options in a grid of two columns, each at most 2 lines of a grid cell.
  */
 const PROSE_CHOICE_LIMITS = {
   ...CHOICE_LIMITS,
@@ -88,9 +88,9 @@ const PROSE_CHOICE_LIMITS = {
 /**
  * The most characters (or rows) each card field may hold. Quiz options are four, each at most 52
  * points tall, which holds 2 lines of code at 22 inside its 1.5-point borders. Concept: title 2
- * lines, body 6, a quoted snippet a passage. Cloze and scenario: a choice card with grid options
- * whose text or situation is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: 4 beat grid rows, in
- * the starter code and in the solution.
+ * lines, body 6, a quoted snippet a passage. Cloze, scenario and numeric: a choice card with grid
+ * options whose text, situation or problem is a passage. Checkpoint: 4 rubric rows of 1 line each.
+ * Exercise: 4 beat grid rows, in the starter code and in the solution.
  */
 export const CARD_TEXT_LIMITS = {
   quiz: { ...CHOICE_LIMITS, options: 4, option: charsIn(2, CHARS_PER_LINE.option) },
@@ -102,6 +102,7 @@ export const CARD_TEXT_LIMITS = {
   },
   cloze: { ...PROSE_CHOICE_LIMITS, text: PASSAGE },
   scenario: { ...PROSE_CHOICE_LIMITS, situation: PASSAGE },
+  numeric: { ...PROSE_CHOICE_LIMITS, problem: PASSAGE },
   checkpoint: { rubricRows: 4, rubricLabel: charsIn(1, CHARS_PER_LINE.rubric) },
   exercise: { gridRows: 4 },
 } as const;
