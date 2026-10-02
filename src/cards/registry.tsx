@@ -41,7 +41,9 @@ const renderers: { [Name in CardTypeName]: Renderer<Name> } = {
   cloze: (card, { index, onNext }) => <ClozeCard card={card} index={index} onNext={onNext} />,
   scenario: (card, { index, onNext }) => <ScenarioCard card={card} index={index} onNext={onNext} />,
   numeric: (card, { index, onNext }) => <NumericCard card={card} index={index} onNext={onNext} />,
-  review: (card, { index, onNext }) => <ReviewCard card={card} index={index} onNext={onNext} />,
+  review: (card, { index, active, onNext }) => (
+    <ReviewCard card={card} index={index} active={active} onNext={onNext} />
+  ),
   exercise: (card, { index, active, onNext }) => (
     <ExerciseCard card={card} index={index} active={active} onNext={onNext} />
   ),

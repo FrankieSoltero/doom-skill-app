@@ -90,7 +90,7 @@ describe('renderCard', () => {
     expect(screen.getByRole('button', { name: 'Next card' })).toBeOnTheScreen();
   });
 
-  it('renders a review card with the card, its index and onNext, and no active flag', () => {
+  it('renders a review card with the card, its index, its active flag and onNext', () => {
     const onNext = jest.fn<undefined, []>();
 
     const element = renderCard(review, { index: 2, active: true, onNext });
@@ -99,6 +99,7 @@ describe('renderCard', () => {
     expect(isValidElement<object>(element) && element.props).toStrictEqual({
       card: review,
       index: 2,
+      active: true,
       onNext,
     });
   });

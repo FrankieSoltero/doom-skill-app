@@ -9,11 +9,11 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { copy } from '../copy';
 import type { ConceptCard as ConceptCardData } from '../data';
 import { selectPlaysStrudel, useFeedStore } from '../feed/store';
-import type { PlayerOwner } from '../strudel/useStrudel';
 import { border, colors, fonts, motion, type } from '../theme';
 import { cardKickerText, cardMetaText } from './cardLabels';
 import { CardBody, CardTitle } from './CardText';
 import { PlayableCode } from './PlayableCode';
+import { playerOwner } from './usePlayableCode';
 
 // Cycle tile values the theme does not hold, from docs/design/card-feed/README.md:55-56 and,
 // where it gives none, reference/DoomSkill Card Feed v2.dc.html:87-91.
@@ -95,11 +95,6 @@ function Snippet({ card }: { card: ConceptCardData }) {
   if (card.snippet === undefined) return null;
   if (card.snippetStyle === 'quote') return <Passage text={card.snippet} />;
   return <CodeBlock code={card.snippet} comment={card.snippetComment ?? ''} />;
-}
-
-/** The card as its player names it in the log: its page, and its id when the API served it. */
-function playerOwner(card: ConceptCardData, index: number): PlayerOwner {
-  return card.id === undefined ? { cardIndex: index } : { cardIndex: index, cardId: card.id };
 }
 
 /**

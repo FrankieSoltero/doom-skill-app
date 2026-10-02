@@ -16,6 +16,11 @@ export type PlayableCodeOptions = {
   autoplay: boolean;
 };
 
+/** The card as its player names it in the log: its page, and its id when the API served it. */
+export function playerOwner(card: { id?: string | undefined }, index: number): PlayerOwner {
+  return card.id === undefined ? { cardIndex: index } : { cardIndex: index, cardId: card.id };
+}
+
 type PlayableCodeState = {
   /** The player, for the audio notice and the hidden WebView. */
   strudel: Strudel;

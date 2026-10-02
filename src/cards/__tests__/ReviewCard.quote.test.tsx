@@ -58,7 +58,7 @@ describe('ReviewCard with a quoted snippet', () => {
     const card = { ...demo, snippet: QUOTE, snippetStyle: 'quote' as const, sources: [SOURCE] };
     renderChoiceCard((onNext) => (
       <SourcesTarget card={card}>
-        <ReviewCard card={card} index={0} onNext={onNext} />
+        <ReviewCard card={card} index={0} active onNext={onNext} />
       </SourcesTarget>
     ));
 

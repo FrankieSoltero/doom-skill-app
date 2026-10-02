@@ -28,7 +28,7 @@ export function renderReviewCard(
   const onNext = renderChoiceCard(
     (next) => (
       <Profiler id="review" onRender={onRender}>
-        <ReviewCard card={card} index={index} onNext={next} />
+        <ReviewCard card={card} index={index} active onNext={next} />
       </Profiler>
     ),
     answers,

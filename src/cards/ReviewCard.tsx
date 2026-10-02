@@ -11,12 +11,15 @@ import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import type { ReviewCard as ReviewCardData } from '../data';
 import type { CardAnswer } from '../feed/answers';
-import { useFeedStore } from '../feed/store';
+import { selectPlaysStrudel, useFeedStore } from '../feed/store';
+import type { PlayerOwner } from '../strudel/useStrudel';
 import { border, colors, fonts, type } from '../theme';
 import { cardMetaText, reviewKickerText } from './cardLabels';
 import { CardTitle } from './CardText';
+import { PlayableCode } from './PlayableCode';
 import { RatingRow } from './RatingRow';
 import type { Rating } from './RatingRow';
+import { playerOwner } from './usePlayableCode';
 
 // Review card values from docs/design/card-feed/README.md:114-121 and, where it gives none, the
 // prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html, that the theme lacks.
@@ -53,6 +56,8 @@ type ReviewCardProps = {
   card: ReviewCardData;
   /** The card's position in its set: its key in the store's answers. */
   index: number;
+  /** True while this card is the one on screen. Leaving it stops its code playing. */
+  active: boolean;
   /** Moves on to the next page. The card calls it once, 550 ms after the learner rates. */
   onNext: () => void;
 };
@@ -104,22 +109,38 @@ function RevealButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-type RevealedAnswerProps = { answer: string; snippet: string; quoted: boolean };
+/** The card's player when its code plays: who it is in the log, and whether it is on screen. */
+type SnippetPlayer = { owner: PlayerOwner; active: boolean };
+
+type RevealedAnswerProps = {
+  answer: string;
+  snippet: string;
+  quoted: boolean;
+  /** Set when the code plays (a Strudel set), null otherwise. */
+  player: SnippetPlayer | null;
+};
 
 /**
  * The revealed answer (README.md:118): the answer text with its bold marking, then its code. When
  * `quoted` (a prose topic, M9 plan C, Q11) the snippet is a quoted source sentence and is not
  * drawn: with the answer and the rating row it would overflow the card. The Sources action still
- * links the source.
+ * links the source. With a `player` the code is a `PlayableCode` that waits for the learner's
+ * Play (M9 plan I Task 4, X6); without one no player is mounted.
  */
-function RevealedAnswer({ answer, snippet, quoted }: RevealedAnswerProps) {
+function RevealedAnswer({ answer, snippet, quoted, player }: RevealedAnswerProps) {
   const color = useCardTextColor();
+  const code =
+    player === null ? (
+      <CodeBlock code={snippet} />
+    ) : (
+      <PlayableCode code={snippet} owner={player.owner} active={player.active} autoplay={false} />
+    );
   return (
     <View testID="review-answer" style={styles.answer}>
       <View testID="review-answer-text" accessibilityLiveRegion="polite">
         <BoldText text={answer} style={[styles.answerText, { color }]} />
       </View>
-      {quoted ? null : <CodeBlock code={snippet} />}
+      {quoted ? null : code}
     </View>
   );
 }
@@ -148,8 +169,13 @@ function RatingFoot({ ratings, rating, onRate }: RatingFootProps) {
  * binds to this card's page and gates. The advance is a convenience, not decoration, so it runs
  * with reduce motion set. A card drawn with a rating already stored starts no timer. The
  * answer lives in the feed store at `index`, and the card selects only its own fields of it.
+ *
+ * In a Strudel set (`selectPlaysStrudel`) the revealed code can play (M9 plan I Task 4): Play /
+ * Stop beside it, and nothing plays by itself. The player mounts with the revealed answer, so an
+ * unrevealed card, a quoted snippet and any other set mount none.
  */
-export function ReviewCard({ card, index, onNext }: ReviewCardProps) {
+export function ReviewCard({ card, index, active, onNext }: ReviewCardProps) {
+  const playsStrudel = useFeedStore(selectPlaysStrudel);
   const revealed = useFeedStore((state) => reviewOf(state.answers[index])?.revealed ?? false);
   const rating = useFeedStore((state) => reviewOf(state.answers[index])?.rating ?? null);
   const setAnswer = useFeedStore((state) => state.setAnswer);
@@ -176,6 +202,7 @@ export function ReviewCard({ card, index, onNext }: ReviewCardProps) {
           answer={card.answer}
           snippet={card.snippet}
           quoted={card.snippetStyle === 'quote'}
+          player={playsStrudel ? { owner: playerOwner(card, index), active } : null}
         />
       ) : (
         <RevealButton onPress={onReveal} />
