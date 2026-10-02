@@ -89,6 +89,7 @@ const conceptCardSchema = z.object({
   snippet: text.optional(),
   snippetComment: z.string().optional(),
   cycles: z.array(text).min(1).optional(),
+  snippetStyle: z.enum(['code', 'quote']).optional(),
 });
 
 const quizCardSchema = z
@@ -152,6 +153,7 @@ const reviewCardSchema = z.object({
   prompt: text,
   answer: text,
   snippet: text,
+  snippetStyle: z.enum(['code', 'quote']).optional(),
   ratings: z.array(z.tuple([text, text])).min(1),
 });
 

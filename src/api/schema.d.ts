@@ -443,7 +443,7 @@ export interface components {
             /** Score */
             score: number | null;
         };
-        Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["CheckpointCard"];
+        Card: components["schemas"]["ConceptCard"] | components["schemas"]["QuizCard"] | components["schemas"]["PredictCard"] | components["schemas"]["ExerciseCard"] | components["schemas"]["ReviewCard"] | components["schemas"]["ClozeCard"] | components["schemas"]["ScenarioCard"] | components["schemas"]["CheckpointCard"];
         /**
          * CardSource
          * @description A source the card's node was built from: its title, its `https` URL, and its licence as
@@ -546,6 +546,35 @@ export interface components {
         };
         /** @enum {string} */
         ChoiceType: "quiz" | "predict";
+        /** ClozeCard */
+        ClozeCard: {
+            /** Correct */
+            correct: number;
+            /** Est Seconds */
+            est_seconds: number;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Node */
+            node: string;
+            /** Options */
+            options: string[];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
+            /** Text */
+            text: string;
+            /** Title */
+            title: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "cloze";
+        };
         Code: string;
         /**
          * CodeAnswer
@@ -574,6 +603,7 @@ export interface components {
             snippet: string;
             /** Snippet Comment */
             snippet_comment: string;
+            snippet_style: components["schemas"]["SnippetStyle"];
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Title */
@@ -1033,6 +1063,7 @@ export interface components {
             ][];
             /** Snippet */
             snippet: string;
+            snippet_style: components["schemas"]["SnippetStyle"];
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /**
@@ -1050,6 +1081,35 @@ export interface components {
             label: string;
             /** Regex */
             regex: string;
+        };
+        /** ScenarioCard */
+        ScenarioCard: {
+            /** Correct */
+            correct: number;
+            /** Est Seconds */
+            est_seconds: number;
+            /** Explanation */
+            explanation: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Node */
+            node: string;
+            /** Options */
+            options: string[];
+            /** Situation */
+            situation: string;
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
+            /** Title */
+            title: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "scenario";
         };
         /**
          * SeenAnswer
@@ -1073,6 +1133,8 @@ export interface components {
              */
             skipped: true;
         };
+        /** @enum {string} */
+        SnippetStyle: "code" | "quote";
         /**
          * SubmissionReceipt
          * @description The submission the request stored, or the one stored first with its client id.
