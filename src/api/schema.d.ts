@@ -538,7 +538,7 @@ export interface components {
         };
         /**
          * ChoiceAnswer
-         * @description A quiz or predict card's answer: the index of the option chosen.
+         * @description A quiz, predict, cloze or scenario card's answer: the index of the option chosen.
          */
         ChoiceAnswer: {
             /** Choice */

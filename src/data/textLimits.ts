@@ -31,6 +31,16 @@ const CHARS_PER_LINE = {
    * 14 points of padding a side, the 10-point gap and the 18-point verdict icon).
    */
   option: 27,
+  /**
+   * A passage (a quoted sentence, a cloze's text, a scenario's situation): Barlow 15 across 280.3,
+   * 309 less the 1.5-point rule and 13.6 of padding a side.
+   */
+  passage: 44,
+  /**
+   * A cloze or scenario option in the two-column grid: Barlow 15 across 123.5, half of 309 less the
+   * 8-point gap, two 1.5-point borders and 12 of padding a side.
+   */
+  gridOption: 19,
 };
 
 /**
@@ -61,15 +71,25 @@ const CHOICE_LIMITS = {
 
 /**
  * A passage: a source sentence quoted word for word (a quoted concept or review snippet, a cloze's
- * text) or a scenario's situation, 4 lines of body text.
+ * text) or a scenario's situation, 4 lines of the passage block.
  */
-const PASSAGE = charsIn(4, CHARS_PER_LINE.body);
+const PASSAGE = charsIn(4, CHARS_PER_LINE.passage);
+
+/**
+ * A cloze's and a scenario's choices: the quiz's title and explanation, and four options in a grid
+ * of two columns, each at most 2 lines of a grid cell.
+ */
+const PROSE_CHOICE_LIMITS = {
+  ...CHOICE_LIMITS,
+  options: 4,
+  option: charsIn(2, CHARS_PER_LINE.gridOption),
+};
 
 /**
  * The most characters (or rows) each card field may hold. Quiz options are four, each at most 52
  * points tall, which holds 2 lines of code at 22 inside its 1.5-point borders. Concept: title 2
- * lines, body 6, a quoted snippet a passage. Cloze and scenario: a choice card whose text or
- * situation is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: 4 beat grid rows, in
+ * lines, body 6, a quoted snippet a passage. Cloze and scenario: a choice card with grid options
+ * whose text or situation is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: 4 beat grid rows, in
  * the starter code and in the solution.
  */
 export const CARD_TEXT_LIMITS = {
@@ -80,8 +100,8 @@ export const CARD_TEXT_LIMITS = {
     body: charsIn(6, CHARS_PER_LINE.body),
     quote: PASSAGE,
   },
-  cloze: { ...CHOICE_LIMITS, text: PASSAGE },
-  scenario: { ...CHOICE_LIMITS, situation: PASSAGE },
+  cloze: { ...PROSE_CHOICE_LIMITS, text: PASSAGE },
+  scenario: { ...PROSE_CHOICE_LIMITS, situation: PASSAGE },
   checkpoint: { rubricRows: 4, rubricLabel: charsIn(1, CHARS_PER_LINE.rubric) },
   exercise: { gridRows: 4 },
 } as const;
