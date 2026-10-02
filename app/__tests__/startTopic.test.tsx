@@ -10,6 +10,7 @@ import { queryClient } from '../../src/api/query';
 import { useSession } from '../../src/auth/useSession';
 import { useFeedStore } from '../../src/feed/store';
 import { loadActiveTopic } from '../../src/feed/useActiveTopic';
+import { PICK_GUARD_MS } from '../../src/placement/usePlacement';
 import { mountedWebViews } from '../../src/strudel/__mocks__/webview';
 import TabsLayout from '../(tabs)/_layout';
 import ExploreScreen from '../(tabs)/explore';
@@ -261,7 +262,11 @@ describe('starting a topic', () => {
     expect(await screen.findByRole('header', { name: 'Quick check' })).toBeOnTheScreen();
     expect(screen.queryByTestId('topic-screen', HIDDEN)).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: 'Start' }));
-    fireEvent.press(await screen.findByRole('button', { name: 's("bd")' }));
+    const option = await screen.findByRole('button', { name: 's("bd")' });
+    // A pick sooner than the double-tap guard after the card appears is ignored. The router's
+    // test renderer runs on Jest's fake timers, whose clock this moves on.
+    await act(() => jest.advanceTimersByTimeAsync(PICK_GUARD_MS));
+    fireEvent.press(option);
     fireEvent.press(await screen.findByRole('button', { name: "Go to today's set" }));
 
     expect(await screen.findByTestId('today-screen')).toBeOnTheScreen();

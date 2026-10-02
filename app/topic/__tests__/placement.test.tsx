@@ -12,6 +12,7 @@ import { useFeedStore } from '../../../src/feed/store';
 import { cardsByType, makeSet } from '../../../src/feed/testing/sets';
 import { activeTopic, loadActiveTopic } from '../../../src/feed/useActiveTopic';
 import { logError, logWarning } from '../../../src/log';
+import { PICK_GUARD_MS } from '../../../src/placement/usePlacement';
 import PlacementScreen from '../[slug]/placement';
 
 jest.mock('react-native-safe-area-context', () => {
@@ -60,6 +61,12 @@ const QUIZ: PlacementQuiz = {
   ],
 };
 
+/** The answer to a placement that passed no band, or to a skip. */
+const FROM_THE_START = {
+  kind: 'result',
+  result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
+} as const;
+
 /** The mocked placement calls. */
 function calls() {
   if (placement === null) throw new Error('placement is mocked');
@@ -96,12 +103,21 @@ async function press(name: string) {
   await advance(0);
 }
 
+/**
+ * Picks the option `name` once the card has been shown longer than the double-tap guard (its own
+ * tests: src/placement/__tests__/usePlacement.test.tsx).
+ */
+async function pick(name: string) {
+  await advance(PICK_GUARD_MS);
+  await press(name);
+}
+
 /** Opens the quiz, starts it and picks `first` then `second`. */
 async function answerBoth(first: string, second: string) {
   await open();
   await press('Start');
-  await press(first);
-  await press(second);
+  await pick(first);
+  await pick(second);
 }
 
 /** Makes the topic active already, with a set of its feed loaded. */
@@ -149,7 +165,7 @@ describe('Placement: cards', () => {
     expect(screen.getByText('1 of 2')).toBeOnTheScreen();
     expect(screen.getByText('Which call plays a sample?')).toBeOnTheScreen();
     expect(screen.queryByText('How many steps per cycle?')).toBeNull();
-    await press('s("bd")');
+    await pick('s("bd")');
 
     expect(screen.getByText('2 of 2')).toBeOnTheScreen();
     expect(screen.getByText('How many steps per cycle?')).toBeOnTheScreen();
@@ -162,7 +178,7 @@ describe('Placement: cards', () => {
   it("shows a predict card's code", async () => {
     await open();
     await press('Start');
-    await press('s("bd")');
+    await pick('s("bd")');
 
     expect(screen.getByTestId('code-block-code')).toHaveTextContent('s("bd*4")');
   });
@@ -205,10 +221,7 @@ describe('Placement: submit', () => {
   });
 
   it('says the learner starts from the beginning when no band passed', async () => {
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await answerBoth('note("c3")', '2');
 
     expect(screen.getByText('Starting from the beginning')).toBeOnTheScreen();
@@ -217,10 +230,7 @@ describe('Placement: submit', () => {
   it('writes no answer to storage or to a log', async () => {
     const write = jest.spyOn(AsyncStorage, 'setItem');
     write.mockClear();
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await answerBoth('note("c3")', '2');
     await press("Go to today's set");
 
@@ -232,10 +242,7 @@ describe('Placement: submit', () => {
 
 describe('Placement: skip', () => {
   it('posts a skip and shows the start from the beginning', async () => {
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await open();
     await press('Skip');
 
@@ -247,10 +254,7 @@ describe('Placement: skip', () => {
   });
 
   it('skips the quiz silently when the set has no card', async () => {
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await open({ bands: BANDS, cards: [] });
 
     expect(calls().send).toHaveBeenCalledWith('strudel', { skip: true });
@@ -275,10 +279,7 @@ describe('Placement: the feed afterwards', () => {
     { name: 'a skip', submit: () => open().then(() => press('Skip')) },
   ])("drops the topic's loaded set after $name, so the feed asks again", async ({ submit }) => {
     await activeWithSet();
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await submit();
     await press("Go to today's set");
 
@@ -288,10 +289,7 @@ describe('Placement: the feed afterwards', () => {
 
   it('drops it after the silent skip of a set with no card', async () => {
     await activeWithSet();
-    calls().send.mockResolvedValue({
-      kind: 'result',
-      result: { placed: 0, bands: 2, knownNodes: 0, milestoneTitle: null },
-    });
+    calls().send.mockResolvedValue(FROM_THE_START);
     await open({ bands: BANDS, cards: [] });
 
     expect(useFeedStore.getState().set).toBeNull();

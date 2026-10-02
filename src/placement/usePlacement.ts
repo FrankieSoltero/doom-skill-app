@@ -1,8 +1,10 @@
 /**
  * The placement quiz's state (K19), for the placement screen and the topic screen's reset row.
  *
- * - `usePlacement`: the set (`GET /topics/{slug}/placement`), then the intro, one card at a time,
- *   the answers sent once at the end (or a skip), and the result line. The answers live in this
+ * - `usePlacement`: the set (`GET /topics/{slug}/placement`), then the intro, one card at a time
+ *   (a pick within `PICK_GUARD_MS` of a card appearing is ignored, so a double tap answers one
+ *   card; each card's progress line is announced on iOS, where the screen's live region does not
+ *   work), the answers sent once at the end (or a skip), and the result line. The answers live in this
  *   hook's state only: never in storage or a log line. A 409 from either call means the topic is
  *   placed already, and the feed opens at once; a set with no card is skipped without a word; any
  *   other failure shows one fixed line before the feed. Opening the feed makes the topic active
@@ -13,11 +15,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
+import { announce } from '../components/announce';
 import { placementCopy } from '../copy/placement';
 import type { Placement, PlacementQuiz, PlacementResult } from '../data';
 import { refreshFeed, useActiveTopic } from '../feed/useActiveTopic';
 
 type Submit = Parameters<Placement['send']>[1];
+
+/**
+ * How long after a card appears a pick is ignored (M8 final review, M4): the second tap of a
+ * double tap would otherwise answer the next card, unread, at the same place.
+ */
+export const PICK_GUARD_MS = 300;
 
 /** The cache key of whether `slug` has a placement, read by the topic screen. */
 const placedKey = (slug: string) => ['placement', slug] as const;
@@ -89,9 +98,17 @@ export function usePlacement(slug: string, calls: Placement, leave: () => void) 
   const finish = useFinish(slug, leave);
   const [phase, setPhase] = useState<Phase>('intro');
   const answers = useRef<number[]>([]);
+  // When the card on screen appeared (`PICK_GUARD_MS`).
+  const shownAt = useRef(0);
+  const quiz = load.data?.kind === 'quiz' ? load.data.quiz : undefined;
+  /** Shows card `index` and tells VoiceOver its progress line (Android reads the live region). */
+  const showCard = (index: number) => {
+    shownAt.current = Date.now();
+    setPhase({ index });
+    if (quiz !== undefined) announce(placementCopy.progress(index + 1, quiz.cards.length));
+  };
   // Whether the server stored this placement: the feed is refreshed when the learner leaves.
   const stored = useRef(false);
-  const quiz = load.data?.kind === 'quiz' ? load.data.quiz : undefined;
 
   const submit = async (body: Submit) => {
     setPhase('sending');
@@ -128,10 +145,11 @@ export function usePlacement(slug: string, calls: Placement, leave: () => void) 
 
   const pick = (choice: number) => {
     if (quiz === undefined || typeof phase !== 'object' || !('index' in phase)) return;
+    if (Date.now() - shownAt.current < PICK_GUARD_MS) return;
     const { index } = phase;
     answers.current[index] = choice;
     if (index + 1 < quiz.cards.length) {
-      setPhase({ index: index + 1 });
+      showCard(index + 1);
       return;
     }
     const picked = quiz.cards.flatMap((card, at) => {
@@ -144,7 +162,7 @@ export function usePlacement(slug: string, calls: Placement, leave: () => void) 
   return {
     step: stepOf(quiz, load.isError, phase),
     start: () => {
-      setPhase({ index: 0 });
+      showCard(0);
     },
     skip: () => void submit({ skip: true }),
     pick,

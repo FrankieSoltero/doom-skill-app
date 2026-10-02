@@ -74,6 +74,7 @@ function StepView({ step, flow }: { step: PlacementStep; flow: Flow }) {
       if (card === undefined) return null;
       return (
         <View style={styles.cardArea}>
+          {/* A live region for TalkBack; on iOS `usePlacement` announces the line. */}
           <View accessibilityLiveRegion="polite">
             <Text style={styles.kicker}>
               {placementCopy.progress(step.index + 1, step.quiz.cards.length)}
