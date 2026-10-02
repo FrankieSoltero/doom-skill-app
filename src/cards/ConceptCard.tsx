@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CardFrame } from '../components/CardFrame';
 import { useCardTextColor } from '../components/cardTextColor';
 import { CodeBlock } from '../components/CodeBlock';
+import { Passage } from '../components/Passage';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { copy } from '../copy';
 import type { ConceptCard as ConceptCardData } from '../data';
@@ -82,24 +83,33 @@ function CycleTiles({ cycles, highlighted }: CycleTilesProps) {
 }
 
 /**
+ * The card's snippet, if it has one: a quoted source sentence (`snippetStyle: 'quote'`, a prose
+ * topic) in a passage block, otherwise code with its comment line.
+ */
+function Snippet({ card }: { card: ConceptCardData }) {
+  if (card.snippet === undefined) return null;
+  if (card.snippetStyle === 'quote') return <Passage text={card.snippet} />;
+  return <CodeBlock code={card.snippet} comment={card.snippetComment ?? ''} />;
+}
+
+/**
  * The concept card (README.md:51-57): kicker row, title, body, a code block, the cycle tiles, a
  * flex spacer, then Got it. It is always answered; the screen decides what pressing Got it does.
  *
  * A topic without Strudel may send no code (M6 hardening Task 8): the code block shows only with a
  * snippet, and the tiles only with a snippet and cycles. The spacer still keeps Got it at the foot.
+ * A quoted snippet (M9 plan C) is a source sentence, not a pattern: it has no tiles.
  */
 export function ConceptCard({ card, active, onNext }: ConceptCardProps) {
-  const { snippet } = card;
-  const cycles = snippet === undefined ? [] : (card.cycles ?? []);
+  const playable = card.snippet !== undefined && card.snippetStyle !== 'quote';
+  const cycles = playable ? (card.cycles ?? []) : [];
   const highlighted = useCycleHighlight(cycles.length, active);
 
   return (
     <CardFrame type="concept" kicker={cardKickerText(card)} meta={cardMetaText(card.estSeconds)}>
       <CardTitle size="l">{card.title}</CardTitle>
       <CardBody text={card.body} />
-      {snippet === undefined ? null : (
-        <CodeBlock code={snippet} comment={card.snippetComment ?? ''} />
-      )}
+      <Snippet card={card} />
       {cycles.length === 0 ? null : <CycleTiles cycles={cycles} highlighted={highlighted} />}
       <View testID="concept-spacer" style={styles.spacer} />
       <PrimaryButton label={copy.gotIt} onPress={onNext} />

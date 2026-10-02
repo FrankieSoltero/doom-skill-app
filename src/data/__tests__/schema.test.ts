@@ -266,6 +266,28 @@ describe('cloze and scenario cards (M9 plan C)', () => {
   });
 });
 
+describe('snippetStyle on concept and review cards (M9 plan C)', () => {
+  const quotable = fixture.cards.filter((card) => ['concept', 'review'].includes(card.type));
+
+  it('keeps a quoted style on a concept and a review', () => {
+    const parsed = quotable.map((card) => cardSchema.parse({ ...card, snippetStyle: 'quote' }));
+
+    expect(parsed.map((card) => [card.type, 'snippetStyle' in card && card.snippetStyle])).toEqual([
+      ['concept', 'quote'],
+      ['review', 'quote'],
+    ]);
+  });
+
+  it('parses a concept and a review without the field, leaving it absent', () => {
+    const parsed = quotable.map((card) => cardSchema.parse(card));
+
+    expect(parsed.map((card) => [card.type, 'snippetStyle' in card])).toEqual([
+      ['concept', false],
+      ['review', false],
+    ]);
+  });
+});
+
 describe('part schemas', () => {
   it('parse the fixture topic and summary unchanged', () => {
     expect(topicSchema.parse(fixture.topic)).toEqual(fixture.topic);

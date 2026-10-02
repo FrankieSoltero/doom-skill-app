@@ -7,6 +7,7 @@ import { BoldText } from '../components/BoldText';
 import { CardFrame } from '../components/CardFrame';
 import { useCardTextColor } from '../components/cardTextColor';
 import { CodeBlock } from '../components/CodeBlock';
+import { Passage } from '../components/Passage';
 import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import type { ReviewCard as ReviewCardData } from '../data';
@@ -104,15 +105,20 @@ function RevealButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-/** The revealed answer (README.md:118): the answer text with its bold marking, then its code. */
-function RevealedAnswer({ answer, snippet }: { answer: string; snippet: string }) {
+type RevealedAnswerProps = { answer: string; snippet: string; quoted: boolean };
+
+/**
+ * The revealed answer (README.md:118): the answer text with its bold marking, then its code, or,
+ * when `quoted` (a prose topic, M9 plan C), the quoted source sentence in a passage block.
+ */
+function RevealedAnswer({ answer, snippet, quoted }: RevealedAnswerProps) {
   const color = useCardTextColor();
   return (
     <View testID="review-answer" style={styles.answer}>
       <View testID="review-answer-text" accessibilityLiveRegion="polite">
         <BoldText text={answer} style={[styles.answerText, { color }]} />
       </View>
-      <CodeBlock code={snippet} />
+      {quoted ? <Passage text={snippet} /> : <CodeBlock code={snippet} />}
     </View>
   );
 }
@@ -165,7 +171,11 @@ export function ReviewCard({ card, index, onNext }: ReviewCardProps) {
     <CardFrame type="review" kicker={reviewKickerText(card)} meta={cardMetaText(card.estSeconds)}>
       <CardTitle size="l">{card.prompt}</CardTitle>
       {revealed ? (
-        <RevealedAnswer answer={card.answer} snippet={card.snippet} />
+        <RevealedAnswer
+          answer={card.answer}
+          snippet={card.snippet}
+          quoted={card.snippetStyle === 'quote'}
+        />
       ) : (
         <RevealButton onPress={onReveal} />
       )}
