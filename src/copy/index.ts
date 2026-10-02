@@ -102,15 +102,17 @@ export const copy = deepFreeze({
   minutes: (n: number) => `~${String(n)} min`,
   /** The label of a concept card's cycle tile, README.md:56 ("CYCLE 1" by style). */
   cycleLabel: (n: number) => `Cycle ${String(n)}`,
-  /** The verdict that leads a quiz or predict explanation after a right pick, README.md:73. */
+  /** The verdict that leads a choice card's explanation after a right pick, README.md:73. */
   correct: 'Correct.',
-  /** The verdict that leads a quiz or predict explanation after a wrong pick, README.md:73. */
+  /** The verdict that leads a choice card's explanation after a wrong pick, README.md:73. */
   notQuite: 'Not quite.',
   /**
-   * A quiz or predict explanation led by its verdict in bold, README.md:73. The result is
+   * A choice card's explanation led by its verdict in bold, README.md:73. The result is
    * bold-marked text (rule SS-11), drawn through `BoldText`.
    */
   verdict: (verdict: string, explanation: string) => `**${verdict}** ${explanation}`,
+  /** What a screen reader says for the blank (`___`) of a cloze card's sentence. */
+  blankSpoken: 'blank',
   /** The review card's reveal button, README.md:116. */
   recallThenReveal: 'Recall it, then tap to reveal',
   /** The caption over the review card's rating buttons, README.md:119 (reworded in M8). */

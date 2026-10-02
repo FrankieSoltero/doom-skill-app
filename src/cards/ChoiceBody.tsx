@@ -16,15 +16,15 @@ import { type } from '../theme';
  * predict grid's `gap:8px` (line 130). The nearest theme steps, space[2] and space[3], are 6.8
  * and 10.2.
  */
-const OPTION_GAP = 8;
+export const OPTION_GAP = 8;
 /** Minimum height of a grid cell, README.md:79 ("62px minimum height"). */
-const CELL_MIN_HEIGHT = 62;
+export const CELL_MIN_HEIGHT = 62;
 /** Options per grid row, README.md:79 ("A 2×2 grid"). */
-const GRID_COLUMNS = 2;
+export const GRID_COLUMNS = 2;
 /** The explanation's size, README.md:73 ("Explanation (14px)"). The theme's body is 15. */
 const EXPLANATION_SIZE = 14;
 /** The explanation's line height: 14px at the prototype's body line height of 1.55, rounded. */
-const EXPLANATION_LINE_HEIGHT = 22;
+export const EXPLANATION_LINE_HEIGHT = 22;
 
 type ChoiceBodyProps = {
   /** The answers, in order. */
@@ -38,8 +38,8 @@ type ChoiceBodyProps = {
   /** The correct option's text color: the card type's color. */
   accent: string;
   /**
-   * `stack`: one option under another (quiz). `grid`: two columns of compact options (predict):
-   * centered labels, no verdict icon.
+   * `stack`: one option under another (quiz). `grid`: two columns of compact options (predict,
+   * cloze and scenario): centered labels, no verdict icon.
    */
   layout: 'stack' | 'grid';
   /** Sets the option labels in the code font. */
@@ -82,10 +82,10 @@ function Explanation({ text }: { text: string }) {
 }
 
 /**
- * The part the quiz and predict cards share (README.md:59-85): the options, then, once the
- * learner has picked, the explanation led by "Correct." or "Not quite.". Every option shows its
- * state from `optionState`. It renders two siblings, so the card's column gap spaces them. It
- * reads the card text color, so render it inside a `CardFrame`.
+ * The part the four choice cards share (quiz, predict, cloze and scenario; README.md:59-85): the
+ * options, then, once the learner has picked, the explanation led by "Correct." or "Not quite.".
+ * Every option shows its state from `optionState`. It renders two siblings, so the card's column
+ * gap spaces them. It reads the card text color, so render it inside a `CardFrame`.
  */
 export function ChoiceBody({
   options,

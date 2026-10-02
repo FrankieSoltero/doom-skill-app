@@ -9,6 +9,7 @@ import { textStyleOf, viewStyleOf } from '../testing/styles';
 const SENTENCE =
   'Photosynthesis turns light, water and carbon dioxide into ___ and oxygen, and it takes ' +
   'place in the chloroplasts of the green cells of a leaf, mostly in the palisade layer.';
+const SPOKEN = SENTENCE.replace('___', 'blank');
 const BOLD_MARKS = 'Plain text keeps **these marks** as typed.';
 
 /** Matches the whole text of an element exactly, keeping spaces. */
@@ -53,5 +54,19 @@ describe('Passage', () => {
     expect(screen.getByText(BOLD_MARKS, exact)).toBe(screen.getByTestId('passage-text'));
     expect(text?.props.children).toBe(BOLD_MARKS);
     expect(textStyleOf(screen.getByTestId('passage-text')).fontFamily).toBe(type.body.fontFamily);
+  });
+
+  it('is read as its text when given no spoken label', () => {
+    render(<Passage text={SENTENCE} />);
+
+    expect(screen.getByTestId('passage-text').props.accessibilityLabel).toBeUndefined();
+  });
+
+  it('is read as the spoken label when given one, and still draws its text', () => {
+    render(<Passage text={SENTENCE} spokenLabel={SPOKEN} />);
+    const text = screen.getByTestId('passage-text');
+
+    expect(text.props.accessibilityLabel).toBe(SPOKEN);
+    expect(screen.getByText(SENTENCE, exact)).toBe(text);
   });
 });

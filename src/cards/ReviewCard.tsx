@@ -7,7 +7,6 @@ import { BoldText } from '../components/BoldText';
 import { CardFrame } from '../components/CardFrame';
 import { useCardTextColor } from '../components/cardTextColor';
 import { CodeBlock } from '../components/CodeBlock';
-import { Passage } from '../components/Passage';
 import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import type { ReviewCard as ReviewCardData } from '../data';
@@ -108,8 +107,10 @@ function RevealButton({ onPress }: { onPress: () => void }) {
 type RevealedAnswerProps = { answer: string; snippet: string; quoted: boolean };
 
 /**
- * The revealed answer (README.md:118): the answer text with its bold marking, then its code, or,
- * when `quoted` (a prose topic, M9 plan C), the quoted source sentence in a passage block.
+ * The revealed answer (README.md:118): the answer text with its bold marking, then its code. When
+ * `quoted` (a prose topic, M9 plan C, Q11) the snippet is a quoted source sentence and is not
+ * drawn: with the answer and the rating row it would overflow the card. The Sources action still
+ * links the source.
  */
 function RevealedAnswer({ answer, snippet, quoted }: RevealedAnswerProps) {
   const color = useCardTextColor();
@@ -118,7 +119,7 @@ function RevealedAnswer({ answer, snippet, quoted }: RevealedAnswerProps) {
       <View testID="review-answer-text" accessibilityLiveRegion="polite">
         <BoldText text={answer} style={[styles.answerText, { color }]} />
       </View>
-      {quoted ? <Passage text={snippet} /> : <CodeBlock code={snippet} />}
+      {quoted ? null : <CodeBlock code={snippet} />}
     </View>
   );
 }

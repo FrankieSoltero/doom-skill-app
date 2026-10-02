@@ -127,9 +127,13 @@ describe('copy for cards', () => {
     expect(copy.cycleLabel(12)).toBe('Cycle 12');
   });
 
-  it('words the verdicts of a quiz or predict answer, README.md:73', () => {
+  it('words the verdicts of a choice card answer, README.md:73', () => {
     expect(copy.correct).toBe('Correct.');
     expect(copy.notQuite).toBe('Not quite.');
+  });
+
+  it("speaks a cloze sentence's blank as a word", () => {
+    expect(copy.blankSpoken).toBe('blank');
   });
 
   it('writes an explanation led by its verdict in bold markers', () => {

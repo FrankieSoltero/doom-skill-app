@@ -13,6 +13,10 @@ import { CARD_TEXT_LIMITS, VERDICT_CHARS } from '../textLimits';
 
 /** One measured field: where it is, its size, and its limit. */
 type Measure = { where: string; size: number; limit: number };
+/** Builds one card's measure of `field`. */
+type MeasureOf = (field: string, size: number, limit: number) => Measure;
+/** The cards built on `ChoiceCard`: a title, an explanation and options. */
+type ChoiceCardData = Extract<Card, { type: 'quiz' | 'predict' | 'cloze' | 'scenario' }>;
 
 /** The demo sets as the fixture source serves them: set 1, then sets 2 to 4. */
 const SETS: FeedSet[] = [fixture, ...extra.sets].map(({ cards, summary }, at) =>
@@ -31,11 +35,11 @@ function solutionOf(setNumber: number): string {
   return code;
 }
 
-/** The passage of a cloze (`text`) or a scenario (`situation`), measured as one; none for predict. */
-function passageMeasures(
-  card: Extract<Card, { type: 'predict' | 'cloze' | 'scenario' }>,
-  measure: (field: string, size: number, limit: number) => Measure,
-): Measure[] {
+/**
+ * The passage of a cloze (`text`) or a scenario (`situation`), measured as one; none for a quiz
+ * or predict.
+ */
+function passageMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
   if (card.type === 'cloze')
     return [measure('text', card.text.length, CARD_TEXT_LIMITS.cloze.text)];
   if (card.type === 'scenario') {
@@ -44,25 +48,26 @@ function passageMeasures(
   return [];
 }
 
+/**
+ * The options of a quiz, cloze or scenario: their count, then each option's length, against the
+ * card type's limits. None for predict, whose options the limits do not cover.
+ */
+function optionMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
+  if (card.type === 'predict') return [];
+  const { options, option } = CARD_TEXT_LIMITS[card.type];
+  return [
+    measure('options', card.options.length, options),
+    ...card.options.map((text, index) =>
+      measure(`option ${String(index + 1)}`, text.length, option),
+    ),
+  ];
+}
+
 /** The measures of one card; `at` names its set and type, as in `set 4 quiz`. */
 function measuresOf(card: Card, at: string, setNumber: number): Measure[] {
-  const measure = (field: string, size: number, limit: number) => ({
-    where: `${at} ${field}`,
-    size,
-    limit,
-  });
+  const measure: MeasureOf = (field, size, limit) => ({ where: `${at} ${field}`, size, limit });
   switch (card.type) {
-    case 'quiz': {
-      const { title, explanation, options, option } = CARD_TEXT_LIMITS.quiz;
-      return [
-        measure('title', card.title.length, title),
-        measure('explanation', drawnLength(card.explanation), explanation),
-        measure('options', card.options.length, options),
-        ...card.options.map((text, index) =>
-          measure(`option ${String(index + 1)}`, text.length, option),
-        ),
-      ];
-    }
+    case 'quiz':
     case 'predict':
     case 'cloze':
     case 'scenario': {
@@ -70,6 +75,7 @@ function measuresOf(card: Card, at: string, setNumber: number): Measure[] {
       return [
         measure('title', card.title.length, title),
         measure('explanation', drawnLength(card.explanation), explanation),
+        ...optionMeasures(card, measure),
         ...passageMeasures(card, measure),
       ];
     }
@@ -143,6 +149,22 @@ describe('demo text limits', () => {
     expect(overLimit({ ...set1, cards })).toStrictEqual([
       'set 1 cloze text',
       'set 1 scenario situation',
+    ]);
+  });
+
+  it('names a cloze or scenario option over its limit, and a fifth option', () => {
+    const [set1] = SETS;
+    if (set1 === undefined) throw new Error('No demo set 1');
+    const long = 'x'.repeat(CARD_TEXT_LIMITS.cloze.option + 1);
+    const cards = [
+      { ...cardsByType.cloze, options: [long, 'b', 'c', 'd'] },
+      { ...cardsByType.scenario, options: ['a', 'b', 'c', 'd', long] },
+    ];
+
+    expect(overLimit({ ...set1, cards })).toStrictEqual([
+      'set 1 cloze option 1',
+      'set 1 scenario options',
+      'set 1 scenario option 5',
     ]);
   });
 

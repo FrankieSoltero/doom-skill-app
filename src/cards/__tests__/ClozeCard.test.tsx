@@ -57,6 +57,14 @@ describe('ClozeCard content', () => {
     );
   });
 
+  it('has a screen reader say blank where the sentence has its blank', () => {
+    renderCloze();
+
+    expect(screen.getByTestId('passage-text').props.accessibilityLabel).toBe(
+      'Photosynthesis turns light energy into blank energy stored in sugar.',
+    );
+  });
+
   it('lays out kicker, passage, options, explanation, a flex spacer, then the button', () => {
     renderCloze({ [INDEX]: { kind: 'choice', picked: 0 } });
 

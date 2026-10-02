@@ -43,9 +43,9 @@ function pickedOf(answer: CardAnswer | undefined): number | null {
  * The card the quiz, predict, cloze and scenario share (docs/design/card-feed/README.md:46-49,
  * 59-85): kicker row, title, `children`, the options, the explanation once answered, a flex
  * spacer, then Next card, disabled until answered. The frame, the kicker, the estimate and the
- * correct option's color come from the card's type. The answer lives in the feed store at `index`. The card
- * selects only its own pick, so another card's answer does not re-render it. The first pick
- * locks the card; later picks are ignored.
+ * correct option's color come from the card's type. The answer lives in the feed store at
+ * `index`. The card selects only its own pick, so another card's answer does not re-render it.
+ * The first pick locks the card; later picks are ignored.
  */
 export function ChoiceCard({ card, index, onNext, layout, mono, children }: ChoiceCardProps) {
   const picked = useFeedStore((state) => pickedOf(state.answers[index]));
