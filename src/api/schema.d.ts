@@ -757,13 +757,16 @@ export interface components {
         };
         /**
          * FeedTopic
-         * @description The topic, with the user's day of the enrollment (from 1), streak and progress.
+         * @description The topic, with the user's day of the enrollment (from 1), streak and progress, and its
+         *     code language (`app.services.feed_lang`; null for a topic without one).
          */
         FeedTopic: {
             /** Day */
             day: number;
             /** Horizon Days */
             horizon_days: number;
+            /** Lang */
+            lang?: string | null;
             progress: components["schemas"]["Fraction"];
             /** Slug */
             slug: string;
