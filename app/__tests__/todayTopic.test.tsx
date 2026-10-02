@@ -24,6 +24,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+  jest.useRealTimers();
 });
 
 describe('Today and the active topic', () => {
@@ -48,6 +49,10 @@ describe('Today and the active topic', () => {
   });
 
   it("asks for a fresh set when the active topic's feed is refreshed, and drops the old one", async () => {
+    // `layout` runs the pager's held work on fake timers (src/components/testing/pager.tsx); on
+    // real ones Jest warns. `afterEach` restores the real timers.
+    jest.useFakeTimers();
+    const warn = jest.spyOn(console, 'warn');
     const getNextSet = jest
       .spyOn(cardSource, 'getNextSet')
       .mockResolvedValueOnce(makeSet(1, [cardsByType.concept]))
@@ -72,6 +77,7 @@ describe('Today and the active topic', () => {
     expect(screen.getByText(cardsByType.quiz.title)).toBeOnTheScreen();
     expect(screen.queryByText(cardsByType.concept.title)).toBeNull();
     expect(getNextSet).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('shows only the paper ground, and asks for no set, until the stored topic is read', () => {
