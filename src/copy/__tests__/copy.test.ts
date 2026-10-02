@@ -105,14 +105,10 @@ describe('copy for the Today screen', () => {
 
 describe('copy for cards', () => {
   it('names each card type for the card kicker', () => {
-    expect(copy.cardTypes).toStrictEqual({
-      concept: 'Concept',
-      quiz: 'Quiz',
-      predict: 'Predict',
-      exercise: 'Exercise',
-      review: 'Review',
-      checkpoint: 'Checkpoint',
-    });
+    // The four choice cards, then the rest.
+    const choice = { quiz: 'Quiz', predict: 'Predict', cloze: 'Fill in', scenario: 'Scenario' };
+    const rest = { concept: 'Concept', exercise: 'Exercise', review: 'Review' };
+    expect(copy.cardTypes).toStrictEqual({ ...choice, ...rest, checkpoint: 'Checkpoint' });
   });
 
   it('writes the card kicker as type, middle dot, node, keeping case (the style uppercases)', () => {

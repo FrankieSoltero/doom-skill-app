@@ -4,6 +4,7 @@
 import solutions from '../../../scripts/__tests__/fixtures/demoSolutions.json';
 import { copy } from '../../copy';
 import { parseGrid } from '../../feed/exercise';
+import { cardsByType } from '../../feed/testing/sets';
 import extra from '../__fixtures__/cards.extra.fixture.json';
 import fixture from '../__fixtures__/cards.fixture.json';
 import type { Card, FeedSet } from '../index';
@@ -30,6 +31,19 @@ function solutionOf(setNumber: number): string {
   return code;
 }
 
+/** The passage of a cloze (`text`) or a scenario (`situation`), measured as one; none for predict. */
+function passageMeasures(
+  card: Extract<Card, { type: 'predict' | 'cloze' | 'scenario' }>,
+  measure: (field: string, size: number, limit: number) => Measure,
+): Measure[] {
+  if (card.type === 'cloze')
+    return [measure('text', card.text.length, CARD_TEXT_LIMITS.cloze.text)];
+  if (card.type === 'scenario') {
+    return [measure('situation', card.situation.length, CARD_TEXT_LIMITS.scenario.situation)];
+  }
+  return [];
+}
+
 /** The measures of one card; `at` names its set and type, as in `set 4 quiz`. */
 function measuresOf(card: Card, at: string, setNumber: number): Measure[] {
   const measure = (field: string, size: number, limit: number) => ({
@@ -49,11 +63,14 @@ function measuresOf(card: Card, at: string, setNumber: number): Measure[] {
         ),
       ];
     }
-    case 'predict': {
-      const { title, explanation } = CARD_TEXT_LIMITS.predict;
+    case 'predict':
+    case 'cloze':
+    case 'scenario': {
+      const { title, explanation } = CARD_TEXT_LIMITS[card.type];
       return [
         measure('title', card.title.length, title),
         measure('explanation', drawnLength(card.explanation), explanation),
+        ...passageMeasures(card, measure),
       ];
     }
     case 'concept': {
@@ -112,6 +129,21 @@ describe('demo text limits', () => {
 
   it('counts the longer verdict, and the space after it, against the explanation', () => {
     expect(VERDICT_CHARS).toBe(Math.max(copy.correct.length, copy.notQuite.length) + 1);
+  });
+
+  it('names a cloze or scenario passage over its limit; the demo has neither', () => {
+    const [set1] = SETS;
+    if (set1 === undefined) throw new Error('No demo set 1');
+    const long = 'x'.repeat(CARD_TEXT_LIMITS.cloze.text + 1);
+    const cards = [
+      { ...cardsByType.cloze, text: long },
+      { ...cardsByType.scenario, situation: long },
+    ];
+
+    expect(overLimit({ ...set1, cards })).toStrictEqual([
+      'set 1 cloze text',
+      'set 1 scenario situation',
+    ]);
   });
 
   it("names the field over its limit: set 4's quiz title as it was before this guard", () => {

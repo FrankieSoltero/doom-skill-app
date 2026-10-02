@@ -3,12 +3,14 @@
 import type {
   Card,
   CheckpointCard,
+  ClozeCard,
   ConceptCard,
   ExerciseCard,
   FeedSet,
   PredictCard,
   QuizCard,
   ReviewCard,
+  ScenarioCard,
 } from '../../data';
 
 const concept: ConceptCard = {
@@ -41,6 +43,29 @@ const predict: PredictCard = {
   options: ['One kick', 'Two kicks'],
   correct: 1,
   explanation: '`*2` repeats the step.',
+};
+
+// A prose topic's two choice cards (M9 plan C): a sentence with a blank, and a situation.
+const cloze: ClozeCard = {
+  type: 'cloze',
+  node: 'photosynthesis',
+  estSeconds: 30,
+  title: 'Fill in the blank',
+  text: 'Photosynthesis turns light energy into ___ energy stored in sugar.',
+  options: ['chemical', 'thermal', 'nuclear', 'kinetic'],
+  correct: 0,
+  explanation: 'The plant stores it in the **chemical bonds** of glucose.',
+};
+
+const scenario: ScenarioCard = {
+  type: 'scenario',
+  node: 'photosynthesis',
+  estSeconds: 45,
+  title: 'What happens next?',
+  situation: 'A potted plant is moved from a sunny window into a dark cupboard for a week.',
+  options: ['It makes less sugar', 'It makes more sugar', 'Nothing changes', 'It grows faster'],
+  correct: 0,
+  explanation: 'Without light, **photosynthesis** slows, so the plant makes less sugar.',
 };
 
 const exercise: ExerciseCard = {
@@ -78,7 +103,16 @@ const checkpoint: CheckpointCard = {
 };
 
 /** One card of each kind, keyed by its `type`. */
-export const cardsByType = { concept, quiz, predict, exercise, review, checkpoint };
+export const cardsByType = {
+  concept,
+  quiz,
+  predict,
+  cloze,
+  scenario,
+  exercise,
+  review,
+  checkpoint,
+};
 
 /** A feed set whose topic has the given streak and whose cards are `cards`. */
 export function makeSet(streak: number, cards: Card[]): FeedSet {

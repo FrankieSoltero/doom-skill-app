@@ -13,6 +13,8 @@ const rules: { [Type in Card['type']]: AnswerRule } = {
   concept: () => true,
   quiz: isChoice,
   predict: isChoice,
+  cloze: isChoice,
+  scenario: isChoice,
   exercise: (answer) => answer?.kind === 'exercise' && answer.result === 'pass',
   review: (answer) => answer?.kind === 'review' && answer.rating !== null,
   checkpoint: (answer) => answer?.kind === 'checkpoint' && answer.status === 'done',

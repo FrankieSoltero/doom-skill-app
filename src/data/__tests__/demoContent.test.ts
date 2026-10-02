@@ -25,6 +25,9 @@ const ESTIMATES: Record<Card['type'], [number, number]> = {
   concept: [40, 60],
   quiz: [30, 45],
   predict: [45, 60],
+  // No demo card has these types (the Strudel demo has no prose); the ranges hold the API's.
+  cloze: [30, 45],
+  scenario: [45, 60],
   exercise: [90, 120],
   review: [20, 20],
   checkpoint: [180, 180],

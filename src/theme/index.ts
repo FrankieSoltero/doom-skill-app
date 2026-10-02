@@ -25,7 +25,15 @@ export const colors = {
 } as const;
 
 export type CardType =
-  'concept' | 'quiz' | 'predict' | 'exercise' | 'review' | 'checkpoint' | 'summary';
+  | 'concept'
+  | 'quiz'
+  | 'predict'
+  | 'cloze'
+  | 'scenario'
+  | 'exercise'
+  | 'review'
+  | 'checkpoint'
+  | 'summary';
 
 export const cardTheme: Record<
   CardType,
@@ -34,6 +42,9 @@ export const cardTheme: Record<
   concept: { bg: colors.violet, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
   quiz: { bg: colors.coral, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
   predict: { bg: colors.aqua, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
+  // A cloze is drawn in the quiz's colors and a scenario in predict's (M9 plan C, Q5).
+  cloze: { bg: colors.coral, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
+  scenario: { bg: colors.aqua, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
   exercise: { bg: colors.ink, fg: colors.paper, shadow: colors.lime, kicker: colors.lime },
   review: { bg: colors.yellow, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },
   checkpoint: { bg: colors.pink, fg: colors.ink, shadow: colors.ink, kicker: colors.ink },

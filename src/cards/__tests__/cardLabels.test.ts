@@ -18,11 +18,13 @@ describe('cardKickerText', () => {
     ['quiz', 'Quiz · mini-notation'],
     ['predict', 'Predict · mini-notation'],
     ['exercise', 'Exercise · mini-notation'],
+    ['cloze', 'Fill in · photosynthesis'],
+    ['scenario', 'Scenario · photosynthesis'],
   ] as const)('names the %s card by its type and node', (cardType, expected) => {
     expect(cardKickerText(cardsByType[cardType])).toBe(expected);
   });
 
-  it('accepts only concept, quiz, predict and exercise cards: tsc fails if another type-checks', () => {
+  it('accepts only the cards whose kicker is type and node: tsc fails if another type-checks', () => {
     // Never called: the checks are the compiler's. Review and checkpoint cards write their own
     // kickers (README.md:115, :124), so passing one here is a type error.
     const reviewKicker = () =>

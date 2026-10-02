@@ -74,6 +74,7 @@ export const placement: Placement | null =
 export type {
   Card,
   CheckpointCard,
+  ClozeCard,
   ConceptCard,
   ExerciseCard,
   FeedSet,
@@ -83,6 +84,7 @@ export type {
   PredictCard,
   QuizCard,
   ReviewCard,
+  ScenarioCard,
   SourceLink,
   Summary,
   Topic,

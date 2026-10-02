@@ -4,16 +4,18 @@ import { isValidElement } from 'react';
 import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
 import { CheckpointCard } from '../CheckpointCard';
+import { ClozeCard } from '../ClozeCard';
 import { ConceptCard } from '../ConceptCard';
 import { ExerciseCard } from '../ExerciseCard';
 import { PredictCard } from '../PredictCard';
 import { QuizCard } from '../QuizCard';
 import { canRenderCard, renderCard, renderSummary } from '../registry';
 import { ReviewCard } from '../ReviewCard';
+import { ScenarioCard } from '../ScenarioCard';
 import { SummaryCard } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
 
-const { concept, quiz, predict, exercise, review, checkpoint } = cardsByType;
+const { concept, quiz, predict, cloze, scenario, exercise, review, checkpoint } = cardsByType;
 
 // A card of a type the registry does not know, as a newer server could send. The cast is the
 // only way to build one: the schema's types allow no such card.
@@ -110,6 +112,27 @@ describe('renderCard', () => {
   });
 });
 
+describe('renderCard for the cloze and scenario cards', () => {
+  it.each([
+    { card: cloze, component: ClozeCard, passage: cloze.text },
+    { card: scenario, component: ScenarioCard, passage: scenario.situation },
+  ])('renders and draws a $card.type card, with its passage', ({ card, component, passage }) => {
+    const onNext = jest.fn<undefined, []>();
+
+    const element = renderCard(card, { index: 6, active: true, onNext });
+    render(<>{element}</>);
+
+    expect(isValidElement(element) && element.type).toBe(component);
+    expect(isValidElement<object>(element) && element.props).toStrictEqual({
+      card,
+      index: 6,
+      onNext,
+    });
+    expect(screen.getByText(card.title)).toBeOnTheScreen();
+    expect(screen.getByTestId('passage-text')).toHaveTextContent(passage);
+  });
+});
+
 describe('renderCard for the exercise card', () => {
   it('renders an exercise card with the card, its index, its active flag and onNext', () => {
     const onNext = jest.fn<undefined, []>();
@@ -200,7 +223,7 @@ describe('renderSummary', () => {
 });
 
 describe('canRenderCard', () => {
-  it.each([concept, quiz, predict, exercise, review, checkpoint])(
+  it.each([concept, quiz, predict, cloze, scenario, exercise, review, checkpoint])(
     'accepts a $type card',
     (card) => {
       expect(canRenderCard(card)).toBe(true);

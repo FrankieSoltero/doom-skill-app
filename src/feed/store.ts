@@ -121,6 +121,8 @@ const responses: { [Type in Card['type']]: ResponseRule } = {
   concept: () => null,
   quiz: choiceResponse,
   predict: choiceResponse,
+  cloze: choiceResponse,
+  scenario: choiceResponse,
   exercise: (answer) =>
     answer.kind === 'exercise' && answer.result !== null ? { code: answer.code } : null,
   review: (answer) =>

@@ -5,16 +5,18 @@ import fixture from '../__fixtures__/cards.fixture.json';
 import type {
   Card,
   CheckpointCard,
+  ClozeCard,
   ConceptCard,
   ExerciseCard,
   FeedSet,
   PredictCard,
   QuizCard,
   ReviewCard,
+  ScenarioCard,
   Summary,
   Topic,
 } from '../index';
-import { cardSchema, feedSetSchema, summarySchema, topicSchema } from '../schema';
+import { apiSetSchema, cardSchema, feedSetSchema, summarySchema, topicSchema } from '../schema';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -26,6 +28,8 @@ type NamedCards = {
   concept: ConceptCard;
   quiz: QuizCard;
   predict: PredictCard;
+  cloze: ClozeCard;
+  scenario: ScenarioCard;
   exercise: ExerciseCard;
   review: ReviewCard;
   checkpoint: CheckpointCard;
@@ -202,6 +206,63 @@ describe('feedSetSchema: conditions for cards from a server', () => {
       FIXTURE_CARD_TYPES.filter((type) => type !== 'exercise'),
     );
     expect(jest.mocked(logWarning).mock.calls).toEqual([['exercise_lang_unknown']]);
+  });
+});
+
+describe('cloze and scenario cards (M9 plan C)', () => {
+  const card = (n: number) => ({
+    id: `00000000-0000-4000-8000-00000000040${String(n)}`,
+    sources: [
+      {
+        title: 'Photosynthesis',
+        url: 'https://en.wikipedia.org/wiki/Photosynthesis',
+        license: 'CC BY-SA 4.0',
+      },
+    ],
+    node: 'Photosynthesis',
+    estSeconds: 30,
+    title: 'Fill in the blank',
+    options: ['chemical', 'thermal', 'nuclear'],
+    correct: 2,
+    explanation: 'Stored in **glucose**.',
+  });
+  const CLOZE = { ...card(1), type: 'cloze', text: 'Plants turn light into ___ energy.' };
+  const SCENARIO = { ...card(2), type: 'scenario', situation: 'A plant sits in the dark.' };
+
+  it('parses a set from the API holding both, after the fixture cards, as sent', () => {
+    const input = { ...feedSetInput([...fixture.cards, CLOZE, SCENARIO]), feedDate: '2026-10-02' };
+    const set = apiSetSchema.parse(input);
+
+    expect(set.cards.map((item) => item.type)).toEqual([
+      ...FIXTURE_CARD_TYPES,
+      'cloze',
+      'scenario',
+    ]);
+    expect(set.cards.slice(-2)).toEqual([CLOZE, SCENARIO]);
+  });
+
+  it.each([CLOZE, SCENARIO])(
+    'refuses a $type card whose correct index is past its options',
+    (item) => {
+      const result = cardSchema.safeParse({ ...item, correct: 3 });
+
+      expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(['correct']);
+    },
+  );
+
+  it.each([CLOZE, SCENARIO])('refuses a $type card with one option', (item) => {
+    const result = cardSchema.safeParse({ ...item, options: ['chemical'], correct: 0 });
+
+    expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(['options']);
+  });
+
+  it('refuses a cloze with no text and a scenario with no situation', () => {
+    const paths = [
+      cardSchema.safeParse({ ...CLOZE, text: '' }),
+      cardSchema.safeParse({ ...SCENARIO, situation: undefined }),
+    ].map((result) => result.error?.issues.map((issue) => issue.path.join('.')));
+
+    expect(paths).toEqual([['text'], ['situation']]);
   });
 });
 
