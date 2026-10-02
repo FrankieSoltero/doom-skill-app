@@ -126,8 +126,10 @@ describe('ConceptCard in a Strudel set', () => {
     expect(play).not.toHaveBeenCalled();
 
     rerender(true);
+    // Drawn inactive, the card stopped once already; count only the stop of leaving it.
+    stop.mockClear();
     rerender(false);
-    expect(stop).toHaveBeenCalled();
+    expect(stop).toHaveBeenCalledTimes(1);
     rerender(true);
 
     expect(play).toHaveBeenCalledTimes(2);

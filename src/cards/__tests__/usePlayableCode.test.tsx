@@ -83,6 +83,16 @@ describe('usePlayableCode autoplay (X2)', () => {
     expect(play.mock.calls).toStrictEqual([[CODE]]);
   });
 
+  it('does not play by itself while the player reports an error, as Play is disabled then', () => {
+    setAudio({ error: 'ReferenceError: nope is not defined' });
+    const { rerender } = renderPlayable({ active: true, autoplay: true });
+
+    rerender({ active: true, autoplay: true });
+    setAudio({ step: 1 });
+
+    expect(play).not.toHaveBeenCalled();
+  });
+
   it('never plays by itself without autoplay', () => {
     const { rerender } = renderPlayable({ active: true, autoplay: false });
 

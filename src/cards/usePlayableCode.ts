@@ -34,9 +34,10 @@ type PlayableCodeState = {
  * its screen loses focus or the app goes to the background.
  *
  * With `autoplay`, the code plays by itself once per visit (decision X2): when the card is active
- * and the player is ready, whichever comes last. Leaving the card arms it again. Within a visit it
- * does not start again: not after the learner taps Stop, and not after the player is reset and is
- * ready again (the learner taps Play then). The flag is a ref, read and written in the effect only.
+ * and the player is ready with no error (as the Play control needs), whichever comes last. Leaving
+ * the card arms it again. Within a visit it does not start again: not after the learner taps Stop,
+ * and not after the player is reset and is ready again (the learner taps Play then). The flag is a
+ * ref, read and written in the effect only.
  */
 export function usePlayableCode({
   code,
@@ -45,7 +46,7 @@ export function usePlayableCode({
   autoplay,
 }: PlayableCodeOptions): PlayableCodeState {
   const strudel = useStrudel(owner);
-  const { status, play, stop } = strudel;
+  const { status, error, play, stop } = strudel;
   useStopWhenAway({ active, stop });
   const startedThisVisit = useRef(false);
 
@@ -54,11 +55,12 @@ export function usePlayableCode({
       startedThisVisit.current = false;
       return;
     }
-    if (autoplay && status === 'ready' && !startedThisVisit.current) {
+    // As the Play control: no start while the player reports an error.
+    if (autoplay && status === 'ready' && error === null && !startedThisVisit.current) {
       startedThisVisit.current = true;
       play(code);
     }
-  }, [active, autoplay, status, play, code]);
+  }, [active, autoplay, status, error, play, code]);
 
   const toggle = () => {
     if (strudel.playing) stop();

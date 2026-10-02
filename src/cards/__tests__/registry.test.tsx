@@ -69,7 +69,7 @@ describe('renderCard', () => {
     expect(screen.getByRole('button', { name: 'Next card' })).toBeOnTheScreen();
   });
 
-  it('renders a predict card with the card, its index and onNext, and no active flag', () => {
+  it('renders a predict card with the card, its index, its active flag and onNext', () => {
     const onNext = jest.fn<undefined, []>();
 
     const element = renderCard(predict, { index: 5, active: false, onNext });
@@ -78,6 +78,7 @@ describe('renderCard', () => {
     expect(isValidElement<object>(element) && element.props).toStrictEqual({
       card: predict,
       index: 5,
+      active: false,
       onNext,
     });
   });

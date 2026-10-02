@@ -37,7 +37,7 @@ beforeEach(() => {
 /** Draws the demo card at INDEX after storing `answers`. */
 function renderPredict(answers: Record<number, CardAnswer> = {}) {
   return renderChoiceCard(
-    (onNext) => <PredictCard card={demo} index={INDEX} onNext={onNext} />,
+    (onNext) => <PredictCard card={demo} index={INDEX} active onNext={onNext} />,
     answers,
   );
 }

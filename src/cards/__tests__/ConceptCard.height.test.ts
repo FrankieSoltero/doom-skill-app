@@ -21,6 +21,7 @@ import { useStrudel } from '../../strudel/useStrudel';
 import { space, type } from '../../theme';
 import { ConceptCard } from '../ConceptCard';
 import { SourcesButton } from '../SourcesButton';
+import { NOTICE_AUDIO, noticeHeight, type NoticeName } from '../testing/noticeHeights';
 import { resetStrudelDouble, setAudio, useStrudelDouble } from '../testing/strudelDouble';
 
 jest.mock('../../strudel/useStrudel', () => ({
@@ -35,8 +36,6 @@ const NATURAL_LINE = 1.2;
 /** The lines `CARD_TEXT_LIMITS.concept` was derived from: a title of 2, a body of 6. */
 const TITLE_LINES = 2;
 const BODY_LINES = 6;
-/** The most lines a page's error text takes in the notice (`ResultBadge`'s `ERROR_MAX_LINES`). */
-const ERROR_LINES = 3;
 /** The card body's children: kicker row, title, body, the playable code, spacer, Got it. */
 const BODY_CHILDREN = 6;
 
@@ -52,7 +51,7 @@ const MAXIMAL: ConceptCardData = {
 };
 
 /** What is drawn under the code: the tiles, or a notice in their place. */
-type Under = 'tiles' | 'unavailable' | 'error' | 'needs network';
+type Under = 'tiles' | NoticeName;
 
 /**
  * Draws the maximal card in a Strudel set and, beside it, the Sources action whose icon a card
@@ -80,10 +79,7 @@ function underHeight(under: Under): number {
     const inner = type.kicker.fontSize * NATURAL_LINE + Number(tile.gap) + Number(note.lineHeight);
     return inner + 2 * Number(tile.padding) + 2 * Number(tile.borderWidth);
   }
-  const line = Number(textStyleOf(screen.getByTestId('result-badge-label')).lineHeight);
-  if (under === 'needs network') return line;
-  const reset = viewStyleOf(screen.getByRole('button', { name: 'Reset audio' }));
-  return Math.max(under === 'error' ? ERROR_LINES * line : line, Number(reset.minHeight));
+  return noticeHeight(under);
 }
 
 /** The card's content height with `under` drawn under its one line of code. */
@@ -109,13 +105,13 @@ beforeEach(() => {
 
 describe('the playing concept card height budget', () => {
   it.each([
-    { under: 'tiles', audio: {}, height: 498.6 },
-    { under: 'unavailable', audio: { status: 'unavailable' as const }, height: 472.6 },
-    { under: 'error', audio: { error: fill(200) }, height: 494.6 },
-    { under: 'needs network', audio: { playing: true, needsNetwork: true }, height: 450.6 },
+    { under: 'tiles', height: 498.6 },
+    { under: 'unavailable', height: 472.6 },
+    { under: 'error', height: 494.6 },
+    { under: 'needs network', height: 450.6 },
   ] as const)('with $under under the code: $height points, inside 543.5', (budget) => {
     renderMaximal();
-    setAudio(budget.audio);
+    if (budget.under !== 'tiles') setAudio(NOTICE_AUDIO[budget.under]);
 
     const sum = conceptHeight(budget.under);
 

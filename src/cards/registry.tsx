@@ -37,7 +37,9 @@ const renderers: { [Name in CardTypeName]: Renderer<Name> } = {
     <ConceptCard card={card} index={index} active={active} onNext={onNext} />
   ),
   quiz: (card, { index, onNext }) => <QuizCard card={card} index={index} onNext={onNext} />,
-  predict: (card, { index, onNext }) => <PredictCard card={card} index={index} onNext={onNext} />,
+  predict: (card, { index, active, onNext }) => (
+    <PredictCard card={card} index={index} active={active} onNext={onNext} />
+  ),
   cloze: (card, { index, onNext }) => <ClozeCard card={card} index={index} onNext={onNext} />,
   scenario: (card, { index, onNext }) => <ScenarioCard card={card} index={index} onNext={onNext} />,
   numeric: (card, { index, onNext }) => <NumericCard card={card} index={index} onNext={onNext} />,
