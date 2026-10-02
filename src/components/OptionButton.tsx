@@ -112,9 +112,9 @@ type OptionButtonProps = {
   /** Whether the learner picked this option; exposed as `accessibilityState.selected`. */
   picked?: boolean;
   /**
-   * For a grid cell (predict, cloze, scenario): the label centered, 8 and 12 padding, code at 14
-   * (the theme's code size) and no icon in any state. Fills, colors, spoken labels and states are
-   * unchanged.
+   * For a grid cell (predict, cloze, scenario, numeric): the label centered, 8 and 12 padding, code
+   * at 14 (the theme's code size) and no icon in any state. Fills, colors, spoken labels and states
+   * are unchanged.
    */
   compact?: boolean;
   /** Called on a press while idle. Every other state is locked. */
@@ -122,11 +122,11 @@ type OptionButtonProps = {
 };
 
 /**
- * An answer choice on a choice card: quiz, predict, cloze or scenario (README.md:61-71, 84).
- * Idle, it is a paper box with a 1.5pt ink border and a 3pt hard shadow drawn as a sibling view
- * behind it. Once the question is answered it locks, drops the shadow and shows its verdict. The
- * button grows to fill a taller container, so a card can set its height (62 in a grid cell) on a
- * wrapping view.
+ * An answer choice on a choice card: quiz, predict, cloze, scenario or numeric (README.md:61-71,
+ * 84). Idle, it is a paper box with a 1.5pt ink border and a 3pt hard shadow drawn as a sibling
+ * view behind it. Once the question is answered it locks, drops the shadow and shows its verdict.
+ * The button grows to fill a taller container, so a card can set its height (62 in a grid cell) on
+ * a wrapping view.
  */
 export function OptionButton({
   label,

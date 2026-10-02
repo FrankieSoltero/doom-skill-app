@@ -39,7 +39,7 @@ type ChoiceBodyProps = {
   accent: string;
   /**
    * `stack`: one option under another (quiz). `grid`: two columns of compact options (predict,
-   * cloze and scenario): centered labels, no verdict icon.
+   * cloze, scenario and numeric): centered labels, no verdict icon.
    */
   layout: 'stack' | 'grid';
   /** Sets the option labels in the code font. */
@@ -82,8 +82,9 @@ function Explanation({ text }: { text: string }) {
 }
 
 /**
- * The part the four choice cards share (quiz, predict, cloze and scenario; README.md:59-85): the
- * options, then, once the learner has picked, the explanation led by "Correct." or "Not quite.".
+ * The part the five choice cards share (quiz, predict, cloze, scenario and numeric;
+ * README.md:59-85): the options, then, once the learner has picked, the explanation led by
+ * "Correct." or "Not quite.".
  * Every option shows its state from `optionState`. It renders two siblings, so the card's column
  * gap spaces them. It reads the card text color, so render it inside a `CardFrame`.
  */

@@ -32,13 +32,13 @@ const CHARS_PER_LINE = {
    */
   option: 27,
   /**
-   * A passage (a quoted sentence, a cloze's text, a scenario's situation): Barlow 15 across 280.3,
-   * 309 less the 1.5-point rule and 13.6 of padding a side.
+   * A passage (a quoted sentence, a cloze's text, a scenario's situation, a numeric card's
+   * problem): Barlow 15 across 280.3, 309 less the 1.5-point rule and 13.6 of padding a side.
    */
   passage: 44,
   /**
-   * A cloze or scenario option in the two-column grid: Barlow 15 across 123.5, half of 309 less the
-   * 8-point gap, two 1.5-point borders and 12 of padding a side.
+   * A cloze, scenario or numeric option in the two-column grid: Barlow 15 across 123.5, half of 309
+   * less the 8-point gap, two 1.5-point borders and 12 of padding a side.
    */
   gridOption: 19,
 };
@@ -49,7 +49,7 @@ const CHARS_PER_LINE = {
  */
 const WRAP_LOSS = 6;
 
-/** The characters `lines` lines hold at `perLine`, less the wrap loss of every line but the last. */
+/** The characters `lines` lines hold at `perLine`, less the wrap loss of each line but the last. */
 function charsIn(lines: number, perLine: number): number {
   return lines * perLine - (lines - 1) * WRAP_LOSS;
 }

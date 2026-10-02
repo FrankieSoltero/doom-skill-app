@@ -1,8 +1,8 @@
 // The height budget of the prose choice cards (M9 plan C Task 22) and the numeric card (M9 plan
-// D): an answered cloze, scenario and numeric card at their text limits, summed from the constants their parts draw with, must
-// fit the card's content box on the reference device. The card body does not scroll, so a change
-// that pushes any of them past its page fails here, as SummaryCard.height.test.ts does for the
-// Summary.
+// D): an answered cloze, scenario and numeric card at their text limits, summed from the
+// constants their parts draw with, must fit the card's content box on the reference device. The
+// card body does not scroll, so a change that pushes any of them past its page fails here, as
+// SummaryCard.height.test.ts does for the Summary.
 import { render, screen } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement } from 'react';

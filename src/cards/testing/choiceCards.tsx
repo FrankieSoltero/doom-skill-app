@@ -1,8 +1,8 @@
 /**
  * Test support for the cards built on `ChoiceCard` (quiz, predict, cloze, scenario and numeric):
  * draw a card over answers already in the feed store, then read what a learner sees and what the
- * store holds. It lives outside `__tests__/` because Jest runs every file there as a suite. Reset the
- * store in `beforeEach` with `useFeedStore.setState(useFeedStore.getInitialState(), true)`.
+ * store holds. It lives outside `__tests__/` because Jest runs every file there as a suite. Reset
+ * the store in `beforeEach` with `useFeedStore.setState(useFeedStore.getInitialState(), true)`.
  */
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import type { ReactElement } from 'react';

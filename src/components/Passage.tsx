@@ -21,8 +21,8 @@ type PassageProps = {
 
 /**
  * A short piece of prose on a paper ground with an ink rule on its left: a cloze sentence, a
- * scenario, or a quoted snippet, where a code card shows its code. The text wraps to the block's
- * width; nothing scrolls and no line is cut.
+ * scenario, a numeric card's problem, or a quoted snippet, where a code card shows its code. The
+ * text wraps to the block's width; nothing scrolls and no line is cut.
  */
 export function Passage({ text, spokenLabel }: PassageProps) {
   return (

@@ -55,8 +55,8 @@ function passageMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
 }
 
 /**
- * The options of a quiz, cloze, scenario or numeric card: their count, then each option's length, against the
- * card type's limits. None for predict, whose options the limits do not cover.
+ * The options of a quiz, cloze, scenario or numeric card: their count, then each option's length,
+ * against the card type's limits. None for predict, whose options the limits do not cover.
  */
 function optionMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
   if (card.type === 'predict') return [];

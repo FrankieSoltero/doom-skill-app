@@ -77,8 +77,8 @@ const correctOutOfRange = {
 // Every other field is plain text: titles, `prompt`, `options`, `node`, the rating labels, the
 // checkpoint rubric `label`s (short row labels, README.md:130-134), a cloze's `text`, a
 // scenario's `situation` and a numeric card's `problem` (a source sentence, quoted word for word,
-// a situation and a problem, each drawn as a passage), and every code field (`snippet`, `snippetComment`, `code`, `starterCode`), where `*`
-// is Strudel syntax.
+// a situation and a problem, each drawn as a passage), and every code field (`snippet`,
+// `snippetComment`, `code`, `starterCode`), where `*` is Strudel syntax.
 // A concept card's code is optional: a topic without Strudel may send none, and then the card
 // draws no code block and no cycle tiles (M6 hardening Task 8).
 const conceptCardSchema = z.object({
