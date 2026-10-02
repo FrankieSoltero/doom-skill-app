@@ -6,6 +6,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { copy } from '../copy';
 import type {
   ClozeCard as ClozeCardData,
+  NumericCard as NumericCardData,
   PredictCard as PredictCardData,
   QuizCard as QuizCardData,
   ScenarioCard as ScenarioCardData,
@@ -18,18 +19,18 @@ import { CardTitle } from './CardText';
 import { ChoiceBody } from './ChoiceBody';
 
 type ChoiceCardProps = {
-  card: QuizCardData | PredictCardData | ClozeCardData | ScenarioCardData;
+  card: QuizCardData | PredictCardData | ClozeCardData | ScenarioCardData | NumericCardData;
   /** The card's position in its set: its key in the store's answers. */
   index: number;
   /** Called when the learner presses Next card, which is enabled once the card is answered. */
   onNext: () => void;
-  /** `stack` for the quiz, `grid` (two columns) for predict, cloze and scenario. */
+  /** `stack` for the quiz, `grid` (two columns) for predict, cloze, scenario and numeric. */
   layout: 'stack' | 'grid';
   /** Sets the option labels in the code font. */
   mono: boolean;
   /**
    * Drawn between the title and the options, such as the predict card's code block or the
-   * passage of a cloze or scenario card.
+   * passage of a cloze, scenario or numeric card.
    */
   children?: ReactNode;
 };
@@ -40,8 +41,8 @@ function pickedOf(answer: CardAnswer | undefined): number | null {
 }
 
 /**
- * The card the quiz, predict, cloze and scenario share (docs/design/card-feed/README.md:46-49,
- * 59-85): kicker row, title, `children`, the options, the explanation once answered, a flex
+ * The card the quiz, predict, cloze, scenario and numeric share (docs/design/card-feed/README.md:
+ * 46-49, 59-85): kicker row, title, `children`, the options, the explanation once answered, a flex
  * spacer, then Next card, disabled until answered. The frame, the kicker, the estimate and the
  * correct option's color come from the card's type. The answer lives in the feed store at
  * `index`. The card selects only its own pick, so another card's answer does not re-render it.

@@ -78,6 +78,7 @@ export type {
   ConceptCard,
   ExerciseCard,
   FeedSet,
+  NumericCard,
   PlacementCard,
   PlacementQuiz,
   PlacementResult,

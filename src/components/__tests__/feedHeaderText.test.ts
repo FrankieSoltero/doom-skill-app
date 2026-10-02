@@ -48,6 +48,7 @@ describe('segmentColor', () => {
     { type: 'predict', color: cardTheme.predict.bg },
     { type: 'cloze', color: colors.coral },
     { type: 'scenario', color: colors.aqua },
+    { type: 'numeric', color: colors.coral },
     { type: 'review', color: cardTheme.review.bg },
     { type: 'checkpoint', color: cardTheme.checkpoint.bg },
   ] as const)('fills a $type segment with its card color', ({ type, color }) => {

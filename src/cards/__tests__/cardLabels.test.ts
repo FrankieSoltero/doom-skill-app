@@ -20,6 +20,7 @@ describe('cardKickerText', () => {
     ['exercise', 'Exercise · mini-notation'],
     ['cloze', 'Fill in · photosynthesis'],
     ['scenario', 'Scenario · photosynthesis'],
+    ['numeric', 'Work it out · unit conversion'],
   ] as const)('names the %s card by its type and node', (cardType, expected) => {
     expect(cardKickerText(cardsByType[cardType])).toBe(expected);
   });

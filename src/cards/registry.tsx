@@ -8,6 +8,7 @@ import { CheckpointCard } from './CheckpointCard';
 import { ClozeCard } from './ClozeCard';
 import { ConceptCard } from './ConceptCard';
 import { ExerciseCard } from './ExerciseCard';
+import { NumericCard } from './NumericCard';
 import { PredictCard } from './PredictCard';
 import { QuizCard } from './QuizCard';
 import { ReviewCard } from './ReviewCard';
@@ -39,6 +40,7 @@ const renderers: { [Name in CardTypeName]: Renderer<Name> } = {
   predict: (card, { index, onNext }) => <PredictCard card={card} index={index} onNext={onNext} />,
   cloze: (card, { index, onNext }) => <ClozeCard card={card} index={index} onNext={onNext} />,
   scenario: (card, { index, onNext }) => <ScenarioCard card={card} index={index} onNext={onNext} />,
+  numeric: (card, { index, onNext }) => <NumericCard card={card} index={index} onNext={onNext} />,
   review: (card, { index, onNext }) => <ReviewCard card={card} index={index} onNext={onNext} />,
   exercise: (card, { index, active, onNext }) => (
     <ExerciseCard card={card} index={index} active={active} onNext={onNext} />

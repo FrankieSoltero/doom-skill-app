@@ -7,6 +7,7 @@ import { CheckpointCard } from '../CheckpointCard';
 import { ClozeCard } from '../ClozeCard';
 import { ConceptCard } from '../ConceptCard';
 import { ExerciseCard } from '../ExerciseCard';
+import { NumericCard } from '../NumericCard';
 import { PredictCard } from '../PredictCard';
 import { QuizCard } from '../QuizCard';
 import { canRenderCard, renderCard, renderSummary } from '../registry';
@@ -15,7 +16,8 @@ import { ScenarioCard } from '../ScenarioCard';
 import { SummaryCard } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
 
-const { concept, quiz, predict, cloze, scenario, exercise, review, checkpoint } = cardsByType;
+const { concept, quiz, predict, cloze, scenario, numeric, exercise, review, checkpoint } =
+  cardsByType;
 
 // A card of a type the registry does not know, as a newer server could send. The cast is the
 // only way to build one: the schema's types allow no such card.
@@ -112,10 +114,11 @@ describe('renderCard', () => {
   });
 });
 
-describe('renderCard for the cloze and scenario cards', () => {
+describe('renderCard for the cloze, scenario and numeric cards', () => {
   it.each([
     { card: cloze, component: ClozeCard, passage: cloze.text },
     { card: scenario, component: ScenarioCard, passage: scenario.situation },
+    { card: numeric, component: NumericCard, passage: numeric.problem },
   ])('renders and draws a $card.type card, with its passage', ({ card, component, passage }) => {
     const onNext = jest.fn<undefined, []>();
 
@@ -223,7 +226,7 @@ describe('renderSummary', () => {
 });
 
 describe('canRenderCard', () => {
-  it.each([concept, quiz, predict, cloze, scenario, exercise, review, checkpoint])(
+  it.each([concept, quiz, predict, cloze, scenario, numeric, exercise, review, checkpoint])(
     'accepts a $type card',
     (card) => {
       expect(canRenderCard(card)).toBe(true);

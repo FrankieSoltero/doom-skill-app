@@ -7,6 +7,7 @@ import type {
   ConceptCard,
   ExerciseCard,
   FeedSet,
+  NumericCard,
   PredictCard,
   QuizCard,
   ReviewCard,
@@ -68,6 +69,18 @@ const scenario: ScenarioCard = {
   explanation: 'Without light, **photosynthesis** slows, so the plant makes less sugar.',
 };
 
+// A quantitative topic's choice card (M9 plan D): a problem to work out; code computed the answer.
+const numeric: NumericCard = {
+  type: 'numeric',
+  node: 'unit conversion',
+  estSeconds: 60,
+  title: 'How fast in m/s?',
+  problem: 'A car travels at 54 km/h. What is its speed in metres per second?',
+  options: ['15 m/s', '150 m/s', '19.4 m/s', '1.5 m/s'],
+  correct: 0,
+  explanation: 'Divide by 3.6: 54 / 3.6 = **15**',
+};
+
 const exercise: ExerciseCard = {
   type: 'exercise',
   lang: 'strudel',
@@ -109,6 +122,7 @@ export const cardsByType = {
   predict,
   cloze,
   scenario,
+  numeric,
   exercise,
   review,
   checkpoint,

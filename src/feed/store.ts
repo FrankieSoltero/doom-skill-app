@@ -123,6 +123,7 @@ const responses: { [Type in Card['type']]: ResponseRule } = {
   predict: choiceResponse,
   cloze: choiceResponse,
   scenario: choiceResponse,
+  numeric: choiceResponse,
   exercise: (answer) =>
     answer.kind === 'exercise' && answer.result !== null ? { code: answer.code } : null,
   review: (answer) =>

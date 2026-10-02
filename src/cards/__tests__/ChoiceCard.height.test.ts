@@ -1,7 +1,7 @@
-// The height budget of the prose choice cards (M9 plan C Task 22): an answered cloze and an
-// answered scenario at their text limits, summed from the constants their parts draw with, must
+// The height budget of the prose choice cards (M9 plan C Task 22) and the numeric card (M9 plan
+// D): an answered cloze, scenario and numeric card at their text limits, summed from the constants their parts draw with, must
 // fit the card's content box on the reference device. The card body does not scroll, so a change
-// that pushes either card past its page fails here, as SummaryCard.height.test.ts does for the
+// that pushes any of them past its page fails here, as SummaryCard.height.test.ts does for the
 // Summary.
 import { render, screen } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
@@ -16,6 +16,7 @@ import { cardsByType } from '../../feed/testing/sets';
 import { border, space, type } from '../../theme';
 import { CELL_MIN_HEIGHT, EXPLANATION_LINE_HEIGHT, GRID_COLUMNS, OPTION_GAP } from '../ChoiceBody';
 import { ClozeCard } from '../ClozeCard';
+import { NumericCard } from '../NumericCard';
 import { ScenarioCard } from '../ScenarioCard';
 import { SourcesButton } from '../SourcesButton';
 import { gridCells, partsInOrder } from '../testing/choiceCards';
@@ -38,7 +39,7 @@ const NATURAL_LINE = 1.2;
  */
 const LINES = { title: 2, passage: 4, gridOption: 2, explanation: 3 } as const;
 
-type ProseType = 'cloze' | 'scenario';
+type ProseType = 'cloze' | 'scenario' | 'numeric';
 
 /**
  * The card body's children once answered, by test ID, the title aside: kicker row, passage,
@@ -85,6 +86,16 @@ function renderMaximal(cardType: ProseType): void {
     render(createElement(ClozeCard, { card, ...props }));
     return;
   }
+  if (cardType === 'numeric') {
+    const problem = fill(CARD_TEXT_LIMITS.numeric.problem);
+    render(
+      createElement(NumericCard, {
+        card: { ...cardsByType.numeric, ...shared, problem },
+        ...props,
+      }),
+    );
+    return;
+  }
   const situation = fill(CARD_TEXT_LIMITS.scenario.situation);
   const card = { ...cardsByType.scenario, ...shared, situation };
   render(createElement(ScenarioCard, { card, ...props }));
@@ -117,6 +128,7 @@ describe('the prose choice cards height budget', () => {
   it.each([
     { cardType: 'cloze', height: 528 },
     { cardType: 'scenario', height: 528 },
+    { cardType: 'numeric', height: 528 },
   ] as const)('an answered $cardType at its limits: $height points, inside 543.5', (budget) => {
     const iconSize = sourcesIconSize();
     renderMaximal(budget.cardType);

@@ -87,6 +87,7 @@ export const copy = deepFreeze({
     predict: 'Predict',
     cloze: 'Fill in',
     scenario: 'Scenario',
+    numeric: 'Work it out',
     exercise: 'Exercise',
     review: 'Review',
     checkpoint: 'Checkpoint',

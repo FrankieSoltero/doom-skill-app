@@ -69,14 +69,15 @@ const correctOutOfRange = {
 // "Wrap steps in **< >** and ...". Nothing else is markup, and an unpaired `**` is shown as
 // typed. Only `apps/mobile/src/components/BoldText.tsx` renders it. The fields it applies to:
 // - concept `body` (README.md:53)
-// - quiz, predict, cloze and scenario `explanation` (README.md:73, :85; M9 plan C Task 4)
+// - quiz, predict, cloze, scenario and numeric `explanation` (README.md:73, :85; M9 plan C
+//   Task 4; a numeric card bolds its answer, as `54 / 3.6 = **15**`)
 // - review `answer` (README.md:118)
 // - exercise `passMsg` and `failMsg`: prose shown to the learner beside the pass and fail badges
 //   (README.md:107-108)
 // Every other field is plain text: titles, `prompt`, `options`, `node`, the rating labels, the
-// checkpoint rubric `label`s (short row labels, README.md:130-134), a cloze's `text` and a
-// scenario's `situation` (a source sentence, quoted word for word, and a situation, each drawn as
-// a passage), and every code field (`snippet`, `snippetComment`, `code`, `starterCode`), where `*`
+// checkpoint rubric `label`s (short row labels, README.md:130-134), a cloze's `text`, a
+// scenario's `situation` and a numeric card's `problem` (a source sentence, quoted word for word,
+// a situation and a problem, each drawn as a passage), and every code field (`snippet`, `snippetComment`, `code`, `starterCode`), where `*`
 // is Strudel syntax.
 // A concept card's code is optional: a topic without Strudel may send none, and then the card
 // draws no code block and no cycle tiles (M6 hardening Task 8).
@@ -123,36 +124,31 @@ const predictCardSchema = z
   })
   .refine(correctIsAnOption, correctOutOfRange);
 
-// A prose topic's two choice cards (M9 plan C): a sentence with a blank (`___`) to fill, and a
-// situation to judge. Each is drawn as a quiz with its text in a passage above the options.
+// The choice cards that draw a passage above the options, each as a quiz: a prose topic's cloze (a
+// sentence with a blank, `___`, to fill) and scenario (a situation to judge), M9 plan C, and a
+// quantitative topic's numeric card (a problem to work out), M9 plan D. Each adds its passage
+// field (`text`, `situation`, `problem`) to these shared fields.
+const passageChoiceFields = {
+  id: cardId,
+  sources: cardSources,
+  node: text,
+  estSeconds: seconds,
+  title: text,
+  options: z.array(text).min(2),
+  correct: count,
+  explanation: text,
+};
+
 const clozeCardSchema = z
-  .object({
-    id: cardId,
-    sources: cardSources,
-    type: z.literal('cloze'),
-    node: text,
-    estSeconds: seconds,
-    title: text,
-    text,
-    options: z.array(text).min(2),
-    correct: count,
-    explanation: text,
-  })
+  .object({ ...passageChoiceFields, type: z.literal('cloze'), text })
   .refine(correctIsAnOption, correctOutOfRange);
 
 const scenarioCardSchema = z
-  .object({
-    id: cardId,
-    sources: cardSources,
-    type: z.literal('scenario'),
-    node: text,
-    estSeconds: seconds,
-    title: text,
-    situation: text,
-    options: z.array(text).min(2),
-    correct: count,
-    explanation: text,
-  })
+  .object({ ...passageChoiceFields, type: z.literal('scenario'), situation: text })
+  .refine(correctIsAnOption, correctOutOfRange);
+
+const numericCardSchema = z
+  .object({ ...passageChoiceFields, type: z.literal('numeric'), problem: text })
   .refine(correctIsAnOption, correctOutOfRange);
 
 const exerciseCardSchema = z.object({
@@ -216,6 +212,7 @@ export const cardSchema = z.discriminatedUnion('type', [
   predictCardSchema,
   clozeCardSchema,
   scenarioCardSchema,
+  numericCardSchema,
   exerciseCardSchema,
   reviewCardSchema,
   checkpointCardSchema,
@@ -405,6 +402,7 @@ export type QuizCard = z.infer<typeof quizCardSchema>;
 export type PredictCard = z.infer<typeof predictCardSchema>;
 export type ClozeCard = z.infer<typeof clozeCardSchema>;
 export type ScenarioCard = z.infer<typeof scenarioCardSchema>;
+export type NumericCard = z.infer<typeof numericCardSchema>;
 export type ExerciseCard = z.infer<typeof exerciseCardSchema>;
 export type ReviewCard = z.infer<typeof reviewCardSchema>;
 export type CheckpointCard = z.infer<typeof checkpointCardSchema>;

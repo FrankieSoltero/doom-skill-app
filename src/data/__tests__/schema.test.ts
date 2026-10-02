@@ -9,6 +9,7 @@ import type {
   ConceptCard,
   ExerciseCard,
   FeedSet,
+  NumericCard,
   PredictCard,
   QuizCard,
   ReviewCard,
@@ -30,6 +31,7 @@ type NamedCards = {
   predict: PredictCard;
   cloze: ClozeCard;
   scenario: ScenarioCard;
+  numeric: NumericCard;
   exercise: ExerciseCard;
   review: ReviewCard;
   checkpoint: CheckpointCard;
@@ -209,7 +211,7 @@ describe('feedSetSchema: conditions for cards from a server', () => {
   });
 });
 
-describe('cloze and scenario cards (M9 plan C)', () => {
+describe('cloze, scenario and numeric cards (M9 plans C and D)', () => {
   const card = (n: number) => ({
     id: `00000000-0000-4000-8000-00000000040${String(n)}`,
     sources: [
@@ -228,20 +230,22 @@ describe('cloze and scenario cards (M9 plan C)', () => {
   });
   const CLOZE = { ...card(1), type: 'cloze', text: 'Plants turn light into ___ energy.' };
   const SCENARIO = { ...card(2), type: 'scenario', situation: 'A plant sits in the dark.' };
+  const NUMERIC = { ...card(3), type: 'numeric', problem: 'A car covers 54 km in 3.6 h. Speed?' };
 
-  it('parses a set from the API holding both, after the fixture cards, as sent', () => {
-    const input = { ...feedSetInput([...fixture.cards, CLOZE, SCENARIO]), feedDate: '2026-10-02' };
-    const set = apiSetSchema.parse(input);
+  it('parses a set from the API holding all three, after the fixture cards, as sent', () => {
+    const cards = [...fixture.cards, CLOZE, SCENARIO, NUMERIC];
+    const set = apiSetSchema.parse({ ...feedSetInput(cards), feedDate: '2026-10-02' });
 
     expect(set.cards.map((item) => item.type)).toEqual([
       ...FIXTURE_CARD_TYPES,
       'cloze',
       'scenario',
+      'numeric',
     ]);
-    expect(set.cards.slice(-2)).toEqual([CLOZE, SCENARIO]);
+    expect(set.cards.slice(-3)).toEqual([CLOZE, SCENARIO, NUMERIC]);
   });
 
-  it.each([CLOZE, SCENARIO])(
+  it.each([CLOZE, SCENARIO, NUMERIC])(
     'refuses a $type card whose correct index is past its options',
     (item) => {
       const result = cardSchema.safeParse({ ...item, correct: 3 });
@@ -250,19 +254,20 @@ describe('cloze and scenario cards (M9 plan C)', () => {
     },
   );
 
-  it.each([CLOZE, SCENARIO])('refuses a $type card with one option', (item) => {
+  it.each([CLOZE, SCENARIO, NUMERIC])('refuses a $type card with one option', (item) => {
     const result = cardSchema.safeParse({ ...item, options: ['chemical'], correct: 0 });
 
     expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(['options']);
   });
 
-  it('refuses a cloze with no text and a scenario with no situation', () => {
+  it('refuses a cloze with no text, a scenario with no situation, a numeric with no problem', () => {
     const paths = [
       cardSchema.safeParse({ ...CLOZE, text: '' }),
       cardSchema.safeParse({ ...SCENARIO, situation: undefined }),
+      cardSchema.safeParse({ ...NUMERIC, problem: '' }),
     ].map((result) => result.error?.issues.map((issue) => issue.path.join('.')));
 
-    expect(paths).toEqual([['text'], ['situation']]);
+    expect(paths).toEqual([['text'], ['situation'], ['problem']]);
   });
 });
 

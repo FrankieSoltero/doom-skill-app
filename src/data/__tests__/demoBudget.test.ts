@@ -16,7 +16,10 @@ type Measure = { where: string; size: number; limit: number };
 /** Builds one card's measure of `field`. */
 type MeasureOf = (field: string, size: number, limit: number) => Measure;
 /** The cards built on `ChoiceCard`: a title, an explanation and options. */
-type ChoiceCardData = Extract<Card, { type: 'quiz' | 'predict' | 'cloze' | 'scenario' }>;
+type ChoiceCardData = Extract<
+  Card,
+  { type: 'quiz' | 'predict' | 'cloze' | 'scenario' | 'numeric' }
+>;
 
 /** The demo sets as the fixture source serves them: set 1, then sets 2 to 4. */
 const SETS: FeedSet[] = [fixture, ...extra.sets].map(({ cards, summary }, at) =>
@@ -36,8 +39,8 @@ function solutionOf(setNumber: number): string {
 }
 
 /**
- * The passage of a cloze (`text`) or a scenario (`situation`), measured as one; none for a quiz
- * or predict.
+ * The passage of a cloze (`text`), a scenario (`situation`) or a numeric card (`problem`),
+ * measured as one; none for a quiz or predict.
  */
 function passageMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
   if (card.type === 'cloze')
@@ -45,11 +48,14 @@ function passageMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
   if (card.type === 'scenario') {
     return [measure('situation', card.situation.length, CARD_TEXT_LIMITS.scenario.situation)];
   }
+  if (card.type === 'numeric') {
+    return [measure('problem', card.problem.length, CARD_TEXT_LIMITS.numeric.problem)];
+  }
   return [];
 }
 
 /**
- * The options of a quiz, cloze or scenario: their count, then each option's length, against the
+ * The options of a quiz, cloze, scenario or numeric card: their count, then each option's length, against the
  * card type's limits. None for predict, whose options the limits do not cover.
  */
 function optionMeasures(card: ChoiceCardData, measure: MeasureOf): Measure[] {
@@ -70,7 +76,8 @@ function measuresOf(card: Card, at: string, setNumber: number): Measure[] {
     case 'quiz':
     case 'predict':
     case 'cloze':
-    case 'scenario': {
+    case 'scenario':
+    case 'numeric': {
       const { title, explanation } = CARD_TEXT_LIMITS[card.type];
       return [
         measure('title', card.title.length, title),
@@ -137,34 +144,38 @@ describe('demo text limits', () => {
     expect(VERDICT_CHARS).toBe(Math.max(copy.correct.length, copy.notQuite.length) + 1);
   });
 
-  it('names a cloze or scenario passage over its limit; the demo has neither', () => {
+  it('names a cloze, scenario or numeric passage over its limit; the demo has none', () => {
     const [set1] = SETS;
     if (set1 === undefined) throw new Error('No demo set 1');
     const long = 'x'.repeat(CARD_TEXT_LIMITS.cloze.text + 1);
     const cards = [
       { ...cardsByType.cloze, text: long },
       { ...cardsByType.scenario, situation: long },
+      { ...cardsByType.numeric, problem: long },
     ];
 
     expect(overLimit({ ...set1, cards })).toStrictEqual([
       'set 1 cloze text',
       'set 1 scenario situation',
+      'set 1 numeric problem',
     ]);
   });
 
-  it('names a cloze or scenario option over its limit, and a fifth option', () => {
+  it('names a cloze, scenario or numeric option over its limit, and a fifth option', () => {
     const [set1] = SETS;
     if (set1 === undefined) throw new Error('No demo set 1');
     const long = 'x'.repeat(CARD_TEXT_LIMITS.cloze.option + 1);
     const cards = [
       { ...cardsByType.cloze, options: [long, 'b', 'c', 'd'] },
       { ...cardsByType.scenario, options: ['a', 'b', 'c', 'd', long] },
+      { ...cardsByType.numeric, options: ['a', long, 'c', 'd'] },
     ];
 
     expect(overLimit({ ...set1, cards })).toStrictEqual([
       'set 1 cloze option 1',
       'set 1 scenario options',
       'set 1 scenario option 5',
+      'set 1 numeric option 2',
     ]);
   });
 

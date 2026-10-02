@@ -8,6 +8,7 @@ const CARD_TYPE_MEMBERS: Record<CardType, true> = {
   predict: true,
   cloze: true,
   scenario: true,
+  numeric: true,
   exercise: true,
   review: true,
   checkpoint: true,
@@ -51,6 +52,10 @@ describe('theme', () => {
   it('draws a cloze card in the quiz colors and a scenario card in the predict colors (Q5)', () => {
     expect(cardTheme.cloze).toStrictEqual(cardTheme.quiz);
     expect(cardTheme.scenario).toStrictEqual(cardTheme.predict);
+  });
+
+  it('draws a numeric card in the quiz colors (M9 plan D, R4)', () => {
+    expect(cardTheme.numeric).toStrictEqual(cardTheme.quiz);
   });
 
   it('makes every string leaf of colors, including neutral.*, a hex or rgba() color', () => {

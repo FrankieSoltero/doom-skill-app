@@ -4,7 +4,8 @@ import type { CheckpointGrade } from '../checkpoint';
 import { isAnswered } from '../gating';
 import { cardsByType } from '../testing/sets';
 
-const { concept, quiz, predict, cloze, scenario, exercise, review, checkpoint } = cardsByType;
+const { concept, quiz, predict, cloze, scenario, numeric, exercise, review, checkpoint } =
+  cardsByType;
 
 const failedGrade: CheckpointGrade = { results: [], passCount: 0, passed: false, feedback: 'fail' };
 const passedGrade: CheckpointGrade = { results: [], passCount: 1, passed: true, feedback: 'all' };
@@ -15,7 +16,7 @@ describe('isAnswered for concept and choice cards', () => {
     expect(isAnswered(concept, { kind: 'choice', picked: 0 })).toBe(true);
   });
 
-  it.each([quiz, predict, cloze, scenario])('needs a pick on a $type card', (card) => {
+  it.each([quiz, predict, cloze, scenario, numeric])('needs a pick on a $type card', (card) => {
     expect(isAnswered(card, undefined)).toBe(false);
     expect(isAnswered(card, { kind: 'choice', picked: 1 })).toBe(true);
   });
