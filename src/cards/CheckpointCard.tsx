@@ -186,6 +186,38 @@ function CheckpointResult({
   );
 }
 
+type CheckpointEditorProps = {
+  card: CheckpointCardData;
+  code: string;
+  onChange: (code: string) => void;
+  /** What the keypad's Submit does (P16). */
+  onAction: () => void;
+};
+
+/**
+ * The editor on the card's ink panel: prose for a written card (`WrittenEditor`, with the system
+ * keyboard), else code, with the card's keypad when it is served `keys` (M9 plan K, P3).
+ */
+function CheckpointEditor({ card, code, onChange, onAction }: CheckpointEditorProps) {
+  return card.written === true ? (
+    <WrittenEditor
+      value={code}
+      onChange={onChange}
+      caret={cardTheme.checkpoint.bg}
+      height={EDITOR_HEIGHT}
+    />
+  ) : (
+    <CodeEditor
+      value={code}
+      onChange={onChange}
+      caret={cardTheme.checkpoint.bg}
+      height={EDITOR_HEIGHT}
+      keys={card.keys ?? null}
+      onAction={onAction}
+    />
+  );
+}
+
 type CheckpointCardProps = {
   card: CheckpointCardData;
   /** The card's position in its set: its key in the store's answers. */
@@ -217,12 +249,20 @@ type CheckpointCardProps = {
  * grade. The card then says it was sent and offers Finish today; the server's grade shows under it
  * as for code. Above the editor it draws the milestone's task (`WrittenTask`, Task 8); a card with
  * no task, or a blank one, draws none. A code card is served its task too and draws none.
+ *
+ * A code card served with `keys` gives them to its editor (M9 plan K, P3); the keypad's Submit
+ * does what the button's Submit or Resubmit would, and nothing while it is disabled or reads
+ * Finish today. A written card keeps the system keyboard.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
   const { code, status, grade, edit, submit } = useCheckpointAnswer(card, index, server);
   useDismissKeyboardWhenLeft(active);
   const button = buttonState(status, grade, code);
+  // The keypad's Submit submits as the button would, and does nothing when the button would not.
+  const onSubmitKey = () => {
+    if (!button.disabled && !button.finishes) submit();
+  };
   const written = card.written === true;
   const task = written ? (card.task ?? '') : '';
   const items =
@@ -240,21 +280,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
         <CardTitle size="s">{card.title}</CardTitle>
         {task.trim() === '' ? null : <WrittenTask task={task} title={card.title} />}
         <View testID="checkpoint-editor-panel" style={styles.panel}>
-          {written ? (
-            <WrittenEditor
-              value={code}
-              onChange={edit}
-              caret={cardTheme.checkpoint.bg}
-              height={EDITOR_HEIGHT}
-            />
-          ) : (
-            <CodeEditor
-              value={code}
-              onChange={edit}
-              caret={cardTheme.checkpoint.bg}
-              height={EDITOR_HEIGHT}
-            />
-          )}
+          <CheckpointEditor card={card} code={code} onChange={edit} onAction={onSubmitKey} />
         </View>
         {written ? null : <RubricList items={items} />}
         <CheckpointResult grade={grade} card={card} sent={status === 'sent'} />

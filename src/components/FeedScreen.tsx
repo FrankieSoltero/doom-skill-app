@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useEffectEvent } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
@@ -10,6 +10,7 @@ import { SourcesTarget } from '../cards/SourcesButton';
 import { canRenderCard, renderCard, renderSummary } from '../cards/registry';
 import { copy } from '../copy';
 import type { Card, CardSource, FeedSet } from '../data';
+import { useKeypad } from '../feed/keypad';
 import { useFeedStore } from '../feed/store';
 import { useFeedSession } from '../feed/useFeedSession';
 import { colors, type } from '../theme';
@@ -18,6 +19,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { ErrorScreen } from './ErrorScreen';
 import { FeedHeader } from './FeedHeader';
 import { FeedPager } from './FeedPager';
+import { KeypadSheet } from './KeypadSheet';
 import { PrimaryButton } from './PrimaryButton';
 import { Toast } from './Toast';
 
@@ -170,6 +172,44 @@ function FailedSummary({ set, status, onKeepGoing }: FailedSummaryProps) {
   );
 }
 
+/** A tap outside the editor: hides the keypad and blurs the editor. */
+function hideKeypad() {
+  useKeypad.getState().hide();
+  Keyboard.dismiss();
+}
+
+/**
+ * The code keypad over the bottom of the feed (M9 plan K, P7): the sheet, which draws itself only
+ * while an editor shows it, and above it, while it shows, a backdrop that hides it on a tap. The
+ * backdrop is not for a screen reader, which has the sheet's escape action. With the sheet hidden
+ * the layer is empty and lets every touch through. The keypad hides when the card at `index`
+ * changes, so it never stays up for a card that has left the screen.
+ *
+ * The feed ends at the tab bar, which pads for the home indicator, so the sheet needs no bottom
+ * inset of its own.
+ */
+function KeypadLayer({ index }: { index: number }) {
+  const shown = useKeypad((state) => state.active !== null);
+  useEffect(() => {
+    useKeypad.getState().hide();
+  }, [index]);
+
+  return (
+    <View testID="keypad-layer" pointerEvents="box-none" style={styles.keypadLayer}>
+      {shown ? (
+        <Pressable
+          testID="keypad-backdrop"
+          accessible={false}
+          importantForAccessibility="no"
+          onPress={hideKeypad}
+          style={styles.fill}
+        />
+      ) : null}
+      <KeypadSheet />
+    </View>
+  );
+}
+
 type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
 
 /**
@@ -222,6 +262,7 @@ function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFee
         onBlocked={session.blocked}
         overlay={<Toast message={copy.answerToContinue} visible={session.toastVisible} />}
       />
+      <KeypadLayer index={session.index} />
     </>
   );
 }
@@ -312,6 +353,14 @@ export function FeedScreen({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper },
   fill: { flex: 1 },
+  keypadLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { ...type.body, color: colors.neutral[700] },
 });

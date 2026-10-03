@@ -11,6 +11,7 @@ import { ResultBadge } from '../components/ResultBadge';
 import { spokenText } from '../components/spokenText';
 import { copy } from '../copy';
 import type { ExerciseCard as ExerciseCardData } from '../data';
+import type { Keypad } from '../data/keypadSchema';
 import type { CardAnswer } from '../feed/answers';
 import { checkExercise, parseGrid } from '../feed/exercise';
 import { useFeedStore } from '../feed/store';
@@ -53,6 +54,10 @@ type EditorFrameProps = {
   step: number | null;
   /** Whether to draw the beat grid: only for code the app can play. */
   grid: boolean;
+  /** The card's keypad, for the editor; `null` keeps the system keyboard (M9 plan K). */
+  keys: Keypad | null;
+  /** What the keypad's ▶ Run does: the card's Run (P16). */
+  onAction: () => void;
 };
 
 /**
@@ -60,12 +65,19 @@ type EditorFrameProps = {
  * The border is a view that holds nothing (see `FadedBorder`), and the content sits inside it.
  * Code with no pattern has no grid, and then no divider; nor has an exercise without `grid`.
  */
-function EditorFrame({ code, onChange, step, grid }: EditorFrameProps) {
+function EditorFrame({ code, onChange, step, grid, keys, onAction }: EditorFrameProps) {
   const rows = useMemo(() => (grid ? parseGrid(code) : []), [code, grid]);
   return (
     <View testID="exercise-editor-frame" style={styles.frame}>
       <FadedBorder opacity={FRAME_LINE_OPACITY} />
-      <CodeEditor value={code} onChange={onChange} caret={colors.lime} height={EDITOR_HEIGHT} />
+      <CodeEditor
+        value={code}
+        onChange={onChange}
+        caret={colors.lime}
+        height={EDITOR_HEIGHT}
+        keys={keys}
+        onAction={onAction}
+      />
       {rows.length === 0 ? null : <View testID="exercise-divider" style={styles.divider} />}
       {grid ? <BeatGrid rows={rows} step={step} /> : null}
     </View>
@@ -148,6 +160,8 @@ function ExerciseLayout({ card, result, onNext, children }: ExerciseLayoutProps)
  * needs a ready player, no audio error and some code; editing clears an audio error, and playing
  * goes on until the learner presses Play again or Stop. The audio stops when the card is left, its
  * screen loses focus or the app leaves the foreground.
+ *
+ * A card served with `keys` gives them to its editor (M9 plan K); the keypad's ▶ Run is Play.
  */
 function StrudelExerciseCard({ card, index, active, onNext }: ExerciseCardProps) {
   const strudel = useStrudel(playerOwner(card, index));
@@ -183,6 +197,10 @@ function StrudelExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
     strudel.clearError();
   };
   const canPlay = strudel.status === 'ready' && strudel.error === null && answer.code.trim() !== '';
+  // The keypad's ▶ Run is Play, and does nothing while Play is disabled.
+  const onRun = () => {
+    if (canPlay) onPlay();
+  };
   // One message at a time, whichever happened last (see useMessageSlot). The stored result, and
   // so Next card, do not change when a notice covers the badge.
   const { result } = answer;
@@ -196,6 +214,8 @@ function StrudelExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
           onChange={onChange}
           step={strudel.playing ? strudel.step : null}
           grid
+          keys={card.keys ?? null}
+          onAction={onRun}
         />
         <ExerciseControls
           playing={strudel.playing}
@@ -217,7 +237,8 @@ function StrudelExerciseCard({ card, index, active, onNext }: ExerciseCardProps)
 
 /**
  * An exercise the app checks but cannot play (`sql`; M6 hardening Task 8): the editor with no
- * grid, Check alone, and the check result. It never starts the Strudel player.
+ * grid, Check alone, and the check result. It never starts the Strudel player. Its keypad's
+ * ▶ Run, when it is served `keys`, is Check.
  */
 function CheckOnlyExerciseCard({ card, index, active, onNext }: ExerciseCardProps) {
   const answer = useExerciseAnswer(card, index);
@@ -230,7 +251,14 @@ function CheckOnlyExerciseCard({ card, index, active, onNext }: ExerciseCardProp
 
   return (
     <ExerciseLayout card={card} result={answer.result} onNext={onNext}>
-      <EditorFrame code={answer.code} onChange={answer.edit} step={null} grid={false} />
+      <EditorFrame
+        code={answer.code}
+        onChange={answer.edit}
+        step={null}
+        grid={false}
+        keys={card.keys ?? null}
+        onAction={onCheck}
+      />
       <ExerciseControls onCheck={onCheck} />
       {badge === null ? null : <ResultBadge {...badge} />}
     </ExerciseLayout>
