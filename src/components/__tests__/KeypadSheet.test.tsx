@@ -94,8 +94,9 @@ describe('KeypadSheet', () => {
       height: 292,
       backgroundColor: colors.ink,
       padding: 12,
-      gap: 8,
     });
+    // The keypad, the sheet's one child, holds the gaps between its rows.
+    expect(viewStyleOf(sheet())).not.toHaveProperty('gap');
     expect(sheet().props.accessibilityViewIsModal).toBe(false);
     expect(screen.getByTestId('keypad-group-calls')).toBeOnTheScreen();
   });

@@ -2,10 +2,11 @@
 // served `keys` to its editor, and the sheet's action key (Submit) submits as the card's Submit
 // button does. A written checkpoint keeps the system keyboard. With two editors in one set, the
 // keypad shows the focused one's keys only. The sheet is drawn beside the cards, as the feed
-// screen draws it.
+// screen draws it. A served card posts over the real API client and a fake network.
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
 
+import { json, serveApi } from '../../api/testing/fakeApi';
 import { KeypadSheet } from '../../components/KeypadSheet';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
 import type { Keypad } from '../../data/keypadSchema';
@@ -27,12 +28,16 @@ jest.mock('../../strudel/useStrudel', () => ({
   ...jest.requireActual<object>('../../strudel/useStrudel'),
   useStrudel: jest.fn(),
 }));
+jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 const STACK = { label: 'stack("")', insert: 'stack("")', caret: 2 };
 const S_CALL = { label: 's("")', insert: 's("")', caret: 2 };
 const KEYS: Keypad = { groups: [{ name: 'calls', keys: [S_CALL] }], action: 'submit' };
 const EXERCISE_KEYS: Keypad = { groups: [{ name: 'calls', keys: [STACK] }], action: 'run' };
 const CODE = 's("bd ~ sd ~")';
+const MILESTONE = '0b7f6c1e-0000-4000-8000-000000000001';
+const SUBMISSION = '0b7f6c1e-0000-4000-8000-0000000000aa';
+const PENDING = { status: 'pending', passed: null, score: null, feedback: null, criteria: null };
 
 const demo = setUpCheckpointCardTests();
 const exerciseDemo = setUpExerciseCardTests();
@@ -131,6 +136,62 @@ describe('CheckpointCard keypad', () => {
 
     expect(useKeypad.getState().active).toBeNull();
     expect(editor().props).not.toHaveProperty('showSoftInputOnFocus');
+  });
+});
+
+describe('CheckpointCard keypad Submit once the card is submitted', () => {
+  const advance = (ms: number) =>
+    act(async () => {
+      await jest.advanceTimersByTimeAsync(ms);
+    });
+
+  /**
+   * A served card (it has an id) with keys and its starter code, which passes, submitted with the
+   * keypad's Submit. Returns the posts the fake network has been sent so far.
+   */
+  function submitServed() {
+    jest.useFakeTimers();
+    const requests = serveApi({
+      [`POST /milestones/${MILESTONE}/submit`]: [
+        json(202, { submission_id: SUBMISSION, status: 'pending' }),
+      ],
+      [`GET /checkpoints/${SUBMISSION}`]: [json(200, PENDING)],
+    });
+    renderWithSheet({ ...withKeys(), id: MILESTONE });
+    fireEvent(editor(), 'focus');
+    pressKey('Submit');
+    return () => requests.filter((request) => request.method === 'POST');
+  }
+
+  it('grades and posts nothing more on Submit after a pass (the button reads Finish today)', async () => {
+    const posts = submitServed();
+    await advance(GRADING_MS);
+    const graded = storedAnswer();
+    expect(graded).toMatchObject({ status: 'done', grade: { passed: true } });
+    expect(screen.getByRole('button', { name: 'Finish today' })).toBeOnTheScreen();
+    expect(posts()).toHaveLength(1);
+
+    fireEvent(editor(), 'focus');
+    pressKey('Submit');
+    await advance(GRADING_MS);
+
+    expect(storedAnswer()).toBe(graded);
+    expect(posts()).toHaveLength(1);
+  });
+
+  it('grades and posts nothing more on Submit while grading: the first grading ends on time', async () => {
+    const posts = submitServed();
+    await advance(GRADING_MS / 2);
+    const grading = storedAnswer();
+    expect(grading).toMatchObject({ status: 'grading' });
+
+    fireEvent(editor(), 'focus');
+    pressKey('Submit');
+    expect(storedAnswer()).toBe(grading);
+    await advance(GRADING_MS / 2);
+
+    expect(storedAnswer()).toMatchObject({ status: 'done', grade: { passed: true } });
+    expect(posts()).toHaveLength(1);
   });
 });
 

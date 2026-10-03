@@ -100,6 +100,22 @@ describe('ExerciseCard keypad', () => {
     expect(storedAnswer()).toStrictEqual({ kind: 'exercise', code: 's("")', result: null });
   });
 
+  it.each([
+    ['absent', demo],
+    ['null', (): ExerciseCardData => ({ ...demo(), keys: null })],
+  ])('keeps the system keyboard and no keypad when its keys are %s', (_, card) => {
+    renderWithSheet(card());
+
+    focus();
+
+    expect(useKeypad.getState().active).toBeNull();
+    expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+    expect(editor().props).not.toHaveProperty('showSoftInputOnFocus');
+    expect(useFeedStore.getState().answers).toStrictEqual({});
+  });
+});
+
+describe('ExerciseCard keypad ▶ Run', () => {
   it('runs the code on ▶ Run as Play does, then hides the sheet', () => {
     const dismiss = jest.spyOn(Keyboard, 'dismiss');
     renderWithSheet(withKeys());
@@ -112,6 +128,18 @@ describe('ExerciseCard keypad', () => {
     expect(dismiss).toHaveBeenCalled();
     expect(shownKeys()).toBeNull();
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+  });
+
+  it('plays the code again on ▶ Run while it plays: the key never stops it', () => {
+    renderWithSheet(withKeys());
+    typeCode('s("bd*2")');
+    setAudio({ playing: true });
+    focus();
+
+    pressKey('▶ Run');
+
+    expect(play.mock.calls).toStrictEqual([['s("bd*2")']]);
+    expect(strudelActions.stop).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -148,19 +176,5 @@ describe('ExerciseCard keypad', () => {
     });
     expect(play).not.toHaveBeenCalled();
     expect(shownKeys()).toBeNull();
-  });
-
-  it.each([
-    ['absent', demo],
-    ['null', (): ExerciseCardData => ({ ...demo(), keys: null })],
-  ])('keeps the system keyboard and no keypad when its keys are %s', (_, card) => {
-    renderWithSheet(card());
-
-    focus();
-
-    expect(useKeypad.getState().active).toBeNull();
-    expect(screen.queryByTestId('keypad-sheet')).toBeNull();
-    expect(editor().props).not.toHaveProperty('showSoftInputOnFocus');
-    expect(useFeedStore.getState().answers).toStrictEqual({});
   });
 });

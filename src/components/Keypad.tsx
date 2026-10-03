@@ -8,7 +8,7 @@ import type { PressableStateCallbackType, ViewStyle } from 'react-native';
 import { copy } from '../copy';
 import type { Keypad as KeypadSpec, KeySpec } from '../data/keypadSchema';
 import type { KeyPress } from '../feed/keypad';
-import { colors, fonts, hardShadow } from '../theme';
+import { border, colors, fonts, hardShadow } from '../theme';
 
 // The code keypad's values (M9 plan K, P4, P11 and P17; spec 3.2), from the "DoomSkill Keypad"
 // mock-up.
@@ -18,8 +18,6 @@ const KEY_HEIGHT = 44;
 const CONTROL_HEIGHT = 52;
 /** Gap between keys and between lines. */
 const GAP = 8;
-/** A key's border. */
-const BORDER = 1;
 /** Size of a code key's label, in the code font. */
 const CODE_SIZE = 13;
 /** Size of a word key's label (ABC, the action key), in the heading font. */
@@ -123,9 +121,10 @@ function GroupRow({
       accessibilityLabel={copy.keypadGroup[name]}
       style={styles.line}
     >
-      {specs.map((spec) => (
+      {/* Keyed by place in the row, so two keys with one label never share a React key. */}
+      {specs.map((spec, index) => (
         <Key
-          key={spec.label}
+          key={index}
           label={spec.label}
           look={look}
           size={styles.groupKey}
@@ -240,7 +239,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: BORDER,
+    borderWidth: border.hairline,
     borderColor: colors.ink,
   },
   code: { fontFamily: fonts.mono, fontSize: CODE_SIZE, color: colors.ink },

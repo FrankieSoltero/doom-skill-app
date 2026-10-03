@@ -124,6 +124,15 @@ describe('keypad store: ABC and hide by editor (P15)', () => {
     expect(useKeypad.getState().active).toEqual({ keys, editorId: 'second' });
   });
 
+  it('keeps the same state on a hide from an editor that holds nothing, so nothing re-renders', () => {
+    useKeypad.getState().show(keys, 'second');
+    const before = useKeypad.getState();
+
+    useKeypad.getState().hide('first');
+
+    expect(useKeypad.getState()).toBe(before);
+  });
+
   it('a hide from the shown editor hides the keypad (P15)', () => {
     useKeypad.getState().show(keys, 'editor');
 

@@ -83,7 +83,7 @@ describe("a code card's keys", () => {
     [
       'a caret past the start of the insert',
       withCalls([{ ...CALL, caret: 6 }]),
-      ['keys.groups.0.keys.0'],
+      ['keys.groups.0.keys.0.caret'],
     ],
     ['a negative caret', withCalls([{ ...CALL, caret: -1 }]), ['keys.groups.0.keys.0.caret']],
     ['a fractional caret', withCalls([{ ...CALL, caret: 0.5 }]), ['keys.groups.0.keys.0.caret']],
@@ -117,6 +117,17 @@ describe("a code card's keys", () => {
     ],
   ])('refuse %s', (_name, keys, paths) => {
     expect(codeCards.map((card) => keysIssues(card, keys))).toEqual([paths, paths]);
+  });
+
+  it('name the caret and say why when it is past the start of the insert', () => {
+    const result = keySpecSchema.safeParse({ ...CALL, caret: 6 });
+
+    expect(result.success ? [] : result.error.issues).toEqual([
+      expect.objectContaining({
+        message: 'caret must not exceed the insert length',
+        path: ['caret'],
+      }),
+    ]);
   });
 
   it('read a key of 12 characters inserting 40, with its caret at the start', () => {

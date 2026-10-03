@@ -2,7 +2,7 @@
 // editor with keys shows them while focused instead of the system keyboard, applies each key
 // press to its text and caret, and hands over to the system keyboard on ABC until it blurs. An
 // editor without keys never touches the keypad store.
-import { type RefObject, useEffect, useId, useState } from 'react';
+import { type RefObject, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
 
 import type { Keypad } from '../data/keypadSchema';
@@ -62,12 +62,12 @@ function edit(
 }
 
 /**
- * Wires one code editor to the keypad. With `keys`: registers a press handler under the editor's
- * own id for as long as it is mounted, shows the keys on focus and hides them on blur, keeps the
- * system keyboard off while the keypad is in use, and controls the input's selection so a press
- * can place the caret. After ABC for this editor the system keyboard is on and the input is
- * focused again so it opens; the editor's blur ends that turn. The feed's focus flag
- * (`useFeedInputFocus`) is set either way.
+ * Wires one code editor to the keypad. With `keys`: registers one press handler under the
+ * editor's own id for as long as it is mounted (it reads the latest render's text, caret and
+ * callbacks), shows the keys on focus and hides them on blur, keeps the system keyboard off while
+ * the keypad is in use, and controls the input's selection so a press can place the caret. After
+ * ABC for this editor the system keyboard is on and the input is focused again so it opens; the
+ * editor's blur ends that turn. The feed's focus flag (`useFeedInputFocus`) is set either way.
  */
 export function useKeypadEditor({
   input,
@@ -82,20 +82,26 @@ export function useKeypadEditor({
   const hasKeys = keys != null;
   const systemKeyboard = useKeypad((state) => !hasKeys || state.systemKeyboard === id);
   const shown = within(selection, value.length);
+  // What the press handler reads: the latest render's, so the handler is registered once.
+  const latest = useRef({ value, selection, onChange, onAction });
+  useLayoutEffect(() => {
+    latest.current = { value, selection, onChange, onAction };
+  });
 
   useEffect(() => {
     if (!hasKeys) return undefined;
     return useKeypad.getState().register(id, (press) => {
+      const current = latest.current;
       if (press === 'action') {
-        onAction?.();
+        current.onAction?.();
         return;
       }
-      const next = edit(press, value, within(selection, value.length));
+      const next = edit(press, current.value, within(current.selection, current.value.length));
       if (next.value.length > MAX_CODE_LENGTH) return;
-      if (next.value !== value) onChange(next.value);
+      if (next.value !== current.value) current.onChange(next.value);
       setSelection({ start: next.caret, end: next.caret });
     });
-  }, [hasKeys, id, value, selection, onChange, onAction]);
+  }, [hasKeys, id]);
 
   // An editor removed while its keypad shows takes the keypad with it.
   useEffect(() => {

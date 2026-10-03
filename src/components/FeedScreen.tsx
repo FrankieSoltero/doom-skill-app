@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { useEffect, useEffectEvent } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
@@ -178,14 +178,18 @@ function FailedSummary({ set, status, onKeepGoing }: FailedSummaryProps) {
  * place the caret) and the card's buttons stay one tap away; a tap on the card outside them hits
  * the card's `DismissKeyboardArea`, whose dismiss blurs the editor, and the blur hides its keypad.
  * The keypad hides when the card at `index` changes, so it never stays up for a card that has left
- * the screen.
+ * the screen, and the system keyboard closes then too (not on the first card: nothing is open).
  *
  * The feed ends at the tab bar, which pads for the home indicator, so the sheet needs no bottom
  * inset of its own.
  */
 function KeypadLayer({ index }: { index: number }) {
+  const shownIndex = useRef(index);
   useEffect(() => {
     useKeypad.getState().hide();
+    if (shownIndex.current === index) return;
+    shownIndex.current = index;
+    Keyboard.dismiss();
   }, [index]);
 
   return (

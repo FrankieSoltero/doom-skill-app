@@ -14,7 +14,10 @@ export const keySpecSchema = z
     insert: z.string().min(1).max(40),
     caret: z.number().int().nonnegative(),
   })
-  .refine((k) => k.caret <= k.insert.length);
+  .refine((k) => k.caret <= k.insert.length, {
+    message: 'caret must not exceed the insert length',
+    path: ['caret'],
+  });
 
 /** A row of keys: the node's `calls` and `methods`, the language's `notation` and `digits`. */
 export const keyGroupSchema = z.object({

@@ -148,6 +148,19 @@ describe('CodeEditor group keys', () => {
     expect(inputProps().selection).toStrictEqual({ start: 7, end: 7 });
   });
 
+  it('registers its handler once, and a key pressed after the code changed reads the new code', () => {
+    const register = jest.spyOn(useKeypad.getState(), 'register');
+    render(<Harness initial="ab" keys={KEYS} />);
+    focus();
+
+    fireEvent.changeText(editor(), 'abc');
+    select(3);
+    press(HH);
+
+    expect(onChange.mock.calls).toStrictEqual([['abc'], ['abchh']]);
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
   it('replaces a selection reported end first as the same selection', () => {
     render(<Harness initial={'s("bd")'} keys={KEYS} />);
     focus();

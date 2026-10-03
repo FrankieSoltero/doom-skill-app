@@ -12,8 +12,6 @@ import { Keypad } from './Keypad';
 const SHEET_HEIGHT = 292;
 /** Padding around the keypad. */
 const PADDING = 12;
-/** Gap between the sheet's rows. */
-const GAP = 8;
 /** A release this far down, or more, hides the sheet. */
 const SWIPE_HIDE = 40;
 /**
@@ -84,5 +82,5 @@ export function KeypadSheet() {
 }
 
 const styles = StyleSheet.create({
-  sheet: { height: SHEET_HEIGHT, backgroundColor: colors.ink, padding: PADDING, gap: GAP },
+  sheet: { height: SHEET_HEIGHT, backgroundColor: colors.ink, padding: PADDING },
 });

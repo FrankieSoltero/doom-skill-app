@@ -95,14 +95,16 @@ export const useKeypad = create<KeypadState>()((setState, getState) => ({
     setState({ active: { keys, editorId } });
   },
   hide: (editorId) => {
-    setState(({ active, systemKeyboard }) =>
-      editorId === undefined
-        ? { active: null, systemKeyboard: null }
-        : {
-            active: active?.editorId === editorId ? null : active,
-            systemKeyboard: systemKeyboard === editorId ? null : systemKeyboard,
-          },
-    );
+    setState((state) => {
+      if (editorId === undefined) return { active: null, systemKeyboard: null };
+      const { active, systemKeyboard } = state;
+      // An editor that holds nothing changes nothing: the same state, so nothing re-renders.
+      if (active?.editorId !== editorId && systemKeyboard !== editorId) return state;
+      return {
+        active: active?.editorId === editorId ? null : active,
+        systemKeyboard: systemKeyboard === editorId ? null : systemKeyboard,
+      };
+    });
   },
   useSystem: () => {
     setState(({ active }) => ({ active: null, systemKeyboard: active?.editorId ?? null }));

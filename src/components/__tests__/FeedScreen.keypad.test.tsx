@@ -5,6 +5,7 @@
 // moves to another card. The cards here are stand-ins; the store's `show` stands in for an
 // editor's focus (CodeEditor.insert.test.tsx).
 import { act, fireEvent, screen } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 
 import type { Card } from '../../data';
 import type { Keypad } from '../../data/keypadSchema';
@@ -108,6 +109,21 @@ describe('FeedScreen keypad sheet', () => {
 
     expect(useFeedStore.getState().index).toBe(1);
     expect(useKeypad.getState().systemKeyboard).toBeNull();
+  });
+
+  it('closes the system keyboard when another card comes on, not on the first card or a re-render', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    await renderSet([concept, concept]);
+    act(() => {
+      useFeedStore.setState({ streak: 13 });
+    });
+    expect(dismiss).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByRole('button', { name: stubNext(0) }));
+    await settle();
+
+    expect(useFeedStore.getState().index).toBe(1);
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the sheet while the card stays', async () => {

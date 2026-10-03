@@ -80,6 +80,16 @@ describe('Keypad layout', () => {
     ]);
   });
 
+  it('draws two keys of one row that share a label, each its own key', () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const twin = { ...S_CALL, insert: 's("bd")' };
+    renderKeypad({ groups: [{ name: 'calls', keys: [S_CALL, twin] }], action: 'run' });
+
+    expect(screen.getAllByTestId('keypad-key-s("")')).toHaveLength(2);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('omits a group the keypad does not send', () => {
     renderKeypad({ groups: [{ name: 'digits', keys: [ONE] }], action: 'run' });
 
@@ -254,6 +264,7 @@ describe('Keypad presses', () => {
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(onPress).not.toHaveBeenCalled();
     expect(onAbc).not.toHaveBeenCalled();
+    expect(Haptics.selectionAsync).not.toHaveBeenCalled();
   });
 
   it('ABC: calls onAbc only', () => {
@@ -264,5 +275,22 @@ describe('Keypad presses', () => {
     expect(onAbc).toHaveBeenCalledTimes(1);
     expect(onPress).not.toHaveBeenCalled();
     expect(onAction).not.toHaveBeenCalled();
+    expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+  });
+
+  it('a key on a device whose haptics reject: the press still passes, and nothing throws', async () => {
+    jest.mocked(Haptics.selectionAsync).mockReturnValueOnce(Promise.reject(new Error('x')));
+    const { onPress } = renderKeypad();
+
+    expect(() => {
+      fireEvent.press(key('~'));
+    }).not.toThrow();
+    // Let the rejection settle: an uncaught one would fail the test.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onPress).toHaveBeenCalledWith(NOTATION[2]);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
   });
 });
