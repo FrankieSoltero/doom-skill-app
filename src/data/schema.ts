@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { logWarning } from '../log';
+import { keypadSchema } from './keypadSchema';
 
 const text = z.string().min(1);
 const count = z.number().int().nonnegative();
@@ -177,6 +178,11 @@ const exerciseCardSchema = z.object({
     .min(1),
   passMsg: text,
   failMsg: text,
+  /**
+   * The keypad of the card's editor (M9 plan K, keypadSchema.ts); null for a language without
+   * keys, absent from the bundled demo cards and an older API.
+   */
+  keys: keypadSchema.nullable().optional(),
 });
 
 const reviewCardSchema = z.object({
@@ -215,6 +221,8 @@ const checkpointCardSchema = z
      * only the server grades. Absent (the bundled demo cards, an older API) reads as false.
      */
     written: z.boolean().optional(),
+    /** The code editor's keypad, as on an exercise; a written card's is null. */
+    keys: keypadSchema.nullable().optional(),
   })
   // A written card has no rubric; a code card has at least one row.
   .refine((card) => (card.written === true ? card.rubric.length === 0 : card.rubric.length >= 1), {

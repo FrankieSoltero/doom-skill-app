@@ -466,6 +466,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            keys?: components["schemas"]["Keypad"] | null;
             /** Milestone */
             milestone: number;
             /** Milestone Count */
@@ -507,6 +508,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            keys?: components["schemas"]["Keypad"] | null;
             /** Milestone */
             milestone: number;
             /** Milestone Count */
@@ -733,6 +735,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            keys?: components["schemas"]["Keypad"] | null;
             /** Lang */
             lang: string;
             /** Node */
@@ -826,6 +829,47 @@ export interface components {
         };
         /** @enum {string} */
         JobState: "queued" | "running" | "done" | "failed";
+        /**
+         * KeyGroup
+         * @description One row of keys, 1 to `MAX_GROUP_KEYS`.
+         */
+        KeyGroup: {
+            /** Keys */
+            keys: components["schemas"]["KeySpec"][];
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "calls" | "notation" | "methods" | "digits";
+        };
+        /**
+         * KeySpec
+         * @description One key: what it shows, what it inserts, and where the caret lands (from the end).
+         */
+        KeySpec: {
+            /**
+             * Caret
+             * @default 0
+             */
+            caret: number;
+            /** Insert */
+            insert: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * Keypad
+         * @description A card's keypad: its rows in `GROUP_ORDER` (a row with no keys left out) and its action.
+         */
+        Keypad: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "run" | "submit";
+            /** Groups */
+            groups: components["schemas"]["KeyGroup"][];
+        };
         /**
          * Milestone
          * @description A milestone's id, position and title; its rubric and checks come with the checkpoint.

@@ -167,7 +167,137 @@
         }
       ],
       "pass_msg": "The hi-hat now plays eight times per cycle.",
-      "fail_msg": "Change how many times hh repeats inside the cycle."
+      "fail_msg": "Change how many times hh repeats inside the cycle.",
+      "keys": {
+        "groups": [
+          {
+            "name": "calls",
+            "keys": [
+              {
+                "label": "note(\"\")",
+                "insert": "note(\"\")",
+                "caret": 2
+              },
+              {
+                "label": "s(\"\")",
+                "insert": "s(\"\")",
+                "caret": 2
+              }
+            ]
+          },
+          {
+            "name": "notation",
+            "keys": [
+              {
+                "label": "< >",
+                "insert": "<>",
+                "caret": 1
+              },
+              {
+                "label": "[ ]",
+                "insert": "[]",
+                "caret": 1
+              },
+              {
+                "label": "~",
+                "insert": "~",
+                "caret": 0
+              },
+              {
+                "label": "*",
+                "insert": "*",
+                "caret": 0
+              },
+              {
+                "label": "/",
+                "insert": "/",
+                "caret": 0
+              },
+              {
+                "label": ",",
+                "insert": ",",
+                "caret": 0
+              },
+              {
+                "label": "( )",
+                "insert": "()",
+                "caret": 1
+              },
+              {
+                "label": "\" \"",
+                "insert": "\"\"",
+                "caret": 1
+              },
+              {
+                "label": ".",
+                "insert": ".",
+                "caret": 0
+              }
+            ]
+          },
+          {
+            "name": "methods",
+            "keys": [
+              {
+                "label": ".fast(",
+                "insert": ".fast(",
+                "caret": 0
+              },
+              {
+                "label": ".slow(",
+                "insert": ".slow(",
+                "caret": 0
+              }
+            ]
+          },
+          {
+            "name": "digits",
+            "keys": [
+              {
+                "label": "1",
+                "insert": "1",
+                "caret": 0
+              },
+              {
+                "label": "2",
+                "insert": "2",
+                "caret": 0
+              },
+              {
+                "label": "3",
+                "insert": "3",
+                "caret": 0
+              },
+              {
+                "label": "4",
+                "insert": "4",
+                "caret": 0
+              },
+              {
+                "label": "8",
+                "insert": "8",
+                "caret": 0
+              },
+              {
+                "label": "16",
+                "insert": "16",
+                "caret": 0
+              },
+              {
+                "label": "0.5",
+                "insert": "0.5",
+                "caret": 0
+              },
+              {
+                "label": ".",
+                "insert": ".",
+                "caret": 0
+              }
+            ]
+          }
+        ],
+        "action": "run"
+      }
     },
     {
       "id": "00000000-0000-4000-8000-000000000201",
@@ -198,7 +328,127 @@
         }
       ],
       "sources": [],
-      "written": false
+      "written": false,
+      "keys": {
+        "groups": [
+          {
+            "name": "calls",
+            "keys": [
+              {
+                "label": "s(\"\")",
+                "insert": "s(\"\")",
+                "caret": 2
+              }
+            ]
+          },
+          {
+            "name": "notation",
+            "keys": [
+              {
+                "label": "< >",
+                "insert": "<>",
+                "caret": 1
+              },
+              {
+                "label": "[ ]",
+                "insert": "[]",
+                "caret": 1
+              },
+              {
+                "label": "~",
+                "insert": "~",
+                "caret": 0
+              },
+              {
+                "label": "*",
+                "insert": "*",
+                "caret": 0
+              },
+              {
+                "label": "/",
+                "insert": "/",
+                "caret": 0
+              },
+              {
+                "label": ",",
+                "insert": ",",
+                "caret": 0
+              },
+              {
+                "label": "( )",
+                "insert": "()",
+                "caret": 1
+              },
+              {
+                "label": "\" \"",
+                "insert": "\"\"",
+                "caret": 1
+              },
+              {
+                "label": ".",
+                "insert": ".",
+                "caret": 0
+              }
+            ]
+          },
+          {
+            "name": "methods",
+            "keys": [
+              {
+                "label": ".bank(",
+                "insert": ".bank(",
+                "caret": 0
+              }
+            ]
+          },
+          {
+            "name": "digits",
+            "keys": [
+              {
+                "label": "1",
+                "insert": "1",
+                "caret": 0
+              },
+              {
+                "label": "2",
+                "insert": "2",
+                "caret": 0
+              },
+              {
+                "label": "3",
+                "insert": "3",
+                "caret": 0
+              },
+              {
+                "label": "4",
+                "insert": "4",
+                "caret": 0
+              },
+              {
+                "label": "8",
+                "insert": "8",
+                "caret": 0
+              },
+              {
+                "label": "16",
+                "insert": "16",
+                "caret": 0
+              },
+              {
+                "label": "0.5",
+                "insert": "0.5",
+                "caret": 0
+              },
+              {
+                "label": ".",
+                "insert": ".",
+                "caret": 0
+              }
+            ]
+          }
+        ],
+        "action": "submit"
+      }
     }
   ],
   "summary": {
