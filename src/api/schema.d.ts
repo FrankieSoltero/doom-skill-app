@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cards/{card_id}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Card Source
+         * @description The passages of the card's node and the node's sources (module docstring).
+         */
+        get: operations["get_card_source"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/checkpoints/{submission_id}": {
         parameters: {
             query?: never;
@@ -456,6 +476,16 @@ export interface components {
             title: string;
             /** Url */
             url: string;
+        };
+        /**
+         * CardSourceOut
+         * @description The passages of a card's node and the node's sources, as the feed serves them.
+         */
+        CardSourceOut: {
+            /** Passages */
+            passages: components["schemas"]["Passage"][];
+            /** Sources */
+            sources: components["schemas"]["CardSource"][];
         };
         /** CheckpointCard */
         CheckpointCard: {
@@ -913,6 +943,24 @@ export interface components {
              * @enum {string}
              */
             type: "numeric";
+        };
+        /**
+         * Passage
+         * @description One passage of a node's material, with the source it was mined from (module docstring).
+         */
+        Passage: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "example" | "definition" | "statement";
+            /** Lead In */
+            lead_in: string;
+            /** Own */
+            own: boolean;
+            source: components["schemas"]["CardSource"];
+            /** Text */
+            text: string;
         };
         /**
          * PlacementAnswer
@@ -1550,6 +1598,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_card_source: {
+        parameters: {
+            query?: {
+                all?: boolean;
+            };
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardSourceOut"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service unavailable */
