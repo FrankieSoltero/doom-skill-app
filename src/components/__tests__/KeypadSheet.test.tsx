@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Appearance, PanResponder, ScrollView } from 'react-native';
+import { Appearance, Keyboard, PanResponder, ScrollView } from 'react-native';
 import type {
   AccessibilityActionEvent,
   PanResponderCallbacks,
@@ -43,6 +43,8 @@ const SERVED_KEYS: KeypadSpec = {
 };
 
 const createPanResponder = jest.spyOn(PanResponder, 'create');
+// Closing the sheet also closes the editor's keyboard: the editor blurs and hides its keypad.
+const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
 
 /** The callbacks the sheet gave `PanResponder.create` on its last render. */
 function panConfig(): PanResponderCallbacks {
@@ -74,6 +76,7 @@ const sheet = () => screen.getByTestId('keypad-sheet');
 beforeEach(() => {
   useKeypad.setState({ active: null, systemKeyboard: null, handlers: {} });
   createPanResponder.mockClear();
+  dismiss.mockClear();
 });
 
 describe('KeypadSheet', () => {
@@ -155,9 +158,10 @@ describe('KeypadSheet keys', () => {
     expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: EDITOR });
     expect(handler).not.toHaveBeenCalled();
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+    expect(dismiss).not.toHaveBeenCalled();
   });
 
-  it('the action key passes the action to the active editor, then hides the sheet (P16)', () => {
+  it('the action key passes the action to the active editor, then closes the sheet and the keyboard (P16)', () => {
     const handler = showKeypad();
     // The press must reach the editor while it is still the active one.
     handler.mockImplementation(() => {
@@ -170,9 +174,10 @@ describe('KeypadSheet keys', () => {
     expect(handler.mock.calls).toEqual([['action']]);
     expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: null });
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('offers a screen reader the escape action, which hides the sheet', () => {
+  it("offers a screen reader the escape action, which closes the sheet and the editor's keyboard", () => {
     const handler = showKeypad();
     render(<KeypadSheet />);
 
@@ -192,8 +197,10 @@ describe('KeypadSheet keys', () => {
 
     perform('activate');
     expect(useKeypad.getState().active).not.toBeNull();
+    expect(dismiss).not.toHaveBeenCalled();
     perform('escape');
     expect(useKeypad.getState().active).toBeNull();
+    expect(dismiss).toHaveBeenCalledTimes(1);
     expect(handler).not.toHaveBeenCalled();
   });
 });
@@ -210,7 +217,7 @@ describe('KeypadSheet swipe down', () => {
     expect(config.onMoveShouldSetPanResponder?.(PAN_EVENT, gesture(0, -12))).toBe(false);
   });
 
-  it('hides on a release more than 40 points down', () => {
+  it("closes the sheet and the editor's keyboard on a release more than 40 points down", () => {
     showKeypad();
     render(<KeypadSheet />);
 
@@ -220,6 +227,7 @@ describe('KeypadSheet swipe down', () => {
 
     expect(useKeypad.getState().active).toBeNull();
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
   it('stays on a release of 40 points or less', () => {
@@ -232,5 +240,6 @@ describe('KeypadSheet swipe down', () => {
 
     expect(useKeypad.getState().active).not.toBeNull();
     expect(sheet()).toBeOnTheScreen();
+    expect(dismiss).not.toHaveBeenCalled();
   });
 });
