@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Keyboard, Pressable, Text } from 'react-native';
 
 import { BottomSheet } from '../components/BottomSheet';
 import { useCardTextColor } from '../components/cardTextColor';
@@ -23,8 +23,8 @@ type WrittenTaskProps = {
 /**
  * The task of a written checkpoint card (M9 plan J Task 8), above its editor: the body text in the
  * card's text color, cut to `TASK_LINES` lines. A tap opens the whole task as a passage in a
- * bottom sheet under the checkpoint's title; Close, a tap above it or the Android back button
- * closes it. A screen reader reads the whole task, with the hint "Read the task".
+ * bottom sheet under the checkpoint's title, closing the keyboard first; Close, a tap above it or
+ * the Android back button closes it. A screen reader reads the whole task, with the hint "Read the task".
  */
 export function WrittenTask({ task, title }: WrittenTaskProps) {
   const color = useCardTextColor();
@@ -37,6 +37,9 @@ export function WrittenTask({ task, title }: WrittenTaskProps) {
         accessibilityRole="button"
         accessibilityHint={copy.readTask}
         onPress={() => {
+          // A transparent Modal does not take focus from the editor beneath: the keyboard would
+          // stay up over the end of the passage and Close.
+          Keyboard.dismiss();
           setOpen(true);
         }}
       >

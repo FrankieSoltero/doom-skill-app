@@ -291,6 +291,16 @@ describe("a written CheckpointCard's task (Task 8)", () => {
     expect(screen.queryByTestId('task-sheet')).toBeNull();
   });
 
+  it('closes the keyboard when the task is opened, so it covers neither the passage nor Close', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    renderCheckpointCard(withTask());
+
+    fireEvent.press(screen.getByRole('button', { name: TASK }));
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('task-sheet')).toBeOnTheScreen();
+  });
+
   it.each([
     ['no task (an older API, the demo card)', written],
     ['a blank task', (): CheckpointCardData => ({ ...written(), task: ' \n ' })],
