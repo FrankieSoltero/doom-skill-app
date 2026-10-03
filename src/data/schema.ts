@@ -205,6 +205,7 @@ const checkpointCardSchema = z
     starterCode: z.string(),
     passThreshold: z.number().int().positive(),
     rubric: z.array(z.object({ label: text, regex: text })).min(1),
+    written: z.boolean().optional(),
   })
   // A threshold above the rubric's size is a checkpoint nobody can pass.
   .refine((card) => card.passThreshold <= card.rubric.length, {

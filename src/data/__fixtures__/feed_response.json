@@ -196,7 +196,8 @@
           "regex": "<[^>]+>|\\.every\\("
         }
       ],
-      "sources": []
+      "sources": [],
+      "written": false
     }
   ],
   "summary": {

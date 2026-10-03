@@ -485,6 +485,11 @@ export interface components {
              * @enum {string}
              */
             type: "checkpoint";
+            /**
+             * Written
+             * @default false
+             */
+            written: boolean;
         };
         /**
          * CheckpointDetail
@@ -521,6 +526,11 @@ export interface components {
              * @constant
              */
             type: "checkpoint";
+            /**
+             * Written
+             * @default false
+             */
+            written: boolean;
         };
         /**
          * CheckpointGrade
