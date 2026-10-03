@@ -1,6 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Appearance, PanResponder, ScrollView } from 'react-native';
-import type { PanResponderCallbacks, PanResponderGestureState } from 'react-native';
+import type {
+  AccessibilityActionEvent,
+  PanResponderCallbacks,
+  PanResponderGestureState,
+} from 'react-native';
 
 import { copy } from '../../copy';
 import type { Keypad as KeypadSpec } from '../../data/keypadSchema';
@@ -68,7 +72,7 @@ function showKeypad(keys: KeypadSpec = KEYS) {
 const sheet = () => screen.getByTestId('keypad-sheet');
 
 beforeEach(() => {
-  useKeypad.setState({ active: null, systemKeyboard: false, handlers: {} });
+  useKeypad.setState({ active: null, systemKeyboard: null, handlers: {} });
   createPanResponder.mockClear();
 });
 
@@ -128,7 +132,9 @@ describe('KeypadSheet', () => {
     expect(viewStyleOf(sheet()).backgroundColor).toBe(colors.ink);
     colorScheme.mockRestore();
   });
+});
 
+describe('KeypadSheet keys', () => {
   it('passes a key press to the active editor', () => {
     const handler = showKeypad();
     render(<KeypadSheet />);
@@ -146,18 +152,48 @@ describe('KeypadSheet', () => {
 
     fireEvent.press(screen.getByRole('button', { name: copy.keypadAbc }));
 
-    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: true });
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: EDITOR });
     expect(handler).not.toHaveBeenCalled();
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
   });
 
-  it('the action key hides the sheet without a key press', () => {
+  it('the action key passes the action to the active editor, then hides the sheet (P16)', () => {
     const handler = showKeypad();
+    // The press must reach the editor while it is still the active one.
+    handler.mockImplementation(() => {
+      expect(useKeypad.getState().active?.editorId).toBe(EDITOR);
+    });
     render(<KeypadSheet />);
 
     fireEvent.press(screen.getByRole('button', { name: copy.keypadRun }));
 
-    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: false });
+    expect(handler.mock.calls).toEqual([['action']]);
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: null });
+    expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+  });
+
+  it('offers a screen reader the escape action, which hides the sheet', () => {
+    const handler = showKeypad();
+    render(<KeypadSheet />);
+
+    expect(sheet().props.accessibilityActions).toStrictEqual([
+      { name: 'escape', label: copy.keypadHide },
+    ]);
+    // RNTL fires no event on a view whose responder refuses a touch, as the swipe's does, so the
+    // test calls the handler as the screen reader would.
+    const { onAccessibilityAction } = sheet().props as {
+      onAccessibilityAction: (event: AccessibilityActionEvent) => void;
+    };
+    const perform = (actionName: string) => {
+      act(() => {
+        onAccessibilityAction({ nativeEvent: { actionName } } as AccessibilityActionEvent);
+      });
+    };
+
+    perform('activate');
+    expect(useKeypad.getState().active).not.toBeNull();
+    perform('escape');
+    expect(useKeypad.getState().active).toBeNull();
     expect(handler).not.toHaveBeenCalled();
   });
 });

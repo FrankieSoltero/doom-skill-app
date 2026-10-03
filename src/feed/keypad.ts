@@ -1,6 +1,8 @@
 // The code keypad (M9 plan K; spec 3.2): which code editor shows it, and what a key press does to
 // that editor's text. The keypad sheet reads `active` and calls `press`; each code editor
-// registers a handler under its own id, calls `show` on focus and `hide` on blur (P7).
+// registers a handler under its own id, calls `show` on focus and `hide` with its id on blur (P7).
+// One editor's blur and another's focus come in either order (feed/inputFocus.ts), so a hide with
+// an id touches only what that editor holds (P15).
 //
 // Positions are UTF-16 code units, the units of a JS string's indices and of the `selection` a
 // `TextInput` reports and takes, so a result goes back to the input unconverted. Delete and the
@@ -10,23 +12,30 @@ import { create } from 'zustand';
 
 import type { Keypad, KeySpec } from '../data/keypadSchema';
 
-/** A key of the sheet: a group key to insert, or one of the delete and caret keys. */
-export type KeyPress = KeySpec | 'delete' | 'left' | 'right';
+/**
+ * A key of the sheet: a group key to insert, one of the delete and caret keys, or the action key
+ * (run or submit), which the editor passes to its card (P16).
+ */
+export type KeyPress = KeySpec | 'delete' | 'left' | 'right' | 'action';
 
 type Selection = { start: number; end: number };
 
 export type KeypadState = {
   /** The editor the keypad shows for, and its keys; `null` while the keypad is hidden. */
   active: { keys: Keypad; editorId: string } | null;
-  /** True after ABC: the focused editor uses the system keyboard until it blurs (P7). */
-  systemKeyboard: boolean;
+  /** After ABC, the editor that uses the system keyboard until it blurs; `null` otherwise (P15). */
+  systemKeyboard: string | null;
   /** Each registered editor's press handler, by editor id. */
   handlers: Record<string, (press: KeyPress) => void>;
-  /** Shows `keys` for `editorId`. Does nothing while `systemKeyboard` is true. */
+  /** Shows `keys` for `editorId`. Does nothing while that editor uses the system keyboard. */
   show: (keys: Keypad, editorId: string) => void;
-  /** Hides the keypad and ends the system keyboard's turn. */
-  hide: () => void;
-  /** Hides the keypad for the system keyboard (ABC). */
+  /**
+   * With no id (the sheet's swipe, the screen): hides the keypad and ends the system keyboard's
+   * turn. With an id (an editor's blur): hides the keypad only if it shows for that editor, and
+   * ends the system keyboard's turn only if it is that editor's; otherwise does nothing (P15).
+   */
+  hide: (editorId?: string) => void;
+  /** Hides the keypad and gives the editor it showed for the system keyboard (ABC). */
   useSystem: () => void;
   /** Registers `handler` for `editorId`, replacing an earlier one. Returns its unregister. */
   register: (editorId: string, handler: (press: KeyPress) => void) => () => void;
@@ -58,11 +67,12 @@ export function insertAt(
 
 /**
  * The text with the selection deleted, or with the character before the caret deleted when
- * nothing is selected. With the caret at 0 and nothing selected, the text is unchanged (P12).
+ * nothing is selected. With the caret at 0 and nothing selected, the text is unchanged (P12). A
+ * selection reported end first is the same selection.
  */
 export function deleteAt(value: string, selection: Selection): { value: string; caret: number } {
-  const { end } = selection;
-  let { start } = selection;
+  const end = Math.max(selection.start, selection.end);
+  let start = Math.min(selection.start, selection.end);
   if (start === end) {
     if (start === 0) return { value, caret: 0 };
     start = moveCaret(value, start, -1);
@@ -78,17 +88,24 @@ export function moveCaret(value: string, caret: number, by: -1 | 1): number {
 
 export const useKeypad = create<KeypadState>()((setState, getState) => ({
   active: null,
-  systemKeyboard: false,
+  systemKeyboard: null,
   handlers: {},
   show: (keys, editorId) => {
-    if (getState().systemKeyboard) return;
+    if (getState().systemKeyboard === editorId) return;
     setState({ active: { keys, editorId } });
   },
-  hide: () => {
-    setState({ active: null, systemKeyboard: false });
+  hide: (editorId) => {
+    setState(({ active, systemKeyboard }) =>
+      editorId === undefined
+        ? { active: null, systemKeyboard: null }
+        : {
+            active: active?.editorId === editorId ? null : active,
+            systemKeyboard: systemKeyboard === editorId ? null : systemKeyboard,
+          },
+    );
   },
   useSystem: () => {
-    setState({ active: null, systemKeyboard: true });
+    setState(({ active }) => ({ active: null, systemKeyboard: active?.editorId ?? null }));
   },
   register: (editorId, handler) => {
     setState((state) => ({ handlers: { ...state.handlers, [editorId]: handler } }));

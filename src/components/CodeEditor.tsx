@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import {
   InputAccessoryView,
   Keyboard,
@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 
 import { copy } from '../copy';
-import { useFeedInputFocus } from '../feed/inputFocus';
+import type { Keypad } from '../data/keypadSchema';
 import { MAX_CODE_LENGTH } from '../strudel/bridge';
 import { border, colors, fonts, type } from '../theme';
+import { useKeypadEditor } from './useKeypadEditor';
 
 // Editor values from docs/design/card-feed/README.md:90 and, where it is silent, the prototype
 // docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:149. The theme holds none.
@@ -38,6 +39,13 @@ type CodeEditorProps = {
   caret: string;
   /** The editor's height in points; longer code scrolls inside it. */
   height: number;
+  /**
+   * The card's code keypad (M9 plan K): shown instead of the system keyboard while the editor is
+   * focused, until ABC. Absent or `null`: the system keyboard only, and the keypad is not touched.
+   */
+  keys?: Keypad | null;
+  /** Called on the keypad's action key: the card's Run or Submit (P16). */
+  onAction?: () => void;
 };
 
 /**
@@ -69,20 +77,22 @@ function DoneBar({ id }: { id: string }) {
  * autocorrect, capitals, spell check, autofill or smart insert and delete (iOS). React Native 0.86
  * has no prop for iOS smart quotes and dashes; iOS leaves them off when autocorrect is off. It
  * takes at most `MAX_CODE_LENGTH` characters, the most the audio player accepts. While it has
- * focus, the feed pager's swipe is off (`useFeedInputFocus`). On iOS a Done key above the keyboard
- * closes it; each editor has its own bar, tied to it by an id.
+ * focus, the feed pager's swipe is off (`useFeedInputFocus`). With `keys`, the code keypad shows
+ * while it has focus and the system keyboard waits for ABC (`useKeypadEditor`). On iOS a Done key
+ * above the system keyboard closes it; each editor has its own bar, tied to it by an id.
  */
-export function CodeEditor({ value, onChange, caret, height }: CodeEditorProps) {
-  const { onFocus, onBlur } = useFeedInputFocus();
+export function CodeEditor({ value, onChange, caret, height, keys, onAction }: CodeEditorProps) {
+  const input = useRef<TextInput>(null);
+  const keypad = useKeypadEditor({ input, keys, value, onChange, onAction });
   const accessoryId = useId();
-  const ios = Platform.OS === 'ios';
+  const doneBar = Platform.OS === 'ios' && keypad.systemKeyboard;
   return (
     <>
       <TextInput
+        ref={input}
         value={value}
         onChangeText={onChange}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        {...keypad.inputProps}
         accessibilityLabel={copy.codeEditor}
         multiline
         autoCorrect={false}
@@ -95,10 +105,10 @@ export function CodeEditor({ value, onChange, caret, height }: CodeEditorProps) 
         maxLength={MAX_CODE_LENGTH}
         cursorColor={caret}
         selectionColor={caret}
-        {...(ios ? { inputAccessoryViewID: accessoryId } : {})}
+        {...(doneBar ? { inputAccessoryViewID: accessoryId } : {})}
         style={[styles.input, { height }]}
       />
-      {ios ? <DoneBar id={accessoryId} /> : null}
+      {doneBar ? <DoneBar id={accessoryId} /> : null}
     </>
   );
 }

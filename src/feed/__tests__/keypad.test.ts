@@ -45,6 +45,10 @@ describe('deleteAt', () => {
     expect(deleteAt('abc', { start: 0, end: 0 })).toEqual({ value: 'abc', caret: 0 });
   });
 
+  it('deletes a selection reported end first as the same selection', () => {
+    expect(deleteAt('abc', { start: 3, end: 1 })).toEqual({ value: 'a', caret: 1 });
+  });
+
   it('deletes a character outside the basic plane whole, not half of it', () => {
     expect(deleteAt('a🥁', { start: 3, end: 3 })).toEqual({ value: 'a', caret: 1 });
   });
@@ -72,7 +76,7 @@ describe('keypad store', () => {
     const state = useKeypad.getState();
 
     expect(state.active).toBeNull();
-    expect(state.systemKeyboard).toBe(false);
+    expect(state.systemKeyboard).toBeNull();
     expect(state.handlers).toEqual({});
   });
 
@@ -87,15 +91,97 @@ describe('keypad store', () => {
   it('ignores show after ABC for the same editor, until hide resets it', () => {
     useKeypad.getState().show(keys, 'editor');
     useKeypad.getState().useSystem();
-    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: true });
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: 'editor' });
 
     useKeypad.getState().show(keys, 'editor');
-    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: true });
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: 'editor' });
 
     useKeypad.getState().hide();
-    expect(useKeypad.getState().systemKeyboard).toBe(false);
+    expect(useKeypad.getState().systemKeyboard).toBeNull();
     useKeypad.getState().show(keys, 'editor');
     expect(useKeypad.getState().active).toEqual({ keys, editorId: 'editor' });
+  });
+});
+
+describe('keypad store: ABC and hide by editor (P15)', () => {
+  it('shows the keys of another editor after ABC (P15)', () => {
+    useKeypad.getState().show(keys, 'first');
+    useKeypad.getState().useSystem();
+
+    useKeypad.getState().show(keys, 'second');
+
+    expect(useKeypad.getState()).toMatchObject({
+      active: { keys, editorId: 'second' },
+      systemKeyboard: 'first',
+    });
+  });
+
+  it('ignores a hide from an editor that is neither shown nor on the system keyboard (P15)', () => {
+    useKeypad.getState().show(keys, 'second');
+
+    useKeypad.getState().hide('first');
+
+    expect(useKeypad.getState().active).toEqual({ keys, editorId: 'second' });
+  });
+
+  it('a hide from the shown editor hides the keypad (P15)', () => {
+    useKeypad.getState().show(keys, 'editor');
+
+    useKeypad.getState().hide('editor');
+
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: null });
+  });
+
+  it("a late hide from the editor that chose ABC ends its turn and keeps another editor's keypad (P15)", () => {
+    useKeypad.getState().show(keys, 'first');
+    useKeypad.getState().useSystem();
+    useKeypad.getState().show(keys, 'second');
+
+    useKeypad.getState().hide('first');
+
+    expect(useKeypad.getState()).toMatchObject({
+      active: { keys, editorId: 'second' },
+      systemKeyboard: null,
+    });
+  });
+
+  it('a hide with no id hides whatever is shown and ends the system keyboard (P15)', () => {
+    useKeypad.getState().show(keys, 'first');
+    useKeypad.getState().useSystem();
+    useKeypad.getState().show(keys, 'second');
+
+    useKeypad.getState().hide();
+
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: null });
+  });
+
+  it('ABC with nothing shown leaves no editor on the system keyboard', () => {
+    useKeypad.getState().useSystem();
+
+    expect(useKeypad.getState()).toMatchObject({ active: null, systemKeyboard: null });
+  });
+});
+
+describe('keypad store: presses', () => {
+  it('sends the action key to the active editor (P16)', () => {
+    const handler = jest.fn<undefined, [KeyPress]>();
+    useKeypad.getState().register('editor', handler);
+    useKeypad.getState().show(keys, 'editor');
+
+    useKeypad.getState().press('action');
+
+    expect(handler.mock.calls).toEqual([['action']]);
+  });
+
+  it('does nothing on a press when the active editor has no handler', () => {
+    const other = jest.fn<undefined, [KeyPress]>();
+    useKeypad.getState().register('other', other);
+    useKeypad.getState().show(keys, 'editor');
+
+    expect(() => {
+      useKeypad.getState().press('left');
+    }).not.toThrow();
+    expect(other).not.toHaveBeenCalled();
   });
 
   it('sends a press to the active editor only', () => {

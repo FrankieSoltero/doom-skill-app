@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
+import type { AccessibilityActionEvent } from 'react-native';
 
+import { copy } from '../copy';
 import { useKeypad } from '../feed/keypad';
 import { colors } from '../theme';
 import { Keypad } from './Keypad';
@@ -19,19 +21,32 @@ const SWIPE_HIDE = 40;
  * stays with the key, which would otherwise lose its press to the sheet.
  */
 const CLAIM_SLOP = 8;
+/** The screen reader's escape gesture hides the sheet, as a swipe down does. */
+const ESCAPE = [{ name: 'escape', label: copy.keypadHide }];
+
+/** The action key: the active editor passes it to its card (P16), then the sheet hides. */
+function pressAction() {
+  useKeypad.getState().press('action');
+  useKeypad.getState().hide();
+}
+
+/** Hides the sheet on the screen reader's escape. */
+function onAccessibilityAction({ nativeEvent }: AccessibilityActionEvent) {
+  if (nativeEvent.actionName === 'escape') useKeypad.getState().hide();
+}
 
 /**
  * The code keypad's sheet (M9 plan K, P7 and P11): while an editor is active in the keypad store
  * (src/feed/keypad.ts), a 292 point ink panel with that editor's keypad; nothing otherwise. A
- * key press goes to the active editor, ABC hands over to the system keyboard, the action key and
- * a swipe down of more than 40 points hide the sheet. The parent places it at the screen's
- * bottom. It is not modal: the card above it stays reachable.
+ * key press goes to the active editor, ABC hands over to the system keyboard, the action key goes
+ * to the active editor and hides the sheet, and a swipe down of more than 40 points or a screen
+ * reader's escape hides it. The parent places it at the screen's bottom. It is not modal: the
+ * card above it stays reachable.
  */
 export function KeypadSheet() {
   const active = useKeypad((state) => state.active);
   const press = useKeypad((state) => state.press);
   const handOver = useKeypad((state) => state.useSystem);
-  const hide = useKeypad((state) => state.hide);
   const swipe = useMemo(
     () =>
       PanResponder.create({
@@ -48,10 +63,12 @@ export function KeypadSheet() {
     <View
       testID="keypad-sheet"
       accessibilityViewIsModal={false}
+      accessibilityActions={ESCAPE}
+      onAccessibilityAction={onAccessibilityAction}
       style={styles.sheet}
       {...swipe.panHandlers}
     >
-      <Keypad keys={active.keys} onPress={press} onAbc={handOver} onAction={hide} />
+      <Keypad keys={active.keys} onPress={press} onAbc={handOver} onAction={pressAction} />
     </View>
   );
 }
