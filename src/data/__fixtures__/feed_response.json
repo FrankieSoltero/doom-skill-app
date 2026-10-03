@@ -209,29 +209,14 @@
                 "caret": 0
               },
               {
-                "label": "/",
-                "insert": "/",
-                "caret": 0
-              },
-              {
                 "label": ",",
                 "insert": ",",
                 "caret": 0
               },
               {
-                "label": "( )",
-                "insert": "()",
-                "caret": 1
-              },
-              {
                 "label": "\" \"",
                 "insert": "\"\"",
                 "caret": 1
-              },
-              {
-                "label": ".",
-                "insert": ".",
-                "caret": 0
               }
             ]
           },
@@ -281,16 +266,6 @@
               {
                 "label": "16",
                 "insert": "16",
-                "caret": 0
-              },
-              {
-                "label": "0.5",
-                "insert": "0.5",
-                "caret": 0
-              },
-              {
-                "label": ".",
-                "insert": ".",
                 "caret": 0
               }
             ]
@@ -365,29 +340,14 @@
                 "caret": 0
               },
               {
-                "label": "/",
-                "insert": "/",
-                "caret": 0
-              },
-              {
                 "label": ",",
                 "insert": ",",
                 "caret": 0
               },
               {
-                "label": "( )",
-                "insert": "()",
-                "caret": 1
-              },
-              {
                 "label": "\" \"",
                 "insert": "\"\"",
                 "caret": 1
-              },
-              {
-                "label": ".",
-                "insert": ".",
-                "caret": 0
               }
             ]
           },
@@ -432,16 +392,6 @@
               {
                 "label": "16",
                 "insert": "16",
-                "caret": 0
-              },
-              {
-                "label": "0.5",
-                "insert": "0.5",
-                "caret": 0
-              },
-              {
-                "label": ".",
-                "insert": ".",
                 "caret": 0
               }
             ]

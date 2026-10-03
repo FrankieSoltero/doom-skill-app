@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { ArrowLeft, ArrowRight, Delete } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PressableStateCallbackType, ViewStyle } from 'react-native';
 
 import { copy } from '../copy';
@@ -10,9 +10,8 @@ import type { Keypad as KeypadSpec, KeySpec } from '../data/keypadSchema';
 import type { KeyPress } from '../feed/keypad';
 import { colors, fonts, hardShadow } from '../theme';
 
-// The code keypad's values (M9 plan K, P4 and P11; spec 3.2), from the "DoomSkill Keypad" mock-up.
-/** Keys a group line holds before it wraps (P11). */
-const PER_LINE = 4;
+// The code keypad's values (M9 plan K, P4, P11 and P17; spec 3.2), from the "DoomSkill Keypad"
+// mock-up.
 /** Height of a group key (P11). */
 const KEY_HEIGHT = 44;
 /** Height of a control key: the caret keys, delete, ABC and the action key (P11). */
@@ -67,9 +66,9 @@ type KeypadProps = {
 };
 
 /**
- * The code keypad (M9 plan K, spec 3.2): one row per group of `keys`, in the order served, each
- * wrapping at 4 keys, and below them the control row: ←, →, ⌫, ABC and the action key over two
- * columns. The group rows scroll when they are taller than the space left above the control row.
+ * The code keypad (M9 plan K, spec 3.2): one row per group of `keys`, in the order served, its 1
+ * to 6 keys stretched to the width (P17), and below them the control row: ←, →, ⌫, ABC and the
+ * action key over two columns. Four rows and the control row fit the sheet, so nothing scrolls.
  * A key press passes through `onPress` with a haptic tick; ABC and the action key call their own
  * callbacks. It draws `keys` only: the store is the sheet's (KeypadSheet.tsx).
  */
@@ -81,15 +80,12 @@ export function Keypad({ keys, onPress, onAbc, onAction }: KeypadProps) {
   };
   return (
     <View style={styles.keypad}>
-      <ScrollView
-        style={styles.groups}
-        contentContainerStyle={styles.column}
-        keyboardShouldPersistTaps="always"
-      >
+      {/* The rows take the space above the control row, which stays at the sheet's bottom. */}
+      <View style={styles.groups}>
         {keys.groups.map(({ name, keys: specs }) => (
           <GroupRow key={name} name={name} specs={specs} onPress={press} />
         ))}
-      </ScrollView>
+      </View>
       <View testID="keypad-controls" style={styles.line}>
         {EDIT_KEYS.map(({ value, Icon, label }) => (
           <IconKey
@@ -110,7 +106,7 @@ export function Keypad({ keys, onPress, onAbc, onAction }: KeypadProps) {
   );
 }
 
-/** A group's keys in lines of 4, named for a screen reader by the group (P11). */
+/** A group's keys in one row, named for a screen reader by the group (P17). */
 function GroupRow({
   name,
   specs,
@@ -121,34 +117,26 @@ function GroupRow({
   onPress: (press: KeyPress) => void;
 }) {
   const look = groupLook(GROUP_COLOURS[name]);
-  const lines: KeySpec[][] = [];
-  for (let start = 0; start < specs.length; start += PER_LINE) {
-    lines.push(specs.slice(start, start + PER_LINE));
-  }
   return (
     <View
       testID={`keypad-group-${name}`}
       accessibilityLabel={copy.keypadGroup[name]}
-      style={styles.column}
+      style={styles.line}
     >
-      {lines.map((line, index) => (
-        <View key={index} testID={`keypad-line-${name}-${String(index)}`} style={styles.line}>
-          {line.map((spec) => (
-            <Key
-              key={spec.label}
-              label={spec.label}
-              look={look}
-              size={styles.groupKey}
-              onPress={() => {
-                onPress(spec);
-              }}
-            >
-              <Text style={styles.code} numberOfLines={1} adjustsFontSizeToFit>
-                {spec.label}
-              </Text>
-            </Key>
-          ))}
-        </View>
+      {specs.map((spec) => (
+        <Key
+          key={spec.label}
+          label={spec.label}
+          look={look}
+          size={styles.groupKey}
+          onPress={() => {
+            onPress(spec);
+          }}
+        >
+          <Text style={styles.code} numberOfLines={1} adjustsFontSizeToFit>
+            {spec.label}
+          </Text>
+        </Key>
       ))}
     </View>
   );
@@ -233,8 +221,7 @@ function Key({ label, look, size, onPress, children }: KeyProps) {
 
 const styles = StyleSheet.create({
   keypad: { flex: 1, gap: GAP },
-  groups: { flex: 1 },
-  column: { gap: GAP },
+  groups: { flex: 1, gap: GAP },
   line: { flexDirection: 'row', gap: GAP },
   groupKey: { flex: 1, height: KEY_HEIGHT },
   control: { flex: 1, height: CONTROL_HEIGHT },

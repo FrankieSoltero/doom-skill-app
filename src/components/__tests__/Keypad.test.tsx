@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
+import { ScrollView } from 'react-native';
 
 import { copy } from '../../copy';
 import type { Keypad as KeypadSpec } from '../../data/keypadSchema';
@@ -11,7 +12,8 @@ jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn(() => Promise.resolve
 
 const S_CALL = { label: 's("")', insert: 's("")', caret: 2 };
 const NOTE_CALL = { label: 'note("")', insert: 'note("")', caret: 2 };
-const NOTATION = ['< >', '[ ]', '~', '*', '/'].map((label) => ({
+// Strudel's notation row: six keys, the most a group holds (P17).
+const NOTATION = ['< >', '[ ]', '~', '*', ',', '" "'].map((label) => ({
   label,
   insert: label.replace(' ', ''),
   caret: label.length === 3 ? 1 : 0,
@@ -96,14 +98,24 @@ describe('Keypad layout', () => {
     expect(within(key('s("")')).getByText('s("")')).toBeOnTheScreen();
   });
 
-  it('wraps a group at 4 keys a line, each line stretching its keys to the width', () => {
+  it('draws each group as one row of its 1 to 6 keys, each stretching to the width (P17)', () => {
     renderKeypad();
 
-    const notation = screen.getByTestId('keypad-group-notation');
-    const lines = within(notation).getAllByTestId(/^keypad-line-/);
-    expect(lines.map((line) => within(line).getAllByRole('button').length)).toStrictEqual([4, 1]);
-    expect(viewStyleOf(lines[0] ?? notation)).toMatchObject({ flexDirection: 'row', gap: 8 });
-    expect(viewStyleOf(key('/'))).toMatchObject({ flex: 1, height: 44 });
+    const rows = screen.getAllByTestId(/^keypad-group-/);
+    expect(rows.map((row) => within(row).getAllByRole('button').length)).toStrictEqual([
+      2, 6, 1, 1,
+    ]);
+    for (const row of rows) {
+      expect(viewStyleOf(row)).toMatchObject({ flexDirection: 'row', gap: 8 });
+    }
+    expect(viewStyleOf(key('" "'))).toMatchObject({ flex: 1, height: 44 });
+    expect(viewStyleOf(key('1'))).toMatchObject({ flex: 1, height: 44 });
+  });
+
+  it('holds nothing that scrolls: the rows fit above the control row (P17)', () => {
+    renderKeypad();
+
+    expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
   });
 
   it('ends with the control row: left, right, delete, ABC, then the action key over two columns', () => {
