@@ -75,6 +75,21 @@ describe('ExerciseCard keypad', () => {
     expect(focusedInputs()).toBe(1);
   });
 
+  it('closes the sheet on a tap on the card outside the editor: the dismiss blurs the editor', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    renderWithSheet(withKeys());
+    focus();
+
+    fireEvent.press(screen.getByTestId('dismiss-keyboard-area'));
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    // What the dismiss does natively: the focused editor blurs.
+    fireEvent(editor(), 'blur');
+
+    expect(shownKeys()).toBeNull();
+    expect(screen.queryByTestId('keypad-sheet')).toBeNull();
+    expect(focusedInputs()).toBe(0);
+  });
+
   it("writes a key's text into the card's answer", () => {
     renderWithSheet(withKeys());
     typeCode('');

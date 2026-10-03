@@ -1,9 +1,10 @@
 // The feed screen's keypad (M9 plan K, Task 7; P7): the screen draws the keypad sheet once, over
-// the bottom of the feed, with a backdrop above it while an editor shows it, so a tap outside the
-// editor hides it; and it hides the sheet when the learner moves to another card. The cards here
-// are stand-ins; the store's `show` stands in for an editor's focus (CodeEditor.insert.test.tsx).
+// the bottom of the feed, with nothing over the card above it, so the editor and the card's
+// buttons stay one tap away (a tap on the card outside the editor hides the sheet through the
+// card's DismissKeyboardArea, ExerciseCard.keys.test.tsx); and it hides the sheet when the learner
+// moves to another card. The cards here are stand-ins; the store's `show` stands in for an
+// editor's focus (CodeEditor.insert.test.tsx).
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { Keyboard } from 'react-native';
 
 import type { Card } from '../../data';
 import type { Keypad } from '../../data/keypadSchema';
@@ -53,14 +54,13 @@ function showKeys() {
 }
 
 describe('FeedScreen keypad sheet', () => {
-  it('draws no sheet and no backdrop while no editor shows the keypad', async () => {
+  it('draws no sheet while no editor shows the keypad', async () => {
     await renderSet([concept, concept]);
 
     expect(screen.queryByTestId('keypad-sheet')).toBeNull();
-    expect(screen.queryByTestId('keypad-backdrop')).toBeNull();
   });
 
-  it('draws the sheet once, over the bottom of the feed, with a backdrop above it', async () => {
+  it('draws the sheet once, over the bottom of the feed, and nothing over the card', async () => {
     await renderSet([concept, concept]);
 
     showKeys();
@@ -73,29 +73,15 @@ describe('FeedScreen keypad sheet', () => {
       bottom: 0,
       justifyContent: 'flex-end',
     });
-    const backdrop = screen.getByTestId('keypad-backdrop');
-    expect(viewStyleOf(backdrop)).toMatchObject({ flex: 1 });
-    // Not for a screen reader: the sheet offers its own escape action.
-    expect(backdrop.props).toMatchObject({ accessible: false, importantForAccessibility: 'no' });
+    // A tap above the sheet reaches the card: the editor (to place the caret) or its buttons.
+    expect(screen.queryByTestId('keypad-backdrop')).toBeNull();
+    expect(screen.getByTestId('keypad-layer').props).toHaveProperty('pointerEvents', 'box-none');
   });
 
   it('lets touches through to the feed while the keypad is hidden', async () => {
     await renderSet([concept, concept]);
 
     expect(screen.getByTestId('keypad-layer').props).toHaveProperty('pointerEvents', 'box-none');
-  });
-
-  it('hides the sheet and dismisses the keyboard on a tap on the backdrop', async () => {
-    const dismiss = jest.spyOn(Keyboard, 'dismiss');
-    await renderSet([concept, concept]);
-    showKeys();
-
-    fireEvent.press(screen.getByTestId('keypad-backdrop'));
-
-    expect(useKeypad.getState().active).toBeNull();
-    expect(dismiss).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('keypad-sheet')).toBeNull();
-    expect(screen.queryByTestId('keypad-backdrop')).toBeNull();
   });
 
   it('hides the sheet when the next card comes on', async () => {
