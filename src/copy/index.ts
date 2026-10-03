@@ -150,6 +150,24 @@ export const copy = deepFreeze({
   codeEditor: 'Code editor',
   /** The key above an editor's keyboard (iOS) that closes the keyboard. */
   done: 'Done',
+  /** The code keypad's key that swaps it for the system keyboard (M9 plan K, P7). */
+  keypadAbc: 'ABC',
+  /** Spoken labels of the code keypad's delete and caret keys (P11). */
+  keypadDelete: 'Delete',
+  keypadLeft: 'Move left',
+  keypadRight: 'Move right',
+  /** The code keypad's action key: `run` on an exercise, `submit` on a checkpoint (P4). */
+  keypadRun: '▶ Run',
+  keypadSubmit: 'Submit',
+  /** Spoken label of the swipe down that hides the code keypad (P7). */
+  keypadHide: 'Hide keypad',
+  /** Spoken names of the code keypad's key groups, by the group's `name` (P4). */
+  keypadGroup: {
+    calls: 'Sounds and calls',
+    notation: 'Notation',
+    methods: 'Methods',
+    digits: 'Numbers',
+  },
   /** The notice shown while the audio plays without its samples (no network). */
   audioNeedsConnection: 'Audio needs a connection',
   /** The notice shown when the audio player could not start or stopped working. */
