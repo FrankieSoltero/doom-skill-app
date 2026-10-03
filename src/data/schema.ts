@@ -203,15 +203,30 @@ const checkpointCardSchema = z
     estSeconds: seconds,
     title: text,
     starterCode: z.string(),
-    passThreshold: z.number().int().positive(),
-    rubric: z.array(z.object({ label: text, regex: text })).min(1),
+    passThreshold: z.number().int().nonnegative(),
+    rubric: z.array(z.object({ label: text, regex: text })),
+    /**
+     * True for a milestone without code checks (M9 plan J): the learner writes an answer, which
+     * only the server grades. Absent (the bundled demo cards, an older API) reads as false.
+     */
     written: z.boolean().optional(),
   })
-  // A threshold above the rubric's size is a checkpoint nobody can pass.
-  .refine((card) => card.passThreshold <= card.rubric.length, {
-    message: '`passThreshold` must not be greater than the rubric size',
-    path: ['passThreshold'],
-  });
+  // A written card has no rubric; a code card has at least one row.
+  .refine((card) => (card.written === true ? card.rubric.length === 0 : card.rubric.length >= 1), {
+    message: 'a written checkpoint has no rubric rows, and a code checkpoint at least one',
+    path: ['rubric'],
+  })
+  // A written card's threshold is 0. A code card's is 1 to its rubric size: above it, nobody can pass.
+  .refine(
+    (card) =>
+      card.written === true
+        ? card.passThreshold === 0
+        : card.passThreshold >= 1 && card.passThreshold <= card.rubric.length,
+    {
+      message: '`passThreshold` must be 0 when written, else from 1 to the rubric size',
+      path: ['passThreshold'],
+    },
+  );
 
 export const cardSchema = z.discriminatedUnion('type', [
   conceptCardSchema,

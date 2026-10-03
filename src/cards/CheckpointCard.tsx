@@ -20,6 +20,7 @@ import { CardTitle } from './CardText';
 import { CheckpointFeedback } from './CheckpointFeedback';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
+import { WrittenEditor } from './WrittenEditor';
 
 // Checkpoint card values from docs/design/card-feed/README.md:123-140 and, where it is silent, the
 // prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:215-240. The theme holds
@@ -73,9 +74,11 @@ type ServerSubmit = { submit: (code: string, localPassed: boolean) => void; rese
  * code, idle, with no grade, and cancels a grading under way. `submit` dismisses the keyboard and
  * stores the code as it is in the store now, grading; `GRADING_DELAY` later it stores the grade of
  * that code, announces it and hands the code and its result to `server`, which posts it for a card
- * the API served. Both forget the server's last grade. The timer is cleared when the card is
- * removed. A card drawn over a stored `grading` has no timer to finish it, so it stores `idle`
- * once, on mount, keeping the code.
+ * the API served. A written card's `submit` grades nothing: it stores the answer as `sent`,
+ * announces that, and hands the answer to `server` at once with `localPassed` false (M9 plan J).
+ * Both forget the server's last grade. The timer is cleared when the card is removed. A card drawn
+ * over a stored `grading` has no timer to finish it, so it stores `idle` once, on mount, keeping
+ * the code.
  */
 function useCheckpointAnswer(card: CheckpointCardData, index: number, server: ServerSubmit) {
   const answer = useFeedStore((state) => checkpointOf(state.answers[index]));
@@ -106,6 +109,12 @@ function useCheckpointAnswer(card: CheckpointCardData, index: number, server: Se
     const code = checkpointOf(useFeedStore.getState().answers[index])?.code ?? card.starterCode;
     stopGrading();
     server.reset();
+    if (card.written === true) {
+      setAnswer(index, { kind: 'checkpoint', code, status: 'sent', grade: null });
+      announce(copy.sentForGrading);
+      server.submit(code, false);
+      return;
+    }
     setAnswer(index, { kind: 'checkpoint', code, status: 'grading', grade: null });
     timer.current = setTimeout(() => {
       timer.current = null;
@@ -125,7 +134,8 @@ type ButtonState = { label: string; disabled: boolean; finishes: boolean };
 
 /**
  * The button for the card's state, README.md:135-140: Submit (enabled once there is code), then
- * Grading (disabled), then Finish today after a pass or Resubmit after a fail.
+ * Grading (disabled), then Finish today after a pass or Resubmit after a fail. A written answer
+ * once sent offers Finish today at once (M9 plan J).
  */
 function buttonState(
   status: CheckpointAnswer['status'],
@@ -133,6 +143,7 @@ function buttonState(
   code: string,
 ): ButtonState {
   if (status === 'grading') return { label: copy.grading, disabled: true, finishes: false };
+  if (status === 'sent') return { label: copy.finishToday, disabled: false, finishes: true };
   if (grade?.passed === true) return { label: copy.finishToday, disabled: false, finishes: true };
   if (grade !== null) return { label: copy.resubmit, disabled: false, finishes: false };
   return { label: copy.submitForGrading, disabled: code.trim() === '', finishes: false };
@@ -141,17 +152,25 @@ function buttonState(
 /**
  * The score line and the feedback of a grade, README.md:139, in a polite live region that is
  * always there, so Android reads the grade when it appears. Nothing is drawn in it before a grade.
+ * A written answer once `sent` has no grade; the region says it was sent instead.
  */
 function CheckpointResult({
   grade,
   card,
+  sent,
 }: {
   grade: CheckpointGrade | null;
   card: CheckpointCardData;
+  sent: boolean;
 }) {
   const color = useCardTextColor();
   return (
     <View testID="checkpoint-result" accessibilityLiveRegion="polite" style={styles.result}>
+      {sent ? (
+        <Text testID="checkpoint-sent" style={[styles.feedback, { color }]}>
+          {copy.sentForGrading}
+        </Text>
+      ) : null}
       {grade === null ? null : (
         <>
           <Text testID="checkpoint-score" style={[styles.score, { color }]}>
@@ -191,12 +210,18 @@ type CheckpointCardProps = {
  * API served (it has an id) then posts the code, and the server's grade shows under the on-phone
  * one; it decides milestone progress on the server, not this card's button. It is polled only
  * while the card is `active` (src/feed/useCheckpointResult.ts). A demo card posts nothing.
+ *
+ * A written card (`card.written`, M9 plan J; absent reads as false) has no code checks: the editor
+ * takes prose (`WrittenEditor`), no rubric is drawn, and Submit sends the answer with no on-phone
+ * grade. The card then says it was sent and offers Finish today; the server's grade shows under it
+ * as for code.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
   const { code, status, grade, edit, submit } = useCheckpointAnswer(card, index, server);
   useDismissKeyboardWhenLeft(active);
   const button = buttonState(status, grade, code);
+  const written = card.written === true;
   const items =
     grade === null
       ? card.rubric.map(({ label }) => ({ label, passed: null }))
@@ -211,15 +236,24 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
       >
         <CardTitle size="s">{card.title}</CardTitle>
         <View testID="checkpoint-editor-panel" style={styles.panel}>
-          <CodeEditor
-            value={code}
-            onChange={edit}
-            caret={cardTheme.checkpoint.bg}
-            height={EDITOR_HEIGHT}
-          />
+          {written ? (
+            <WrittenEditor
+              value={code}
+              onChange={edit}
+              caret={cardTheme.checkpoint.bg}
+              height={EDITOR_HEIGHT}
+            />
+          ) : (
+            <CodeEditor
+              value={code}
+              onChange={edit}
+              caret={cardTheme.checkpoint.bg}
+              height={EDITOR_HEIGHT}
+            />
+          )}
         </View>
-        <RubricList items={items} />
-        <CheckpointResult grade={grade} card={card} />
+        {written ? null : <RubricList items={items} />}
+        <CheckpointResult grade={grade} card={card} sent={status === 'sent'} />
         <CheckpointFeedback result={server.result} localPassed={grade?.passed ?? null} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
         <PrimaryButton

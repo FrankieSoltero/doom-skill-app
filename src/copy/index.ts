@@ -174,6 +174,13 @@ export const copy = deepFreeze({
   grading: 'Grading against rubric…',
   /** The checkpoint card's button after a passing grade, README.md:140. */
   finishToday: 'Finish today',
+  /** The written checkpoint card's editor: its label and its placeholder (M9 plan J). */
+  yourAnswer: 'Your answer',
+  /**
+   * Shown on a written checkpoint card once its answer is sent: nothing is graded on the phone, and
+   * the server's grade arrives under the card (M9 plan J).
+   */
+  sentForGrading: 'Sent for grading. Your result arrives in about a minute.',
   /** The checkpoint card's button after a failing grade, README.md:140. */
   resubmit: 'Resubmit',
   /** The checkpoint score line of a passing grade, README.md:139. */

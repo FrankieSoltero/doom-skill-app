@@ -8,7 +8,9 @@ export type CardAnswer =
   | { kind: 'review'; revealed: boolean; rating: 0 | 1 | 2 | 3 | null }
   | {
       kind: 'checkpoint';
+      /** The code, or a written checkpoint's answer. */
       code: string;
-      status: 'idle' | 'grading' | 'done';
+      /** `sent`: a written answer posted for the server's grade, with no grade on the phone. */
+      status: 'idle' | 'grading' | 'done' | 'sent';
       grade: CheckpointGrade | null;
     };

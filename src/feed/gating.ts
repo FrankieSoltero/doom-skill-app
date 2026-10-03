@@ -18,13 +18,15 @@ const rules: { [Type in Card['type']]: AnswerRule } = {
   numeric: isChoice,
   exercise: (answer) => answer?.kind === 'exercise' && answer.result === 'pass',
   review: (answer) => answer?.kind === 'review' && answer.rating !== null,
-  checkpoint: (answer) => answer?.kind === 'checkpoint' && answer.status === 'done',
+  checkpoint: (answer) =>
+    answer?.kind === 'checkpoint' && (answer.status === 'done' || answer.status === 'sent'),
 };
 
 /**
  * True when `answer` completes `card`. A concept card needs no answer. An answer of the wrong
  * kind for the card, such as a choice stored against an exercise, does not count. A checkpoint
- * counts once graded, whether or not the grade passed.
+ * counts once graded, whether or not the grade passed, or once a written answer is sent (M9 plan
+ * J: only the server grades it).
  */
 export function isAnswered(card: Card, answer: CardAnswer | undefined): boolean {
   return rules[card.type](answer);

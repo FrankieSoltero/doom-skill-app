@@ -201,6 +201,42 @@ describe('feedSetSchema: conditions for cards from a server', () => {
     expect(issuePaths(feedSetInput(patched))).toEqual([]);
   });
 
+  it('parses a checkpoint as served with no `written` key and leaves it absent: a code card', () => {
+    const set = feedSetSchema.parse(feedSetInput());
+
+    expect(set.cards[CHECKPOINT_INDEX]).not.toHaveProperty('written');
+    expect(issuePaths(feedSetInput(patchCard(CHECKPOINT_INDEX, { written: false })))).toEqual([]);
+  });
+
+  it('parses a written checkpoint: no rubric rows and a threshold of 0 (M9 plan J)', () => {
+    const written = { written: true, rubric: [], passThreshold: 0, starterCode: '' };
+    const set = feedSetSchema.parse(feedSetInput(patchCard(CHECKPOINT_INDEX, written)));
+
+    expect(set.cards[CHECKPOINT_INDEX]).toMatchObject(written);
+  });
+
+  it.each([
+    [
+      'a code card with no rubric rows',
+      { written: false, rubric: [] },
+      ['rubric', 'passThreshold'],
+    ],
+    ['a card with no `written` and no rubric rows', { rubric: [] }, ['rubric', 'passThreshold']],
+    ['a code card with a threshold of 0', { written: false, passThreshold: 0 }, ['passThreshold']],
+    ['a written card with a rubric row', { written: true, passThreshold: 0 }, ['rubric']],
+    [
+      'a written card with a threshold of 1',
+      { written: true, rubric: [], passThreshold: 1 },
+      ['passThreshold'],
+    ],
+    ['a negative threshold', { written: true, rubric: [], passThreshold: -1 }, ['passThreshold']],
+  ])('refuses %s', (_name, patch, fields) => {
+    const paths = issuePaths(feedSetInput(patchCard(CHECKPOINT_INDEX, patch)));
+
+    const expected = fields.map((field) => `cards.${String(CHECKPOINT_INDEX)}.${field}`);
+    expect(new Set(paths)).toEqual(new Set(expected));
+  });
+
   it('drops an exercise in another language as an unknown kind, keeps the rest and logs it', () => {
     const set = feedSetSchema.parse(feedSetInput(patchCard(EXERCISE_INDEX, { lang: 'cobol' })));
 

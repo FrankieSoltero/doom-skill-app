@@ -65,6 +65,11 @@ describe('isAnswered for checkpoint cards', () => {
     );
   });
 
+  it('is answered once a written answer is sent, with no grade (M9 plan J)', () => {
+    const sent = { kind: 'checkpoint', code: 'An answer.', status: 'sent', grade: null } as const;
+    expect(isAnswered(checkpoint, sent)).toBe(true);
+  });
+
   it('is not answered without an answer or with another kind', () => {
     expect(isAnswered(checkpoint, undefined)).toBe(false);
     expect(isAnswered(checkpoint, { kind: 'review', revealed: true, rating: 2 })).toBe(false);
