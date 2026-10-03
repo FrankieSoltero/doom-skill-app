@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/feed/extra": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Feed Extra
+         * @description Add a practice card or the next idea to the stored set the learner is on (docstring).
+         */
+        post: operations["add_feed_extra"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feed/next": {
         parameters: {
             query?: never;
@@ -783,6 +803,38 @@ export interface components {
              * @enum {string}
              */
             type: "exercise";
+        };
+        /**
+         * ExtraOut
+         * @description The added card, and the set's count of added cards (module docstring).
+         */
+        ExtraOut: {
+            /** Added */
+            added: number;
+            card: components["schemas"]["Card"];
+        };
+        /**
+         * ExtraRequest
+         * @description `POST /feed/extra` (module docstring).
+         */
+        ExtraRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "test" | "deeper";
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /**
+             * Feed Date
+             * Format: date
+             */
+            feed_date: string;
+            /** Set Number */
+            set_number: number;
         };
         /**
          * FeedSet
@@ -1716,6 +1768,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    add_feed_extra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtraRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtraOut"];
+                };
+            };
+            /** @description Nothing to add */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not in feed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too many added cards */
+            429: {
+                headers: {
+                    /** @description Seconds */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Service unavailable */
