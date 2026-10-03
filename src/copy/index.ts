@@ -181,6 +181,11 @@ export const copy = deepFreeze({
    * the server's grade arrives under the card (M9 plan J).
    */
   sentForGrading: 'Sent for grading. Your result arrives in about a minute.',
+  /**
+   * What a tap on a written checkpoint card's task does: open the whole task in a sheet (M9 plan J
+   * Task 8). A screen reader says it as the task's hint.
+   */
+  readTask: 'Read the task',
   /** The checkpoint card's button after a failing grade, README.md:140. */
   resubmit: 'Resubmit',
   /** The checkpoint score line of a passing grade, README.md:139. */

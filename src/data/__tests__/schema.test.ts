@@ -205,11 +205,19 @@ describe('feedSetSchema: conditions for cards from a server', () => {
     const set = feedSetSchema.parse(feedSetInput());
 
     expect(set.cards[CHECKPOINT_INDEX]).not.toHaveProperty('written');
+    expect(set.cards[CHECKPOINT_INDEX]).not.toHaveProperty('task');
     expect(issuePaths(feedSetInput(patchCard(CHECKPOINT_INDEX, { written: false })))).toEqual([]);
   });
 
-  it('parses a written checkpoint: no rubric rows and a threshold of 0 (M9 plan J)', () => {
-    const written = { written: true, rubric: [], passThreshold: 0, starterCode: '' };
+  it('refuses a checkpoint whose task is not text (M9 plan J Task 8)', () => {
+    const paths = issuePaths(feedSetInput(patchCard(CHECKPOINT_INDEX, { task: 3 })));
+
+    expect(paths).toEqual([`cards.${String(CHECKPOINT_INDEX)}.task`]);
+  });
+
+  it('parses a written checkpoint with its task: no rubric rows and a threshold of 0 (M9 plan J)', () => {
+    const task = 'Explain what a dividend is.';
+    const written = { written: true, task, rubric: [], passThreshold: 0, starterCode: '' };
     const set = feedSetSchema.parse(feedSetInput(patchCard(CHECKPOINT_INDEX, written)));
 
     expect(set.cards[CHECKPOINT_INDEX]).toMatchObject(written);

@@ -2,7 +2,7 @@
 // written answer. Nothing is graded on the phone: Submit sends the answer to the server, and the
 // button then finishes the set. The server's grade shows under the card as for code. Over the real
 // API client and a fake network; nothing leaves the test.
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
 
 import { json, serveApi } from '../../api/testing/fakeApi';
@@ -21,6 +21,8 @@ const MILESTONE = '0b7f6c1e-0000-4000-8000-000000000002';
 const SUBMISSION = '0b7f6c1e-0000-4000-8000-0000000000bb';
 const ANSWER = 'A dividend is a share of profit paid to the owners of a stock.';
 const SENT = 'Sent for grading. Your result arrives in about a minute.';
+const TASK =
+  'Explain what a dividend is, and why a company might pay one instead of buying back stock.';
 const PENDING_LINE = 'Getting detailed feedback…';
 const UNAVAILABLE_LINE = "Detailed feedback isn't available right now.";
 /** A grade the server has not given, `status` saying why. */
@@ -39,6 +41,9 @@ const written = (): CheckpointCardData => ({
   starterCode: '',
 });
 const served = (): CheckpointCardData => ({ ...written(), id: MILESTONE });
+/** The written card as the API serves it since Task 8: with its task. */
+const withTask = (): CheckpointCardData => ({ ...written(), task: TASK });
+const taskText = () => screen.getByTestId('checkpoint-task-text');
 
 const answerEditor = () => screen.getByLabelText('Your answer');
 const typeAnswer = (text: string) => {
@@ -250,5 +255,57 @@ describe('a written CheckpointCard edited after submit', () => {
     expect(screen.queryByTestId('checkpoint-sent')).toBeNull();
     expect(isDisabled('Submit for grading')).toBe(false);
     expect(screen.queryByRole('button', { name: 'Finish today' })).toBeNull();
+  });
+});
+
+describe("a written CheckpointCard's task (Task 8)", () => {
+  it('draws the task above the editor in the body font, in the title color, clamped to 6 lines', () => {
+    renderCheckpointCard(withTask());
+
+    expect(taskText()).toHaveTextContent(TASK);
+    expect(taskText().props).toHaveProperty('numberOfLines', 6);
+    expect(textStyleOf(taskText())).toMatchObject({ fontFamily: fonts.body, lineHeight: 23 });
+    expect(textStyleOf(taskText()).color).toBe(textStyleOf(screen.getByRole('header')).color);
+    const body = within(screen.getByTestId('card-frame-body'));
+    const order = body
+      .getAllByTestId(/^checkpoint-(task|editor-panel)$/)
+      .map((part) => String(part.props.testID));
+    expect(order).toStrictEqual(['checkpoint-task', 'checkpoint-editor-panel']);
+  });
+
+  it('opens the whole task in a sheet on a tap (Read the task), and Close closes it', () => {
+    renderCheckpointCard(withTask());
+    expect(screen.queryByTestId('task-sheet')).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: TASK }));
+
+    expect(screen.getByRole('button', { name: TASK }).props).toHaveProperty(
+      'accessibilityHint',
+      'Read the task',
+    );
+    const sheet = within(screen.getByTestId('task-sheet'));
+    expect(sheet.getByRole('header', { name: 'Build a 4-bar drum loop' })).toBeOnTheScreen();
+    expect(sheet.getByTestId('passage-text')).toHaveTextContent(TASK);
+    expect(sheet.getByTestId('passage-text').props).not.toHaveProperty('numberOfLines');
+    fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByTestId('task-sheet')).toBeNull();
+  });
+
+  it.each([
+    ['no task (an older API, the demo card)', written],
+    ['a blank task', (): CheckpointCardData => ({ ...written(), task: ' \n ' })],
+  ])('draws no task for %s, as before', (_name, card) => {
+    renderCheckpointCard(card());
+
+    expect(screen.queryByTestId('checkpoint-task')).toBeNull();
+    expect(answerEditor()).toBeOnTheScreen();
+  });
+
+  it('draws no task on a code card: the task is served but not drawn', () => {
+    renderCheckpointCard({ ...demo(), task: TASK });
+
+    expect(screen.queryByTestId('checkpoint-task')).toBeNull();
+    expect(screen.queryByText(TASK)).toBeNull();
+    expect(screen.getAllByTestId('rubric-row')).toHaveLength(4);
   });
 });

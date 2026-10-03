@@ -478,6 +478,8 @@ export interface components {
             sources: components["schemas"]["CardSource"][];
             /** Starter Code */
             starter_code: string;
+            /** Task */
+            task: string;
             /** Title */
             title: string;
             /**
@@ -519,6 +521,8 @@ export interface components {
             sources: components["schemas"]["CardSource"][];
             /** Starter Code */
             starter_code: string;
+            /** Task */
+            task: string;
             /** Title */
             title: string;
             /**

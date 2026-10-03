@@ -176,6 +176,7 @@
       "milestone": 1,
       "milestone_count": 2,
       "title": "First sounds",
+      "task": "Build a four-bar drum loop: a kick, a snare or clap, hi-hats, and a change across bars.",
       "starter_code": "s(\"<[bd ~ sd ~] [bd bd sd ~]>\")\n  .stack(s(\"hh*8\"))",
       "pass_threshold": 3,
       "rubric": [

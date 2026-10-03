@@ -21,6 +21,7 @@ import { CheckpointFeedback } from './CheckpointFeedback';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 import { WrittenEditor } from './WrittenEditor';
+import { WrittenTask } from './WrittenTask';
 
 // Checkpoint card values from docs/design/card-feed/README.md:123-140 and, where it is silent, the
 // prototype docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:215-240. The theme holds
@@ -214,7 +215,8 @@ type CheckpointCardProps = {
  * A written card (`card.written`, M9 plan J; absent reads as false) has no code checks: the editor
  * takes prose (`WrittenEditor`), no rubric is drawn, and Submit sends the answer with no on-phone
  * grade. The card then says it was sent and offers Finish today; the server's grade shows under it
- * as for code.
+ * as for code. Above the editor it draws the milestone's task (`WrittenTask`, Task 8); a card with
+ * no task, or a blank one, draws none. A code card is served its task too and draws none.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
@@ -222,6 +224,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
   useDismissKeyboardWhenLeft(active);
   const button = buttonState(status, grade, code);
   const written = card.written === true;
+  const task = written ? (card.task ?? '') : '';
   const items =
     grade === null
       ? card.rubric.map(({ label }) => ({ label, passed: null }))
@@ -235,6 +238,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
         meta={cardMetaText(card.estSeconds)}
       >
         <CardTitle size="s">{card.title}</CardTitle>
+        {task.trim() === '' ? null : <WrittenTask task={task} title={card.title} />}
         <View testID="checkpoint-editor-panel" style={styles.panel}>
           {written ? (
             <WrittenEditor

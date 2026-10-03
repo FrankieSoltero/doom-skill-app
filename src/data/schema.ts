@@ -202,6 +202,11 @@ const checkpointCardSchema = z
     milestoneCount: z.number().int().positive(),
     estSeconds: seconds,
     title: text,
+    /**
+     * The milestone's task (M9 plan J Task 8), served on every checkpoint; only a written card
+     * draws it. Absent (the bundled demo cards, an older API) draws no task.
+     */
+    task: z.string().optional(),
     starterCode: z.string(),
     passThreshold: z.number().int().nonnegative(),
     rubric: z.array(z.object({ label: text, regex: text })),
