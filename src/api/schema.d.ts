@@ -476,6 +476,7 @@ export interface components {
             correct: boolean | null;
             /** Feedback */
             feedback: string | null;
+            follow_up?: components["schemas"]["Card"] | null;
             /** Next Due */
             next_due: string | null;
             node: components["schemas"]["AttemptNode"];
