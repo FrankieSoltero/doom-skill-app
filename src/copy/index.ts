@@ -145,6 +145,8 @@ export const copy = deepFreeze({
    * shows it uppercase.
    */
   cardKicker: (type: string, node: string) => `${type} · ${node}`,
+  /** A card's place in its two-card sequence, after the node in its kicker: `1/2`. */
+  cardKickerPart: (index: number, of: number) => `${String(index)}/${String(of)}`,
   /** A card's estimated time under two minutes, README.md:52 ("~40 S" by style). */
   seconds: (n: number) => `~${String(n)} s`,
   /** A card's estimated time from two minutes up, README.md:124 ("~3 MIN" by style). */

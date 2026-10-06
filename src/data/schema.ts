@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { logWarning } from '../log';
 import { keypadSchema } from './keypadSchema';
+import { sequenceSchema } from './sequenceSchema';
 
 const text = z.string().min(1);
 const count = z.number().int().nonnegative();
@@ -34,6 +35,8 @@ export const sourceLinkSchema = z.object({
   license: text.nullable(),
 });
 const cardSources = z.array(sourceLinkSchema).max(3).optional();
+// The fields every card shares: its sources and its place in a sequence (M10 plan T).
+const cardCommon = { sources: cardSources, sequence: sequenceSchema.optional() };
 
 /**
  * The exercise languages: the server's `Lang` (services/api/app/llm/resolve_model.py; kept in step
@@ -90,7 +93,7 @@ const correctOutOfRange = {
 // draws no code block and no cycle tiles (M6 hardening Task 8).
 const conceptCardSchema = z.object({
   id: cardId,
-  sources: cardSources,
+  ...cardCommon,
   type: z.literal('concept'),
   node: text,
   estSeconds: seconds,
@@ -105,7 +108,7 @@ const conceptCardSchema = z.object({
 const quizCardSchema = z
   .object({
     id: cardId,
-    sources: cardSources,
+    ...cardCommon,
     type: z.literal('quiz'),
     node: text,
     estSeconds: seconds,
@@ -119,7 +122,7 @@ const quizCardSchema = z
 const predictCardSchema = z
   .object({
     id: cardId,
-    sources: cardSources,
+    ...cardCommon,
     type: z.literal('predict'),
     node: text,
     estSeconds: seconds,
@@ -137,7 +140,7 @@ const predictCardSchema = z
 // field (`text`, `situation`, `problem`) to these shared fields.
 const passageChoiceFields = {
   id: cardId,
-  sources: cardSources,
+  ...cardCommon,
   node: text,
   estSeconds: seconds,
   title: text,
@@ -160,7 +163,7 @@ const numericCardSchema = z
 
 const exerciseCardSchema = z.object({
   id: cardId,
-  sources: cardSources,
+  ...cardCommon,
   type: z.literal('exercise'),
   lang: exerciseLang,
   node: text,
@@ -187,7 +190,7 @@ const exerciseCardSchema = z.object({
 
 const reviewCardSchema = z.object({
   id: cardId,
-  sources: cardSources,
+  ...cardCommon,
   type: z.literal('review'),
   node: text,
   lastSeenDays: count,
@@ -202,7 +205,7 @@ const reviewCardSchema = z.object({
 const checkpointCardSchema = z
   .object({
     id: cardId,
-    sources: cardSources,
+    ...cardCommon,
     type: z.literal('checkpoint'),
     milestone: z.number().int().positive(),
     milestoneCount: z.number().int().positive(),

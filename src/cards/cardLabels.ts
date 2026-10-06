@@ -15,7 +15,7 @@ type NodeKickerFields = Pick<
     Card,
     { type: 'concept' | 'quiz' | 'predict' | 'cloze' | 'scenario' | 'numeric' | 'exercise' }
   >,
-  'type' | 'node'
+  'type' | 'node' | 'sequence'
 >;
 
 /** Below this many seconds the estimate is in seconds; from here up, in minutes. */
@@ -28,10 +28,15 @@ const SECONDS_PER_MINUTE = 60;
  * or `Work it out · Unit conversion`. The kicker style shows it uppercase. It accepts no other
  * card type: a review card's kicker is built from `lastSeenDays` ("REVIEW · SEEN 3 DAYS AGO",
  * README.md:115, see `reviewKickerText`) and a checkpoint card's from its milestone
- * (README.md:124, see `checkpointKickerText`).
+ * (README.md:124, see `checkpointKickerText`). A card in a two-card sequence adds its place after
+ * the node: `Concept · Layering · 1/2`.
  */
 export function cardKickerText(card: NodeKickerFields): string {
-  return copy.cardKicker(copy.cardTypes[card.type], card.node);
+  const { sequence } = card;
+  const node = sequence
+    ? `${card.node} · ${copy.cardKickerPart(sequence.index, sequence.of)}`
+    : card.node;
+  return copy.cardKicker(copy.cardTypes[card.type], node);
 }
 
 /**
