@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DoomSkill",
-    "slug": "doomskill",
+    "slug": "learnloop",
     "scheme": "doomskill",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,6 +28,7 @@
       "eas": {
         "projectId": "ffc1b7f8-ec94-47a5-89e8-b348ef3865e5"
       }
-    }
+    },
+    "owner": "frankiesoltero"
   }
 }
