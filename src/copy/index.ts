@@ -14,6 +14,54 @@ import { profile, reminder } from './profile';
 import { sources } from './sources';
 import { explore, pendingTopic, topic, tree } from './topics';
 
+/** The source sheet opened from a card's book icon (M9 plan H, spec 5.1). */
+const source = {
+  /** The book icon's spoken label. */
+  action: 'Show me the source',
+  /** The sheet's title. */
+  title: 'Where this card comes from',
+  /** Shown while the passages load. */
+  loading: 'Finding the passage…',
+  /** Shown when the passages could not be loaded. */
+  unavailable: 'The passage is not available right now.',
+  /** The heading over the passage the card was built from. */
+  own: 'This card was built from',
+  /** The heading over the other passages of the idea. */
+  more: 'More from this idea',
+  /** The heading over the card's source links. */
+  links: 'Sources',
+  /** A source link's spoken label. */
+  open: 'Open the source',
+};
+
+/** The help sheet opened from a card's help icon (M9 plan H, spec 5.2). */
+const help = {
+  /** The help icon's spoken label. */
+  action: 'Help with this card',
+  /** The sheet's title. */
+  title: 'Help with this card',
+  /** The row that adds one more practice card. */
+  testMe: 'Test me',
+  /** The Test me row's hint line. */
+  testMeHint: 'One more practice card on this idea',
+  /** The row that adds the next idea's card. */
+  deeper: 'Go deeper',
+  /** The Go deeper row's hint line. */
+  deeperHint: 'The next idea that builds on this one',
+  /** Shown when the server has nothing to add. */
+  nothing: 'Nothing more to add here',
+  /** Shown when the set already holds its most added cards. */
+  full: 'This set is full',
+  /** Shown while a request is in flight. */
+  adding: 'Adding…',
+  /** Shown after a card was added to the set. */
+  added: 'Added after this card',
+  /** Shown when the request timed out and the card may already be added. */
+  maybeAdded: 'The card may appear after a reload',
+  /** Shown when the request failed for any other reason. */
+  failed: 'Could not add a card right now',
+};
+
 /** Freezes every nested object under `value`. Functions and primitives are left as they are. */
 function freezeChildren(value: object): void {
   const children: unknown[] = Object.values(value);
@@ -368,4 +416,6 @@ export const copy = deepFreeze({
   reminder,
   flag,
   sources,
+  source,
+  help,
 } as const);
