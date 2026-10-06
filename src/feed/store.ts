@@ -69,9 +69,11 @@ type FeedActions = {
   /**
    * Inserts `card` at `at` when `at > state.index`, `at <= checkpointIndex(cards)` and no answer
    * exists at any position >= at (a later `at` is first clamped to `checkpointIndex(cards)`); else
-   * appends it at `checkpointIndex(cards)` and logs `insert_appended` (no card text). Returns the
+   * appends it at `checkpointIndex(cards)` when that is > `state.index` and logs `insert_appended`,
+   * or inserts nothing, logs `insert_dropped` and returns -1 (no card text in either). Returns the
    * index used; -1 with no set. A card whose id is already in the set is not inserted twice
-   * (returns its index). Answers stay keyed by index: no answer lies at or after the card.
+   * (returns its index). A card never lands at or before the page on screen, so the answers,
+   * keyed by index, never shift.
    */
   insertCard: (card: Card, at: number) => number;
   reset: () => void;
@@ -264,7 +266,8 @@ function answeredFrom(state: FeedState, at: number): boolean {
 
 /**
  * Where a card asked for at `at` goes: `at`, clamped to the checkpoint, when that is after the
- * current card and no answer lies at or after it; else the checkpoint's index (`appended`).
+ * current card and no answer lies at or after it; else the checkpoint's index (`appended`) when
+ * that is after the current card; else nowhere (-1).
  */
 function insertionAt(
   state: FeedState,
@@ -273,8 +276,10 @@ function insertionAt(
 ): { index: number; appended: boolean } {
   const end = checkpointIndex(cards);
   const clamped = Math.min(at, end);
-  const fits = clamped > state.index && !answeredFrom(state, clamped);
-  return fits ? { index: clamped, appended: false } : { index: end, appended: true };
+  if (clamped > state.index && !answeredFrom(state, clamped)) {
+    return { index: clamped, appended: false };
+  }
+  return end > state.index ? { index: end, appended: true } : { index: -1, appended: false };
 }
 
 /**
@@ -362,6 +367,10 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     const existing = card.id === undefined ? -1 : set.cards.findIndex(({ id }) => id === card.id);
     if (existing !== -1) return existing;
     const { index, appended } = insertionAt(state, set.cards, at);
+    if (index === -1) {
+      logWarning('insert_dropped', { at, index: state.index });
+      return -1;
+    }
     if (appended) logWarning('insert_appended', { at, index });
     const cards = [...set.cards.slice(0, index), card, ...set.cards.slice(index)];
     setState({ set: { ...set, cards } });

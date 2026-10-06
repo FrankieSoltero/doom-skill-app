@@ -80,7 +80,9 @@ describe('insertCard', () => {
     expect(store().set?.cards[3]?.type).toBe('checkpoint');
     expect(logWarning).not.toHaveBeenCalled();
   });
+});
 
+describe('insertCard when the position does not fit (defensive)', () => {
   it('appends before the checkpoint when an answer exists at or after the position', () => {
     store().startSet(
       apiSet([served(concept, 1), served(quiz, 2), served(predict, 3), served(checkpoint, 4)]),
@@ -105,6 +107,34 @@ describe('insertCard', () => {
     expect(logWarning).toHaveBeenCalledWith('insert_appended', { at: 1, index: 2 });
   });
 
+  it('appends at the checkpoint when the position is not after the current card', () => {
+    store().startSet(apiSet([served(concept, 1), served(quiz, 2), served(checkpoint, 3)]));
+    store().setIndex(1);
+
+    expect(store().insertCard(added, 1)).toBe(2);
+
+    expect(ids()[2]).toBe('00000000-0000-4000-8000-000000000009');
+    expect(store().set?.cards[3]?.type).toBe('checkpoint');
+    expect(logWarning).toHaveBeenCalledWith('insert_appended', { at: 1, index: 2 });
+  });
+
+  // Page 2 is the checkpoint in the first set and the summary page in the second: no page after
+  // the one on screen can take the card, so it is dropped and no page shifts.
+  it.each([
+    ['on the checkpoint', [served(concept, 1), served(quiz, 2), served(checkpoint, 3)]],
+    ['on the summary page of a set without a checkpoint', [served(concept, 1), served(quiz, 2)]],
+  ])('drops the card when the learner is %s', (_where, cards) => {
+    store().startSet(apiSet(cards));
+    store().setIndex(2);
+    const set = store().set;
+
+    expect(store().insertCard(added, 3)).toBe(-1);
+
+    expect(store().set).toBe(set);
+    expect(logWarning).toHaveBeenCalledWith('insert_dropped', { at: 3, index: 2 });
+    expect(logWarning).not.toHaveBeenCalledWith('insert_appended', expect.anything());
+  });
+
   it('logs no card text when it appends', () => {
     store().startSet(apiSet([served(concept, 1), served(quiz, 2)]));
     store().setIndex(1);
@@ -113,7 +143,9 @@ describe('insertCard', () => {
 
     expect(JSON.stringify(jest.mocked(logWarning).mock.calls)).not.toContain(review.prompt);
   });
+});
 
+describe('insertCard, card ids and no set', () => {
   it('does not insert a card whose id is already in the set, and returns its index', () => {
     store().startSet(apiSet([served(concept, 1), added, served(quiz, 2)]));
     const set = store().set;
