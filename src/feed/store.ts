@@ -66,6 +66,14 @@ type FeedActions = {
    * set is current by now, or when one is already kept.
    */
   recordSummary: (round: number, summary: Summary) => void;
+  /**
+   * Inserts `card` at `at` when `at > state.index`, `at <= checkpointIndex(cards)` and no answer
+   * exists at any position >= at (a later `at` is first clamped to `checkpointIndex(cards)`); else
+   * appends it at `checkpointIndex(cards)` and logs `insert_appended` (no card text). Returns the
+   * index used; -1 with no set. A card whose id is already in the set is not inserted twice
+   * (returns its index). Answers stay keyed by index: no answer lies at or after the card.
+   */
+  insertCard: (card: Card, at: number) => number;
   reset: () => void;
 };
 
@@ -241,6 +249,35 @@ function nextIndex(state: FeedState, index: number): number {
 }
 
 /**
+ * The index of the set's checkpoint card, else the number of cards: the last place a card may be
+ * inserted, so an inserted card always comes before the checkpoint.
+ */
+export function checkpointIndex(cards: readonly Card[]): number {
+  const found = cards.findIndex((card) => card.type === 'checkpoint');
+  return found === -1 ? cards.length : found;
+}
+
+/** True when an answer is stored for the page `at` or a later one. */
+function answeredFrom(state: FeedState, at: number): boolean {
+  return Object.keys(state.answers).some((page) => Number(page) >= at);
+}
+
+/**
+ * Where a card asked for at `at` goes: `at`, clamped to the checkpoint, when that is after the
+ * current card and no answer lies at or after it; else the checkpoint's index (`appended`).
+ */
+function insertionAt(
+  state: FeedState,
+  cards: readonly Card[],
+  at: number,
+): { index: number; appended: boolean } {
+  const end = checkpointIndex(cards);
+  const clamped = Math.min(at, end);
+  const fits = clamped > state.index && !answeredFrom(state, clamped);
+  return fits ? { index: clamped, appended: false } : { index: end, appended: true };
+}
+
+/**
  * The state after a new set starts, in the next round. The first set of the session brings its
  * topic's streak.
  */
@@ -315,6 +352,20 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
         ? { recordedSummary: summary }
         : {},
     );
+  },
+  // The card joins `set.cards`, so the pages and the summary's totals count it; the logged event
+  // carries the two positions only.
+  insertCard: (card, at) => {
+    const state = getState();
+    const { set } = state;
+    if (set === null) return -1;
+    const existing = card.id === undefined ? -1 : set.cards.findIndex(({ id }) => id === card.id);
+    if (existing !== -1) return existing;
+    const { index, appended } = insertionAt(state, set.cards, at);
+    if (appended) logWarning('insert_appended', { at, index });
+    const cards = [...set.cards.slice(0, index), card, ...set.cards.slice(index)];
+    setState({ set: { ...set, cards } });
+    return index;
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a
   // reset must not reuse the page keys of a set started before it. `resets` counts up, and
