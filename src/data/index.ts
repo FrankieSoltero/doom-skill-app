@@ -31,8 +31,16 @@ const client = config.dataSource === 'api' ? api : null;
  * API source asks for the learner's active topic (src/feed/useActiveTopic.ts), read on every
  * request; with none it fails with `noTopic`, and the feed screen sends the learner to Explore.
  */
-export const cardSource: CardSource =
-  client === null ? createFixtureSource() : createApiSource(client, activeTopic);
+const apiSource = client === null ? null : createApiSource(client, activeTopic);
+export const cardSource: CardSource = apiSource ?? createFixtureSource();
+
+/**
+ * The date and number of the set the API served last, for a card added to it (`POST
+ * /feed/extra`); `null` before the first set and with the demo sets, which no API served.
+ */
+export function currentSet(): { feedDate: string; setNumber: number } | null {
+  return apiSource?.getCurrentSet() ?? null;
+}
 
 /**
  * Reads the recorded summary of a set the API served (`GET /feed/summary`); `null` with the demo

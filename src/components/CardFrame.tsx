@@ -2,8 +2,11 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FlagButton, useFlaggable, useThanksLine } from '../cards/FlagButton';
-import { SourcesButton, useHasSources } from '../cards/SourcesButton';
+import { HelpButton } from '../cards/HelpButton';
+import { SourcesButton, useFrameCard, useHasSources } from '../cards/SourcesButton';
 import { copy } from '../copy';
+import { currentSet } from '../data';
+import { useFeedStore } from '../feed/store';
 import { border, cardTheme, colors, hardShadow, space, type } from '../theme';
 import type { CardType } from '../theme';
 import { CardTextColorProvider } from './cardTextColor';
@@ -26,6 +29,13 @@ type CardFrameProps = {
   children: ReactNode;
 };
 
+/** The id of the card a frame holds when it gets the help action (`CardFrame`); else null. */
+function useHelpCardId(): string | null {
+  const card = useFrameCard();
+  if (card?.id === undefined || card.type === 'checkpoint') return null;
+  return currentSet() === null ? null : card.id;
+}
+
 /**
  * The frame every card sits in (docs/design/card-feed/README.md:17-20, 46-47): a filled box with
  * a 1.5pt ink border, a hard offset shadow drawn as a sibling view behind it, "+" corner marks,
@@ -39,11 +49,19 @@ type CardFrameProps = {
  *
  * A card with sources (from the API; src/cards/SourcesButton.tsx) gets the Sources action there
  * too, before the flag; it opens the sheet that lists them. The demo cards have none.
+ *
+ * A card with a server id that is not a checkpoint gets the help action between the two, once the
+ * API has served a set (src/cards/HelpButton.tsx); a card it adds goes in after the page on
+ * screen (the store's `index`: only the page on screen can be tapped), and the frame shows its
+ * line for as long as the flag's. The demo cards and the Summary have none.
  */
 export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
   const kickerStyle = [styles.kicker, { color: theme.kicker }];
   const [thanked, showThanks] = useThanksLine();
+  const [added, showAdded] = useThanksLine();
+  const helpCardId = useHelpCardId();
+  const index = useFeedStore((state) => state.index);
   const flaggable = useFlaggable();
   const hasSources = useHasSources();
 
@@ -59,12 +77,16 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
             <Text style={[kickerStyle, styles.lead]}>{kicker}</Text>
             {meta ? <Text style={kickerStyle}>{meta}</Text> : null}
             {hasSources ? <SourcesButton /> : null}
+            {helpCardId === null ? null : (
+              <HelpButton cardId={helpCardId} index={index} onAdded={showAdded} />
+            )}
             {flaggable ? <FlagButton onFlagged={showThanks} /> : null}
           </View>
           {children}
         </View>
         <CornerMarks tone="ink" />
         <Toast message={copy.flag.thanks} visible={thanked} />
+        <Toast message={copy.help.added} visible={added} />
       </View>
     </CardTextColorProvider>
   );

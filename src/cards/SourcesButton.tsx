@@ -31,6 +31,11 @@ export function SourcesTarget({ card, children }: { card: Card; children: ReactN
   return <SourcesContext.Provider value={card}>{children}</SourcesContext.Provider>;
 }
 
+/** The card a frame here holds; null outside any `SourcesTarget` (the Summary). */
+export function useFrameCard(): Card | null {
+  return useContext(SourcesContext);
+}
+
 /** The sources of the card a frame here holds, in the order the API sent them; none for none. */
 export function useCardSources(): readonly SourceLink[] {
   return useContext(SourcesContext)?.sources ?? NO_SOURCES;

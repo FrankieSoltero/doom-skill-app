@@ -1,6 +1,7 @@
 // src/data/index.ts chooses the app's one card source by `config.dataSource`: the API source for
 // `api`, the demo fixture source otherwise. Each case loads the module afresh over a mocked
 // configuration; the Supabase client and the session are mocked, and no request is made.
+import response from '../__fixtures__/feed_response.json';
 import type { CardSource } from '../index';
 
 jest.mock('../../auth/supabase', () => ({ supabase: { auth: { refreshSession: jest.fn() } } }));
@@ -76,20 +77,25 @@ describe('cardSource', () => {
 
 type DataModule = typeof import('../index');
 
-/** The export `name` of src/data/index.ts under `dataSource`. */
-function exportFor<Name extends 'loadSummary' | 'flagCard' | 'placement'>(
-  dataSource: 'api' | 'fixture',
-  name: Name,
-): DataModule[Name] | undefined {
-  let value: DataModule[Name] | undefined;
+/** src/data/index.ts loaded afresh under `dataSource`. */
+function moduleFor(dataSource: 'api' | 'fixture'): DataModule | undefined {
+  let loaded: DataModule | undefined;
   jest.isolateModules(() => {
     jest.doMock('../../config', () => ({
       config: { apiUrl: 'https://api.test', dataSource },
       configError: null,
     }));
-    value = jest.requireActual<DataModule>('../index')[name];
+    loaded = jest.requireActual<DataModule>('../index');
   });
-  return value;
+  return loaded;
+}
+
+/** The export `name` of src/data/index.ts under `dataSource`. */
+function exportFor<Name extends 'loadSummary' | 'flagCard' | 'placement'>(
+  dataSource: 'api' | 'fixture',
+  name: Name,
+): DataModule[Name] | undefined {
+  return moduleFor(dataSource)?.[name];
 }
 
 const loadSummaryFor = (dataSource: 'api' | 'fixture') => exportFor(dataSource, 'loadSummary');
@@ -156,5 +162,33 @@ describe('placement', () => {
 
   it('is null with the fixture data source: the demo sets have no placement', () => {
     expect(exportFor('fixture', 'placement')).toBeNull();
+  });
+});
+
+describe('currentSet', () => {
+  it('is null before the first set, then the set the API source served, with the api data source', async () => {
+    const served = { ...response, set_number: 2, feed_date: '2026-10-05' };
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(served), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const data = moduleFor('api');
+    mockActiveTopic.mockReturnValue('strudel');
+    expect(data?.currentSet()).toBeNull();
+
+    await data?.cardSource.getNextSet();
+    mockActiveTopic.mockReturnValue(null);
+
+    expect(data?.currentSet()).toStrictEqual({ feedDate: '2026-10-05', setNumber: 2 });
+  });
+
+  it('is null with the fixture data source, even after a set: no API served the demo sets', async () => {
+    const data = moduleFor('fixture');
+
+    await data?.cardSource.getNextSet();
+
+    expect(data?.currentSet()).toBeNull();
   });
 });
