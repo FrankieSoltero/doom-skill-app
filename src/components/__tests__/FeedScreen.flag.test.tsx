@@ -64,6 +64,6 @@ describe('FeedScreen flag target', () => {
     await renderFeed(scriptedSource(makeSet(1, [{ ...cardsByType.quiz, sources }])), frameCard);
     await layout(700);
 
-    expect(screen.getByRole('button', { name: 'Sources' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Show me the source' })).toBeOnTheScreen();
   });
 });

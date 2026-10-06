@@ -63,7 +63,7 @@ describe('ReviewCard with a quoted snippet', () => {
     ));
 
     reveal();
-    fireEvent.press(screen.getByRole('button', { name: 'Sources' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Show me the source' }));
 
     expect(
       within(screen.getByTestId('sources-sheet')).getByText('Photosynthesis'),

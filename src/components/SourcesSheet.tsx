@@ -28,8 +28,11 @@ export function hostOf(url: string): string {
   return HOST.exec(url)?.[1]?.toLowerCase() ?? '';
 }
 
-/** Opens `url` in the system browser when it is `https` (module comment). */
-function openSource(url: string): void {
+/**
+ * Opens `url` in the system browser when it is `https` (module comment). The source sheet's
+ * passage line (src/cards/SourceSheet.tsx) opens through it too.
+ */
+export function openSource(url: string): void {
   if (!url.startsWith(HTTPS)) return;
   Linking.openURL(url).catch(() => {
     logWarning('source_open_failed');
@@ -45,6 +48,36 @@ type SourcesSheetProps = {
   onClose: () => void;
 };
 
+/**
+ * A row per source, in the order given: the sheet's rows, which the source sheet
+ * (src/cards/SourceSheet.tsx) shows under its links heading.
+ */
+export function SourceRows({ sources }: { sources: readonly SourceLink[] }) {
+  return sources.map((source, index) => (
+    <Pressable
+      // Two sources may share a URL; the index keeps each row's key apart.
+      key={`${String(index)}:${source.url}`}
+      accessibilityRole="link"
+      onPress={() => {
+        openSource(source.url);
+      }}
+      style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
+    >
+      <Text style={styles.title} numberOfLines={2}>
+        {source.title}
+      </Text>
+      <View style={styles.meta}>
+        <Text style={styles.detail} numberOfLines={1}>
+          {copy.sources.licence(source.license)}
+        </Text>
+        <Text style={styles.detail} numberOfLines={1}>
+          {hostOf(source.url)}
+        </Text>
+      </View>
+    </Pressable>
+  ));
+}
+
 /** The sheet: the title, a row per source and Close (module comment). */
 export function SourcesSheet({ visible, sources, onClose }: SourcesSheetProps) {
   return (
@@ -55,29 +88,7 @@ export function SourcesSheet({ visible, sources, onClose }: SourcesSheetProps) {
       onClose={onClose}
       testID="sources-sheet"
     >
-      {sources.map((source, index) => (
-        <Pressable
-          // Two sources may share a URL; the index keeps each row's key apart.
-          key={`${String(index)}:${source.url}`}
-          accessibilityRole="link"
-          onPress={() => {
-            openSource(source.url);
-          }}
-          style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
-        >
-          <Text style={styles.title} numberOfLines={2}>
-            {source.title}
-          </Text>
-          <View style={styles.meta}>
-            <Text style={styles.detail} numberOfLines={1}>
-              {copy.sources.licence(source.license)}
-            </Text>
-            <Text style={styles.detail} numberOfLines={1}>
-              {hostOf(source.url)}
-            </Text>
-          </View>
-        </Pressable>
-      ))}
+      <SourceRows sources={sources} />
     </BottomSheet>
   );
 }

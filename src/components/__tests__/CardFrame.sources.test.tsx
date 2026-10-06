@@ -22,14 +22,16 @@ function renderFrame(card: Card | null) {
   render(card === null ? frame : <SourcesTarget card={card}>{frame}</SourcesTarget>);
 }
 
-const sourcesAction = () => screen.queryByRole('button', { name: 'Sources' });
+const sourcesAction = () => screen.queryByRole('button', { name: 'Show me the source' });
 
 describe('CardFrame Sources action', () => {
   it('puts the Sources action in the kicker row of a card with sources', () => {
     renderFrame(CARD);
 
     expect(
-      within(screen.getByTestId('card-kicker-row')).getByRole('button', { name: 'Sources' }),
+      within(screen.getByTestId('card-kicker-row')).getByRole('button', {
+        name: 'Show me the source',
+      }),
     ).toBeOnTheScreen();
     expect(screen.queryByTestId('sources-sheet')).toBeNull();
   });
@@ -37,7 +39,7 @@ describe('CardFrame Sources action', () => {
   it('opens the sheet of the card sources, and Close closes it', () => {
     renderFrame(CARD);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Sources' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Show me the source' }));
 
     const sheet = screen.getByTestId('sources-sheet');
     expect(within(sheet).getByText('Mini-notation')).toBeOnTheScreen();
