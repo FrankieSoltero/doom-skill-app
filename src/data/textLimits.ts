@@ -18,6 +18,8 @@ const CHARS_PER_LINE = {
   titleM: 27,
   /** Concept title: Barlow Condensed 38, 13.57 points a character, across 309. */
   titleL: 22,
+  /** Exercise title: Barlow Condensed 28, 10.00 points a character, across 309. */
+  titleS: 30,
   /** Concept body: Barlow 15, 6.25 points a character, across 309. */
   body: 49,
   /** Quiz and predict explanation: Barlow 14, 5.84 points a character, across 309. */
@@ -92,6 +94,17 @@ const PROSE_CHOICE_LIMITS = {
 };
 
 /**
+ * The exercise title's lines. A Strudel exercise with four beat grid rows and a check message at
+ * the backend's 120 characters (at most 4 lines of 22 beside its label) is the kicker row (14),
+ * the editor frame (199: the 100-point editor, the divider and the grid), the buttons (46), the
+ * message (88), Next card (50) and six 13.6 gaps: 478.6, with 29 a title line. 2 lines make 536.6;
+ * a third is over even at the message's fewest 3 lines, 543.6
+ * (`cards/__tests__/ExerciseCard.height.test.ts`). The starter code has no line limit: the editor
+ * keeps its height and scrolls.
+ */
+const EXERCISE_TITLE_LINES = 2;
+
+/**
  * The review card's answer: Barlow 17, 7.09 points a character, across 309.
  */
 const ANSWER_PER_LINE = 43;
@@ -122,20 +135,13 @@ const CODE_LINES = {
   /** A review card's snippet: 3, with `ANSWER_LINES` (above). */
   review: 3,
   /**
-   * A predict card's code, answered in a Strudel set: the kicker row (14), the title (66), four
-   * options in two rows of 2-line cells (134), the explanation (66), Next card (50), six 13.6 gaps,
-   * the code block's padding (28) and the error notice under the code (79.6, with its gap) are
-   * 519.2, and each code line 22. 1 line makes 541.2; 2 make 563.2
-   * (`cards/__tests__/ChoiceCard.height.test.ts`).
+   * A predict card's code, answered, with no audio notice: the kicker row (14), the title (66),
+   * four options in two rows of 2-line cells (134), the explanation (66), Next card (50), six 13.6
+   * gaps and the code block's padding (28) are 439.6, and each code line 22. 4 lines make 527.6; 5
+   * make 549.6 (`cards/__tests__/ChoiceCard.height.test.ts`). A Strudel audio notice under 4 lines
+   * may run past the frame (M10 plan T, T3: a device-checklist item); under one line each fits.
    */
-  predict: 1,
-  /**
-   * An exercise's starter code: the lines its editor shows whole. The editor is 100 points tall
-   * with 12 of padding above and below, at 22 a line: 3 lines take 90, a fourth scrolls inside the
-   * editor. The editor keeps its height, so the card does not grow with the starter
-   * (`cards/__tests__/ExerciseCard.height.test.ts`).
-   */
-  exercise: 3,
+  predict: 4,
 };
 
 /**
@@ -145,8 +151,8 @@ const CODE_LINES = {
  * (the quiz's 48 characters take 4 lines there), and `CODE_LINES.predict`. Concept: title 2 lines,
  * body 6, a quoted snippet a passage. Review: the prompt in 2 lines of the concept title's style,
  * the answer in `ANSWER_LINES`. Cloze, scenario and numeric: a choice card with grid options whose
- * text, situation or problem is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: 4
- * beat grid rows, in the starter code and in the solution.
+ * text, situation or problem is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: the
+ * title in `EXERCISE_TITLE_LINES`, and 4 beat grid rows, in the starter code and in the solution.
  */
 export const CARD_TEXT_LIMITS = {
   quiz: { ...CHOICE_LIMITS, options: 4, option: charsIn(2, CHARS_PER_LINE.option) },
@@ -170,7 +176,7 @@ export const CARD_TEXT_LIMITS = {
   scenario: { ...PROSE_CHOICE_LIMITS, situation: PASSAGE },
   numeric: { ...PROSE_CHOICE_LIMITS, problem: PASSAGE },
   checkpoint: { rubricRows: 4, rubricLabel: charsIn(1, CHARS_PER_LINE.rubric) },
-  exercise: { gridRows: 4, starterLines: CODE_LINES.exercise },
+  exercise: { gridRows: 4, title: charsIn(EXERCISE_TITLE_LINES, CHARS_PER_LINE.titleS) },
 } as const;
 
 /** The line-limit key of each card type's code field, in `CARD_TEXT_LIMITS`. */
@@ -178,7 +184,6 @@ export const CODE_LINE_FIELDS = {
   concept: 'snippetLines',
   review: 'snippetLines',
   predict: 'codeLines',
-  exercise: 'starterLines',
 } as const;
 
 /**
