@@ -135,6 +135,24 @@ describe('insertCard when the position does not fit (defensive)', () => {
     expect(logWarning).not.toHaveBeenCalledWith('insert_appended', expect.anything());
   });
 
+  // The learner answered card 0, typed a draft on the checkpoint (page 3), then went back to 0: an
+  // append at the checkpoint would put the draft's stored answer on the inserted card's page.
+  it('drops the card when the checkpoint already holds an answer', () => {
+    const draft = { kind: 'checkpoint', code: 's("bd")', status: 'idle', grade: null } as const;
+    store().startSet(
+      apiSet([served(concept, 1), served(quiz, 2), served(predict, 3), served(checkpoint, 4)]),
+    );
+    store().setAnswer(0, { kind: 'choice', picked: 1 });
+    store().setAnswer(3, draft);
+    const { set, answers } = store();
+
+    expect(store().insertCard(added, 2)).toBe(-1);
+
+    expect(store().set).toBe(set);
+    expect(store().answers).toBe(answers);
+    expect(logWarning).toHaveBeenCalledWith('insert_dropped', { at: 2, index: 0 });
+  });
+
   it('logs no card text when it appends', () => {
     store().startSet(apiSet([served(concept, 1), served(quiz, 2)]));
     store().setIndex(1);

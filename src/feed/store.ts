@@ -69,11 +69,12 @@ type FeedActions = {
   /**
    * Inserts `card` at `at` when `at > state.index`, `at <= checkpointIndex(cards)` and no answer
    * exists at any position >= at (a later `at` is first clamped to `checkpointIndex(cards)`); else
-   * appends it at `checkpointIndex(cards)` when that is > `state.index` and logs `insert_appended`,
-   * or inserts nothing, logs `insert_dropped` and returns -1 (no card text in either). Returns the
-   * index used; -1 with no set. A card whose id is already in the set is not inserted twice
-   * (returns its index). A card never lands at or before the page on screen, so the answers,
-   * keyed by index, never shift.
+   * appends it at `checkpointIndex(cards)` when that is > `state.index` and no answer exists at any
+   * position >= it, and logs `insert_appended`; or inserts nothing, logs `insert_dropped` and
+   * returns -1 (no card text in either). Returns the index used; -1 with no set. A card whose id
+   * is already in the set is not inserted twice (returns its index). A card never lands at or
+   * before the page on screen nor before a stored answer, so the answers, keyed by index, never
+   * shift.
    */
   insertCard: (card: Card, at: number) => number;
   reset: () => void;
@@ -267,7 +268,8 @@ function answeredFrom(state: FeedState, at: number): boolean {
 /**
  * Where a card asked for at `at` goes: `at`, clamped to the checkpoint, when that is after the
  * current card and no answer lies at or after it; else the checkpoint's index (`appended`) when
- * that is after the current card; else nowhere (-1).
+ * that is after the current card and no answer lies at or after it (a draft typed on the
+ * checkpoint); else nowhere (-1).
  */
 function insertionAt(
   state: FeedState,
@@ -279,7 +281,8 @@ function insertionAt(
   if (clamped > state.index && !answeredFrom(state, clamped)) {
     return { index: clamped, appended: false };
   }
-  return end > state.index ? { index: end, appended: true } : { index: -1, appended: false };
+  const appendable = end > state.index && !answeredFrom(state, end);
+  return appendable ? { index: end, appended: true } : { index: -1, appended: false };
 }
 
 /**
