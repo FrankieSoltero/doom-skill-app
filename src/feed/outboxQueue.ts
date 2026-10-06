@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { ApiError } from '../api/errors';
 import type { components } from '../api/schema';
+import type { Card } from '../data';
 import { logWarning } from '../log';
 
 /** An answer to one card, as the feed store hands it over. */
@@ -21,6 +22,12 @@ export type Attempt = {
 };
 
 export type Queued = Attempt & { clientAttemptId: string };
+
+/**
+ * What the outbox reads from the API's reply to an attempt (`AttemptResult`): the optional
+ * `follow_up`, the card the server added after a wrong answer, parsed; `null` when none.
+ */
+export type AttemptReply = { followUp: Card | null };
 
 /** What the queue reads and writes: async storage in the app. */
 export type QueueStorage = {

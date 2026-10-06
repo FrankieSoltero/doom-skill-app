@@ -34,25 +34,30 @@ import { api, newUuid } from '../api/client';
 import { ApiError } from '../api/errors';
 import { useSession } from '../auth/useSession';
 import { logWarning } from '../log';
+import { handOverFollowUp, installFollowUpSink, parseFollowUp, placeFollowUp } from './followUp';
 import {
   isQueueKey,
   kindOf,
   queueKey,
   storedQueue,
   type Attempt,
+  type AttemptReply,
   type Queued,
   type QueueStorage,
 } from './outboxQueue';
 import { sendAttemptsTo } from './store';
 
-export type { Attempt } from './outboxQueue';
+export type { Attempt, AttemptReply } from './outboxQueue';
 
 /** The session as the outbox reads it: who is signed in, if the session has been read. */
 export type SessionView = { status: 'loading' | 'signedOut' | 'signedIn'; userId: string | null };
 
 export type OutboxDeps = {
-  /** Sends one attempt; resolves on a 2xx, rejects otherwise (an `ApiError` from the client). */
-  post: (attempt: Queued) => Promise<void>;
+  /**
+   * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up), rejects
+   * otherwise (an `ApiError` from the client).
+   */
+  post: (attempt: Queued) => Promise<AttemptReply> | Promise<void>;
   storage: QueueStorage;
   /** The session store (`useSession` in the app). */
   session: {
@@ -87,12 +92,13 @@ function cut(response: Attempt['response']): Attempt['response'] {
 
 /**
  * Posts `head`: true when it is done with, sent or refused for good (a 404, 409 or 422, logged
- * with its kind); false when it must wait for a retry.
+ * with its kind); false when it must wait for a retry. A sent attempt's follow-up goes to the
+ * installed sink, which cannot make it unsent.
  */
 async function sendOne(post: OutboxDeps['post'], head: Queued): Promise<boolean> {
+  let reply: AttemptReply | undefined;
   try {
-    await post(head);
-    return true;
+    reply = (await post(head)) ?? undefined;
   } catch (error) {
     if (error instanceof ApiError && REFUSED.has(error.status)) {
       logWarning('attempt_dropped', { kind: error.kind, status: error.status });
@@ -101,6 +107,8 @@ async function sendOne(post: OutboxDeps['post'], head: Queued): Promise<boolean>
     logWarning('attempt_send_failed', { kind: kindOf(error) });
     return false;
   }
+  handOverFollowUp(head, reply);
+  return true;
 }
 
 /** Removes every stored queue but `keep`'s (`null`: all of them). */
@@ -204,8 +212,8 @@ export function createOutbox(deps: OutboxDeps): Outbox {
 type Client = NonNullable<typeof api>;
 
 /** Posts `attempt` through the app's API client, in the API's snake_case body. */
-async function post(client: Client, attempt: Queued): Promise<void> {
-  await client.POST('/cards/{card_id}/attempt', {
+async function post(client: Client, attempt: Queued): Promise<AttemptReply> {
+  const { data } = await client.POST('/cards/{card_id}/attempt', {
     params: { path: { card_id: attempt.cardId } },
     body: {
       client_attempt_id: attempt.clientAttemptId,
@@ -215,6 +223,7 @@ async function post(client: Client, attempt: Queued): Promise<void> {
       set_number: attempt.setNumber,
     },
   });
+  return { followUp: parseFollowUp(data?.follow_up) };
 }
 
 /** With the demo sets there is no API, and nothing to send. */
@@ -227,7 +236,8 @@ const INERT: Outbox = {
 
 /**
  * The app's outbox over the API client and async storage, for the user `useSession` holds. It
- * flushes when the app returns to the foreground, and takes the feed store's answered cards.
+ * flushes when the app returns to the foreground, takes the feed store's answered cards, and
+ * places each follow-up in the running set (`placeFollowUp`).
  */
 function appOutbox(): Outbox {
   const client = api;
@@ -248,6 +258,7 @@ function appOutbox(): Outbox {
     if (state === 'active') void outbox.flush();
   });
   sendAttemptsTo(outbox);
+  installFollowUpSink(placeFollowUp);
   return outbox;
 }
 
