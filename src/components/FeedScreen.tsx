@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
 import { FlagTarget } from '../cards/FlagButton';
-import { SourcesTarget } from '../cards/SourcesButton';
+import { SourcesTarget } from '../cards/cardSources';
 import { canRenderCard, renderCard, renderSummary } from '../cards/registry';
 import { copy } from '../copy';
 import type { Card, CardSource, FeedSet } from '../data';
@@ -204,7 +204,9 @@ type ReadyFeedProps = ScreenActions & { set: FeedSet; session: FeedSession };
 /**
  * The feed header over the pager, which fills the rest. Each card is a page, then the Summary,
  * whose `Keep going` loads the next set. A new set's pages get new keys (the store's round), so
- * every card of it starts fresh and the old set's cards unmount.
+ * every card of it starts fresh and the old set's cards unmount. Within a set a page is keyed by
+ * its card's id (by its index for a demo card, which has none), so a card inserted into the set
+ * does not hand a page, and its error boundary's state, to the card it shifts.
  */
 function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFeedProps) {
   const streak = useFeedStore((state) => state.streak);
@@ -218,7 +220,7 @@ function ReadyFeed({ set, session, drawCard, drawSummary, onViewTree }: ReadyFee
   const pages: ReactNode[] = [
     ...set.cards.map((card, index) => (
       <CardPage
-        key={`${round}-${String(index)}`}
+        key={`${round}-${card.id ?? String(index)}`}
         card={card}
         index={index}
         round={session.setRound}

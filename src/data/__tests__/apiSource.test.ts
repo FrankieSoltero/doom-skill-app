@@ -210,14 +210,14 @@ describe('createApiSource: cards it cannot show', () => {
 describe('createApiSource: the current set', () => {
   it('has none before a set is served, and keeps the date and number of the last one', async () => {
     const { source } = sourceOver([ok(1), ok(2), noContent()]);
-    expect(source.currentSet()).toBeNull();
+    expect(source.getCurrentSet()).toBeNull();
 
     await source.getNextSet();
-    expect(source.currentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 1 });
+    expect(source.getCurrentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 1 });
     await source.getNextSet();
-    expect(source.currentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
+    expect(source.getCurrentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
     await source.getNextSet();
-    expect(source.currentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
+    expect(source.getCurrentSet()).toStrictEqual({ feedDate: '2026-09-30', setNumber: 2 });
   });
 
   it("names the set by the API's date, not the device's", async () => {
@@ -227,7 +227,7 @@ describe('createApiSource: the current set', () => {
     const set = await source.getNextSet();
 
     expect(set?.feedDate).toBe('2026-10-01');
-    expect(source.currentSet()).toStrictEqual({ feedDate: '2026-10-01', setNumber: 1 });
+    expect(source.getCurrentSet()).toStrictEqual({ feedDate: '2026-10-01', setNumber: 1 });
   });
 
   it('fails with kind schema for a set without a date, and keeps no current set', async () => {
@@ -238,7 +238,7 @@ describe('createApiSource: the current set', () => {
 
     expect(error.kind).toBe('schema');
     expect(error.message).toBe('Card set failed validation at feedDate');
-    expect(source.currentSet()).toBeNull();
+    expect(source.getCurrentSet()).toBeNull();
   });
 
   it('keeps a set that arrives after the feed screen has gone', async () => {
@@ -257,7 +257,7 @@ describe('createApiSource: the current set', () => {
     });
 
     expect(useFeedStore.getState().set?.setNumber).toBe(1);
-    expect(source.currentSet()?.setNumber).toBe(1);
+    expect(source.getCurrentSet()?.setNumber).toBe(1);
   });
 });
 

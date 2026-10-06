@@ -6,9 +6,10 @@
  * TanStack Query, keyed by card id and kept for the session, and shows the passage the card was
  * built from first, then the others, then the sources. A passage is drawn as served, with its
  * lead-in muted above it and one line, its source's title and licence, that opens the source
- * through the sources sheet's `https`-only opener. Any failure to load (an older server's 404,
- * any other `ApiError`, an answer the app cannot read) leaves the sources and one line; there is
- * no retry button, a reopen asks again. A card without an id (the demo cards) asks nothing.
+ * through the `https`-only opener of src/components/SourceLinks.tsx. Any failure to load (an older
+ * server's 404, any other `ApiError`, an answer the app cannot read) leaves the sources and one
+ * line; there is no retry button, a reopen asks again. A card without an id (the demo cards) asks
+ * nothing.
  */
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -17,11 +18,11 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { requireApi } from '../api/query';
 import { BottomSheet } from '../components/BottomSheet';
 import { Passage } from '../components/Passage';
-import { openSource, SourceRows } from '../components/SourcesSheet';
+import { openSource, SourceRows } from '../components/SourceLinks';
 import { copy } from '../copy';
 import { fetchCardSource, type CardPassages } from '../data/feedActions';
 import { colors, space, type } from '../theme';
-import { useCardSources } from './SourcesButton';
+import { useCardSources } from './cardSources';
 
 type CardPassage = CardPassages['passages'][number];
 
@@ -52,6 +53,8 @@ function SourcePassage({ passage }: { passage: CardPassage }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={copy.source.open}
+        // The label hides the visible line from a screen reader; the hint tells the links apart.
+        accessibilityHint={sourceLine(source)}
         onPress={() => {
           openSource(source.url);
         }}

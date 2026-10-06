@@ -10,7 +10,7 @@ import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
 import { colors } from '../../theme';
 import { SourceSheet } from '../SourceSheet';
-import { SourcesTarget } from '../SourcesButton';
+import { SourcesTarget } from '../cardSources';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -140,6 +140,7 @@ describe('SourceSheet', () => {
 
     const links = screen.getAllByRole('link', { name: 'Open the source' });
     expect(links).toHaveLength(2);
+    expect(links[0]).toHaveProp('accessibilityHint', 'Mini-notation · CC BY-SA 4.0');
     const [first] = screen.getAllByText('Mini-notation · CC BY-SA 4.0');
     if (first === undefined) throw new Error('no source line');
     fireEvent.press(first);

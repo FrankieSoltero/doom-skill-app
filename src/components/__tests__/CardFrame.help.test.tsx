@@ -9,7 +9,7 @@ import { Text } from 'react-native';
 
 import { json, queryWrapper, serveApi } from '../../api/testing/fakeApi';
 import { FlagTarget } from '../../cards/FlagButton';
-import { SourcesTarget } from '../../cards/SourcesButton';
+import { SourcesTarget } from '../../cards/cardSources';
 import { currentSet, type Card } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';

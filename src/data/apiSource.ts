@@ -193,21 +193,17 @@ export async function resetPlacement(api: ApiClient, slug: string): Promise<Rese
  * - No active topic fails with kind `noTopic`, before any request.
  * - Any ApiError fails with its kind; the client has already applied its time limit and retries.
  * - A set with cards the app cannot show is served without them, their ids in `droppedIds`.
- * - `currentSet()` gives the served set's date (the API's: the date the server stored it for, in
- *   the user's timezone) and number, for the attempts at its cards; `null` before the first set.
- *   `getCurrentSet()` gives the same, for a card added to the running set (`POST /feed/extra`).
+ * - `getCurrentSet()` gives the served set's date (the API's: the date the server stored it for,
+ *   in the user's timezone) and number, for the attempts at its cards and for a card added to the
+ *   running set (`POST /feed/extra`); `null` before the first set.
  *
  * Nothing is cancelled when the feed screen goes: the session keeps a set that arrives late.
  */
 export function createApiSource(
   api: ApiClient,
   getTopic: () => string | null,
-): CardSource & {
-  currentSet: () => CurrentSet | null;
-  getCurrentSet: () => CurrentSet | null;
-} {
+): CardSource & { getCurrentSet: () => CurrentSet | null } {
   let served: { topic: string; set: CurrentSet } | null = null;
-  const current = () => served?.set ?? null;
 
   const get = async (path: FeedPath, topic: string): Promise<unknown> => {
     const { data } = await api.GET(path, { params: { query: { topic } } });
@@ -243,7 +239,6 @@ export function createApiSource(
       served = { topic, set: { feedDate: set.feedDate, setNumber: set.setNumber } };
       return set;
     },
-    currentSet: current,
-    getCurrentSet: current,
+    getCurrentSet: () => served?.set ?? null,
   };
 }

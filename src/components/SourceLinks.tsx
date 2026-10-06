@@ -1,11 +1,11 @@
 /**
- * The sheet of a card's sources (M6 hardening Task 12), opened by the Sources action in the card
- * frame's corner (src/cards/SourcesButton.tsx): one row per source with its title, its licence
- * line and the host of its URL, on the shared `BottomSheet`. A tap on a row opens the URL in the
- * system browser with `Linking.openURL`, and only when it starts with `https://`: the card schema
- * already refuses any other URL (src/data/schema.ts), and this checks again, so nothing else (an
- * `http`, `javascript:` or app URL) is ever handed to the system. A URL the system could not open
- * is logged by the event alone, never the URL. The sheet stays open after a tap.
+ * A card's source links (M6 hardening Task 12), shown under the links heading of the source sheet
+ * (src/cards/SourceSheet.tsx) that the Sources action in the card frame's corner opens: one row per
+ * source with its title, its licence line and the host of its URL. A tap on a row opens the URL in
+ * the system browser with `Linking.openURL`, and only when it starts with `https://`: the card
+ * schema already refuses any other URL (src/data/schema.ts), and this checks again, so nothing
+ * else (an `http`, `javascript:` or app URL) is ever handed to the system. A URL the system could
+ * not open is logged by the event alone, never the URL.
  */
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,7 +13,6 @@ import { copy } from '../copy';
 import type { SourceLink } from '../data';
 import { logWarning } from '../log';
 import { border, colors, space, type } from '../theme';
-import { BottomSheet } from './BottomSheet';
 
 const HTTPS = 'https://';
 /**
@@ -39,19 +38,7 @@ export function openSource(url: string): void {
   });
 }
 
-type SourcesSheetProps = {
-  /** Shown while true. */
-  visible: boolean;
-  /** The card's sources, in the order the API sent them. */
-  sources: readonly SourceLink[];
-  /** Called on Close, a tap above the sheet, or the Android back button. */
-  onClose: () => void;
-};
-
-/**
- * A row per source, in the order given: the sheet's rows, which the source sheet
- * (src/cards/SourceSheet.tsx) shows under its links heading.
- */
+/** A row per source, in the order given (module comment). */
 export function SourceRows({ sources }: { sources: readonly SourceLink[] }) {
   return sources.map((source, index) => (
     <Pressable
@@ -76,21 +63,6 @@ export function SourceRows({ sources }: { sources: readonly SourceLink[] }) {
       </View>
     </Pressable>
   ));
-}
-
-/** The sheet: the title, a row per source and Close (module comment). */
-export function SourcesSheet({ visible, sources, onClose }: SourcesSheetProps) {
-  return (
-    <BottomSheet
-      visible={visible}
-      title={copy.sources.action}
-      cancelLabel={copy.sources.close}
-      onClose={onClose}
-      testID="sources-sheet"
-    >
-      <SourceRows sources={sources} />
-    </BottomSheet>
-  );
 }
 
 const styles = StyleSheet.create({

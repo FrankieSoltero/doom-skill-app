@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { SourcesTarget } from '../../cards/SourcesButton';
+import { SourcesTarget } from '../../cards/cardSources';
 import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
 import { CardFrame } from '../CardFrame';

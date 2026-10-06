@@ -7,7 +7,7 @@ import { fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReviewCard as ReviewCardData } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { ReviewCard } from '../ReviewCard';
-import { SourcesTarget } from '../SourcesButton';
+import { SourcesTarget } from '../cardSources';
 import { renderChoiceCard } from '../testing/choiceCards';
 import { demoCard } from '../testing/demoCards';
 import { reveal, revealButton, renderReviewCard } from '../testing/reviewCards';

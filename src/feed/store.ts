@@ -265,6 +265,15 @@ function answeredFrom(state: FeedState, at: number): boolean {
   return Object.keys(state.answers).some((page) => Number(page) >= at);
 }
 
+/** `record` with every page key `>= at` moved up by one, for a card inserted at `at`. */
+function shiftedFrom<T>(record: Record<number, T>, at: number): Record<number, T> {
+  const entries = Object.entries(record).map(([page, value]) => {
+    const key = Number(page);
+    return [key >= at ? key + 1 : key, value] as const;
+  });
+  return Object.fromEntries(entries);
+}
+
 /**
  * Where a card asked for at `at` goes: `at`, clamped to the checkpoint, when that is after the
  * current card and no answer lies at or after it; else the checkpoint's index (`appended`) when
@@ -362,7 +371,8 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     );
   },
   // The card joins `set.cards`, so the pages and the summary's totals count it; the logged event
-  // carries the two positions only.
+  // carries the two positions only. The page-keyed `shownAt` and `seenSent` move with their cards
+  // (a back-swipe leaves keys after the current page); `answers` holds none at or after `index`.
   insertCard: (card, at) => {
     const state = getState();
     const { set } = state;
@@ -376,7 +386,11 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
     }
     if (appended) logWarning('insert_appended', { at, index });
     const cards = [...set.cards.slice(0, index), card, ...set.cards.slice(index)];
-    setState({ set: { ...set, cards } });
+    setState({
+      set: { ...set, cards },
+      shownAt: shiftedFrom(state.shownAt, index),
+      seenSent: shiftedFrom(state.seenSent, index),
+    });
     return index;
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a

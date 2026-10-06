@@ -2,7 +2,8 @@
 // the current card, never past the checkpoint, and never ahead of an answer already stored.
 import type { Card, FeedSet } from '../../data';
 import { logWarning } from '../../log';
-import { checkpointIndex, pageCount, useFeedStore } from '../store';
+import type { Attempt } from '../outbox';
+import { checkpointIndex, pageCount, sendAttemptsTo, useFeedStore } from '../store';
 import { cardsByType, makeSet } from '../testing/sets';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -160,6 +161,51 @@ describe('insertCard when the position does not fit (defensive)', () => {
     store().insertCard(added, 0);
 
     expect(JSON.stringify(jest.mocked(logWarning).mock.calls)).not.toContain(review.prompt);
+  });
+});
+
+// `shownAt` and `seenSent` are keyed by page, like the answers: an insertion at a page already
+// visited (a back-swipe) must move them with their cards, or the inserted card takes them over.
+describe('insertCard after a back-swipe', () => {
+  afterEach(() => {
+    sendAttemptsTo(null);
+    jest.restoreAllMocks();
+  });
+
+  it('moves the shown times and the sent seen with their cards', () => {
+    const add = jest.fn<undefined, [Attempt]>();
+    sendAttemptsTo({ add });
+    let clock = 1_000;
+    jest.spyOn(Date, 'now').mockImplementation(() => clock);
+    const inserted = served(concept, 9);
+    store().startSet(apiSet([served(quiz, 1), served(concept, 2), served(predict, 3)]));
+    store().setAnswer(0, { kind: 'choice', picked: 0 });
+    clock = 2_000;
+    store().setIndex(1);
+    clock = 3_000;
+    store().setIndex(2);
+    store().setIndex(1);
+    store().setIndex(0);
+
+    expect(store().insertCard(inserted, 1)).toBe(1);
+
+    expect(store().shownAt).toStrictEqual({ 0: 1_000, 2: 2_000, 3: 3_000 });
+    expect(store().seenSent).toStrictEqual({ 2: true });
+    add.mockClear();
+    clock = 5_000;
+    store().setIndex(1);
+    clock = 6_000;
+    store().setIndex(2);
+    store().setIndex(3);
+    expect(add.mock.calls).toStrictEqual([
+      [
+        expect.objectContaining({
+          cardId: inserted.id,
+          response: { seen: true },
+          durationMs: 1_000,
+        }),
+      ],
+    ]);
   });
 });
 

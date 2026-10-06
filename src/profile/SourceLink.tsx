@@ -3,7 +3,7 @@
  * section): the build tag of the running build (`app-v<version>+<sha>`) when it has one, else
  * "development build". A tap opens that tag's tree on GitHub, or the repository's root with no
  * tag, through `Linking.openURL`, and only when the URL is `https` — the same rule
- * `src/components/SourcesSheet.tsx` applies to a card's sources, applied again here since
+ * `src/components/SourceLinks.tsx` applies to a card's sources, applied again here since
  * `sourceUrl` always returns an `https` URL in practice but nothing else should ever reach
  * `Linking.openURL` unchecked.
  */

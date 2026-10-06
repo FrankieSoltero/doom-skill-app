@@ -1,6 +1,6 @@
 // The profile's link to the app's source (M7 open client): the build tag when the running build
 // carries one, else "development build"; a tap opens the tagged tree on GitHub, or the repository
-// itself with no tag. Only ever an `https` URL (mirrors src/components/SourcesSheet.tsx's rule).
+// itself with no tag. Only ever an `https` URL (mirrors src/components/SourceLinks.tsx's rule).
 //
 // `buildTag` is mocked directly rather than through `process.env`: `EXPO_PUBLIC_` variables are
 // inlined when `../../config` is first evaluated (src/__tests__/config.test.ts's `loadWith`

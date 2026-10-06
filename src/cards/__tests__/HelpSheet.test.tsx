@@ -12,7 +12,7 @@ import * as feedActions from '../../data/feedActions';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { HelpSheet } from '../HelpSheet';
-import { SourcesTarget } from '../SourcesButton';
+import { SourcesTarget } from '../cardSources';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 

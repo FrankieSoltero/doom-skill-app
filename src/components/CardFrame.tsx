@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { FlagButton, useFlaggable, useThanksLine } from '../cards/FlagButton';
 import { HelpButton } from '../cards/HelpButton';
-import { SourcesButton, useFrameCard, useHasSources } from '../cards/SourcesButton';
+import { useFrameCard, useHasSources } from '../cards/cardSources';
+import { SourcesButton } from '../cards/SourcesButton';
 import { copy } from '../copy';
 import { currentSet } from '../data';
 import { useFeedStore } from '../feed/store';

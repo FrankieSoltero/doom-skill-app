@@ -46,7 +46,7 @@ describe('cardSource', () => {
       name: 'FeedLoadError',
       kind: 'noTopic',
     });
-    expect('currentSet' in source).toBe(true);
+    expect('getCurrentSet' in source).toBe(true);
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -71,7 +71,7 @@ describe('cardSource', () => {
     const set = await source.getNextSet();
 
     expect(set?.setNumber).toBe(1);
-    expect('currentSet' in source).toBe(false);
+    expect('getCurrentSet' in source).toBe(false);
   });
 });
 

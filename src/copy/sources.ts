@@ -5,8 +5,6 @@
 
 /** The Sources action in a card frame's corner (src/cards/SourcesButton.tsx) and its sheet. */
 export const sources = {
-  /** The action's spoken label, and the sheet's title. */
-  action: 'Sources',
   /** A source's licence line; a source with no licence recorded reads as unknown. */
   licence: (license: string | null) => `Licence: ${license ?? 'unknown'}`,
   /** Closes the sheet. */
