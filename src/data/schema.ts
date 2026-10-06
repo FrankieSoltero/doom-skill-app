@@ -28,7 +28,7 @@ const HTTPS_URL = /^https:\/\/[^\s/?#\\]+\S*$/;
  * its licence (null when none was recorded). A card has at most 3; a source with another URL
  * fails its card. Optional: the bundled demo cards have none, and a checkpoint sends `[]`.
  */
-const sourceLinkSchema = z.object({
+export const sourceLinkSchema = z.object({
   title: text,
   url: z.string().regex(HTTPS_URL),
   license: text.nullable(),
