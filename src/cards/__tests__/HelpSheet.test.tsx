@@ -261,3 +261,36 @@ describe('HelpSheet on a full set or a failure', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('HelpSheet sends once and claims only a card it placed', () => {
+  it('sends one request however often the rows are pressed while it is in flight', async () => {
+    const requests = serveApi({ [EXTRA]: [new Promise<Response>(() => undefined)] });
+    renderSheet();
+
+    fireEvent.press(testMe());
+    fireEvent.press(testMe());
+    fireEvent.press(deeper());
+    await settle();
+
+    expect(requests).toHaveLength(1);
+  });
+
+  it('says the card may appear later when the feed cannot place it, rows locked', async () => {
+    // The checkpoint after this card already holds an answer (the learner came back to this
+    // card), so the store has nowhere to put the added card and drops it.
+    const { set } = useFeedStore.getState();
+    const checkpoint: Card = { ...cardsByType.checkpoint, id: idOf(4) };
+    useFeedStore.setState({
+      set: set === null ? null : { ...set, cards: [...set.cards, checkpoint] },
+      answers: { 3: { kind: 'choice', picked: 0 } },
+    });
+
+    await press(testMe, json(200, { card: ADDED, added: 1 }));
+
+    expect(ids()).toStrictEqual([idOf(1), CARD_ID, idOf(3), idOf(4)]);
+    expect(screen.getByText('The card may appear after a reload')).toBeOnTheScreen();
+    expectRowsEnabled(false);
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});

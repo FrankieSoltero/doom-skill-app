@@ -5,7 +5,9 @@
  * number the data source served the set with (`currentSet()` of src/data).
  *
  * - An added card goes into the feed right after this card (`insertCard(card, index + 1)`); the
- *   sheet closes and the frame shows `copy.help.added`.
+ *   sheet closes and the frame shows `copy.help.added`. When the feed has nowhere to put it (an
+ *   answer already stored at the checkpoint after this card), the server still holds it: the
+ *   sheet stays, says it may appear after a reload, and keeps both rows disabled until it closes.
  * - Nothing to add: "Go deeper" becomes the source sheet with all the node's passages; "Test me"
  *   shows one line. A card not in a set the learner is on (or an older server) reads the same.
  * - A full set (429) disables both rows until the sheet closes.
@@ -96,7 +98,11 @@ export function HelpSheet({ cardId, index, onClose, onAdded }: HelpSheetProps) {
       return;
     }
     if (outcome.kind === 'added') {
-      useFeedStore.getState().insertCard(outcome.card, index + 1);
+      if (useFeedStore.getState().insertCard(outcome.card, index + 1) === -1) {
+        // The server holds the card but the feed had nowhere to put it: a reload shows it.
+        setStatus('maybeAdded');
+        return;
+      }
       onClose();
       onAdded();
     } else if (outcome.kind === 'nothing' && action === 'deeper') {
