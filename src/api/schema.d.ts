@@ -526,6 +526,7 @@ export interface components {
             pass_threshold: number;
             /** Rubric */
             rubric: components["schemas"]["RubricRow"][];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Starter Code */
@@ -570,6 +571,7 @@ export interface components {
             prompt: string;
             /** Rubric */
             rubric: components["schemas"]["RubricRow"][];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Starter Code */
@@ -630,6 +632,7 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Text */
@@ -666,6 +669,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Snippet */
             snippet: string;
             /** Snippet Comment */
@@ -793,6 +797,7 @@ export interface components {
             node: string;
             /** Pass Msg */
             pass_msg: string;
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Starter Code */
@@ -987,6 +992,7 @@ export interface components {
             options: string[];
             /** Problem */
             problem: string;
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Title */
@@ -1141,6 +1147,7 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Title */
@@ -1211,6 +1218,7 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
             /** Title */
@@ -1252,6 +1260,7 @@ export interface components {
                 string,
                 string
             ][];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Snippet */
             snippet: string;
             snippet_style: components["schemas"]["SnippetStyle"];
@@ -1290,6 +1299,7 @@ export interface components {
             node: string;
             /** Options */
             options: string[];
+            sequence?: components["schemas"]["SequenceOut"] | null;
             /** Situation */
             situation: string;
             /** Sources */
@@ -1312,6 +1322,16 @@ export interface components {
              * @constant
              */
             seen: true;
+        };
+        /**
+         * SequenceOut
+         * @description A card's place in its two-card sequence: `index` 1 or 2, `of` 2.
+         */
+        SequenceOut: {
+            /** Index */
+            index: number;
+            /** Of */
+            of: number;
         };
         /**
          * SkippedAnswer
