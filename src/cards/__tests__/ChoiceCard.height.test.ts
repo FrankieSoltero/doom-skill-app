@@ -5,11 +5,12 @@
 // SummaryCard.height.test.ts does for the Summary.
 //
 // The answered predict card of a Strudel set (M9 plan I Task 5) has the Play / Stop control beside
-// its code, which adds no height, and while the audio needs attention a notice under the code. No
-// predict row existed before this one. `CARD_TEXT_LIMITS.predict` limits only the title and the
-// explanation, so the rest is chosen: ONE code line, and four options (README.md:79's 2x2 grid) of
-// 2 lines each, as the prose grid's. Open item, not this task's to fix: the code, the options and
-// their number have no limit, so a longer predict card can already overflow, with no audio.
+// its code, which adds no height, and while the audio needs attention a notice under the code.
+// Four options (README.md:79's 2x2 grid) are chosen, as the prose grid's. M10 plan T Task 1 adds
+// `CARD_TEXT_LIMITS.predict.option` (2 lines of a grid cell in the code font) and `codeLines`:
+// with each notice in turn under the code that many lines fit, and one more does not. The quiz's
+// option limit, 48, takes 4 lines of a grid cell, and four such options are over the frame with
+// one code line and no notice.
 import { render, screen } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement } from 'react';
@@ -19,7 +20,7 @@ import { PASSAGE_PADDING_X, PASSAGE_PADDING_Y, PASSAGE_RULE } from '../../compon
 import { BUTTON_HEIGHT } from '../../components/PrimaryButton';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import type { PredictCard as PredictCardData } from '../../data';
-import { CARD_TEXT_LIMITS } from '../../data/textLimits';
+import { CARD_TEXT_LIMITS, lineCount } from '../../data/textLimits';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType } from '../../feed/testing/sets';
 import { useStrudel } from '../../strudel/useStrudel';
@@ -31,7 +32,7 @@ import { PredictCard } from '../PredictCard';
 import { ScenarioCard } from '../ScenarioCard';
 import { SourcesButton } from '../SourcesButton';
 import { gridCells, partsInOrder } from '../testing/choiceCards';
-import { NOTICE_AUDIO, noticeHeight } from '../testing/noticeHeights';
+import { NOTICE_AUDIO, noticeHeight, type NoticeName } from '../testing/noticeHeights';
 import { startSetIn } from '../testing/playingSets';
 import { resetStrudelDouble, setAudio, useStrudelDouble } from '../testing/strudelDouble';
 
@@ -64,10 +65,16 @@ const LINES = { title: 2, passage: 4, gridOption: 2, explanation: 3 } as const;
 const BODY_CHILDREN = 7;
 /** The predict card's options at their most, as chosen above. */
 const PREDICT_OPTIONS = 4;
-/** A predict option's text: 28 characters of the code font take 2 lines of a grid cell's 123.5. */
-const PREDICT_OPTION = 'x'.repeat(28);
+/** Menlo's advance, the same for every character: 0.602 em (src/data/textLimits.ts). */
+const MENLO_ADVANCE = 0.602;
+/** The quiz's option limit, which predict used before its own (M10 plan T Task 1). */
+const QUIZ_OPTION = CARD_TEXT_LIMITS.quiz.option;
 
 const fill = (length: number) => 'x'.repeat(length);
+/** A predict option's text of `length` characters, apart from the title's and explanation's. */
+const optionOf = (length: number) => 'o'.repeat(length);
+/** A predict option at its limit. */
+const PREDICT_OPTION = optionOf(CARD_TEXT_LIMITS.predict.option);
 
 type ProseType = 'cloze' | 'scenario' | 'numeric';
 
@@ -130,9 +137,12 @@ function renderMaximal(cardType: ProseType): void {
   render(createElement(ScenarioCard, { card, ...props }));
 }
 
-/** The height of a grid of `options` options whose text lines are `lineHeight` points tall. */
-function gridHeight(options: number, lineHeight: number): number {
-  const optionFace = LINES.gridOption * lineHeight + 2 * COMPACT_PADDING_Y + 2 * border.strong;
+/**
+ * The height of a grid of `options` options whose text takes `lines` lines (2 at the prose limit)
+ * of `lineHeight` points.
+ */
+function gridHeight(options: number, lineHeight: number, lines: number = LINES.gridOption): number {
+  const optionFace = lines * lineHeight + 2 * COMPACT_PADDING_Y + 2 * border.strong;
   const rows = Math.ceil(options / GRID_COLUMNS);
   return rows * Math.max(CELL_MIN_HEIGHT, optionFace) + (rows - 1) * OPTION_GAP;
 }
@@ -157,13 +167,15 @@ function proseHeight(cardType: ProseType, iconSize: number): number {
   return choiceHeight(passage, grid, iconSize);
 }
 
-/** The predict card at its text limits, with one line of code. */
-const MAXIMAL_PREDICT: PredictCardData = {
+/** A predict card at its title and explanation limits, with `codeLines` lines and `option`s. */
+const maximalPredict = (codeLines: number, option: string): PredictCardData => ({
   ...cardsByType.predict,
   title: fill(CARD_TEXT_LIMITS.predict.title),
-  options: Array.from({ length: PREDICT_OPTIONS }, () => PREDICT_OPTION),
+  code: Array.from({ length: codeLines }, () => 'note("c3 <e3 g3>")').join('\n'),
+  options: Array.from({ length: PREDICT_OPTIONS }, () => option),
   explanation: fill(CARD_TEXT_LIMITS.predict.explanation),
-};
+});
+const { codeLines: CODE_LINES } = CARD_TEXT_LIMITS.predict;
 
 /** The answered predict card's body children, the title aside, in a Strudel set. */
 const PREDICT_PARTS = [
@@ -175,31 +187,59 @@ const PREDICT_PARTS = [
   'primary-button-face',
 ];
 
-/** Draws MAXIMAL_PREDICT answered, at page 0 of a set whose topic has `lang`. */
-function renderPredictIn(lang: 'strudel' | 'sql'): void {
-  startSetIn([MAXIMAL_PREDICT], lang);
+/**
+ * Draws a predict card with `codeLines` lines of code and options of `option` (at their limits by
+ * default) answered, at page 0 of a set whose topic has `lang`. Returns the code lines drawn,
+ * counted as the server counts them.
+ */
+function renderPredictIn(lang: 'strudel' | 'sql', codeLines = CODE_LINES, option = PREDICT_OPTION) {
+  const card = maximalPredict(codeLines, option);
+  startSetIn([card], lang);
   useFeedStore.getState().setAnswer(0, { kind: 'choice', picked: 0 });
-  const props = { card: MAXIMAL_PREDICT, index: 0, active: false, onNext: jest.fn() };
-  render(createElement(PredictCard, props));
+  render(createElement(PredictCard, { card, index: 0, active: false, onNext: jest.fn() }));
+  return lineCount(card.code);
 }
 
-/** The drawn code block's height: its padding above and below, and its one code line. */
-function codeBlockHeight(): number {
+/** The drawn code block's height: its padding above and below, and its `lines` code lines. */
+function codeBlockHeight(lines: number): number {
   const padding = Number(viewStyleOf(screen.getByTestId('code-block-content')).paddingVertical);
-  return 2 * padding + Number(textStyleOf(screen.getByTestId('code-block-code')).lineHeight);
+  return (
+    2 * padding + lines * Number(textStyleOf(screen.getByTestId('code-block-code')).lineHeight)
+  );
 }
 
 /** The code row of the drawn playing predict card: the block and the control side by side. */
-function codeRowHeight(): number {
+function codeRowHeight(lines: number): number {
   const control = Number(viewStyleOf(screen.getByTestId('playable-code-control')).height);
-  return Math.max(codeBlockHeight(), control);
+  return Math.max(codeBlockHeight(lines), control);
 }
 
-/** The drawn playing predict card's height with no notice under its code. */
-function predictHeight(iconSize: number): number {
-  const options = screen.getAllByText(PREDICT_OPTION);
+/** What the drawn `notice` adds under the code: the column's gap, then the notice. */
+function noticeAdded(notice: NoticeName): number {
+  return Number(viewStyleOf(screen.getByTestId('playable-code')).gap) + noticeHeight(notice);
+}
+
+/**
+ * The lines a drawn option of unbroken characters takes in a grid cell: the characters a line of
+ * the code font holds across the cell's text width, rounded down, and as many lines as it fills.
+ */
+function optionLines(option: ReturnType<typeof screen.getByText>, text: string): number {
+  const perLine = Math.floor(
+    gridTextWidth / (Number(textStyleOf(option).fontSize) * MENLO_ADVANCE),
+  );
+  return Math.ceil(text.length / perLine);
+}
+
+/**
+ * The drawn playing predict card's height with `codeLines` lines of code and options `text`, with
+ * no notice under its code.
+ */
+function predictHeight(iconSize: number, codeLines: number, text = PREDICT_OPTION): number {
+  const options = screen.getAllByText(text);
   const optionLine = Math.max(...options.map((option) => Number(textStyleOf(option).lineHeight)));
-  return choiceHeight(codeRowHeight(), gridHeight(PREDICT_OPTIONS, optionLine), iconSize);
+  const lines = Math.max(...options.map((option) => optionLines(option, text)));
+  const grid = gridHeight(PREDICT_OPTIONS, optionLine, lines);
+  return choiceHeight(codeRowHeight(codeLines), grid, iconSize);
 }
 
 beforeEach(() => {
@@ -236,20 +276,20 @@ describe('the prose choice cards height budget', () => {
 describe('the playing predict card height budget', () => {
   it('an answered predict at its limits: 461.6 points, the control adding 0, inside 543.5', () => {
     const iconSize = sourcesIconSize();
-    renderPredictIn('sql');
-    const plainBlock = codeBlockHeight();
+    const plainLines = renderPredictIn('sql');
+    const plainBlock = codeBlockHeight(plainLines);
     expect(screen.queryByTestId('playable-code')).toBeNull();
     screen.unmount();
 
-    renderPredictIn('strudel');
-    const sum = predictHeight(iconSize);
+    const codeLines = renderPredictIn('strudel');
+    const sum = predictHeight(iconSize, codeLines);
 
     expect(partsInOrder(new RegExp(`^(${PREDICT_PARTS.join('|')})$`))).toStrictEqual(PREDICT_PARTS);
     expect(screen.getAllByRole('header')).toHaveLength(1);
     expect(gridCells()).toStrictEqual([GRID_COLUMNS, GRID_COLUMNS]);
     expect(screen.queryAllByTestId('audio-notice')).toHaveLength(0);
     expect(plainBlock).toBe(50);
-    expect(codeRowHeight()).toBe(plainBlock);
+    expect(codeRowHeight(codeLines)).toBe(plainBlock);
     expect(sum).toBeCloseTo(461.6, 5);
     expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
   });
@@ -260,16 +300,54 @@ describe('the playing predict card height budget', () => {
     { notice: 'needs network', added: 35.6, height: 497.2 },
   ] as const)('"$notice" adds $added under the code: $height points, inside 543.5', (row) => {
     const iconSize = sourcesIconSize();
-    renderPredictIn('strudel');
-    const base = predictHeight(iconSize);
+    const base = predictHeight(iconSize, renderPredictIn('strudel'));
     setAudio(NOTICE_AUDIO[row.notice]);
 
-    const gap = Number(viewStyleOf(screen.getByTestId('playable-code')).gap);
-    const added = gap + noticeHeight(row.notice);
+    const added = noticeAdded(row.notice);
 
     expect(screen.getByTestId('audio-notice')).toBeOnTheScreen();
     expect(added).toBeCloseTo(row.added, 5);
     expect(base + added).toBeCloseTo(row.height, 5);
     expect(base + added).toBeLessThanOrEqual(CONTENT_BOX);
+  });
+});
+
+describe('the predict card budget', () => {
+  it('limits an option to 2 lines of a grid cell and the code to 1 line', () => {
+    renderPredictIn('strudel');
+    const [option] = screen.getAllByText(PREDICT_OPTION);
+    if (option === undefined) throw new Error('no option');
+
+    expect(CARD_TEXT_LIMITS.predict.option).toBe(22);
+    expect(CODE_LINES).toBe(1);
+    expect(optionLines(option, PREDICT_OPTION)).toBe(LINES.gridOption);
+  });
+
+  it('one more code line, with the error notice, is over the frame: 563.2 points', () => {
+    const iconSize = sourcesIconSize();
+    const codeLines = renderPredictIn('strudel', CODE_LINES + 1);
+    const base = predictHeight(iconSize, codeLines);
+    setAudio(NOTICE_AUDIO.error);
+
+    const sum = base + noticeAdded('error');
+
+    expect(codeLines).toBe(CODE_LINES + 1);
+    expect(sum).toBeCloseTo(563.2, 5);
+    expect(sum).toBeGreaterThan(CONTENT_BOX);
+  });
+
+  it("the quiz's 48-character options take 4 lines: 549.6 points, 1 code line, no notice", () => {
+    const iconSize = sourcesIconSize();
+    const wide = optionOf(QUIZ_OPTION);
+    const codeLines = renderPredictIn('strudel', CODE_LINES, wide);
+    const [option] = screen.getAllByText(wide);
+    if (option === undefined) throw new Error('no option');
+
+    const sum = predictHeight(iconSize, codeLines, wide);
+
+    expect(QUIZ_OPTION).toBe(48);
+    expect(optionLines(option, wide)).toBe(4);
+    expect(sum).toBeCloseTo(549.6, 5);
+    expect(sum).toBeGreaterThan(CONTENT_BOX);
   });
 });
