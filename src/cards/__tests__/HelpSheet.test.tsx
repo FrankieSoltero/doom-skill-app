@@ -1,7 +1,8 @@
 // "Help with this card" (M9 plan H Task 6, spec 5.2): the sheet's two rows add a card to the
 // running set through `POST /feed/extra`, over the real API client and a fake network. An added
 // card lands right after the current card; every other answer leaves one line in the sheet, and
-// "Go deeper" with nothing to add opens the source sheet with all the node's passages.
+// "Go deeper" with nothing to add opens the source sheet with all the node's passages. The third
+// row, "Ask a question" (M10 plan Q Task 9), opens the ask sheet: no text field until then.
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { TextInput } from 'react-native';
 
@@ -28,6 +29,7 @@ const CARD_ID = idOf(2);
 const ADDED_ID = idOf(9);
 const EXTRA = 'POST /feed/extra';
 const SOURCE = `GET /cards/${CARD_ID}/source`;
+const QUESTIONS = `GET /cards/${CARD_ID}/questions`;
 const LINK = { title: 'Mini-notation', url: 'https://strudel.cc/learn/mini-notation/' };
 const CARD: Card = { ...cardsByType.quiz, id: CARD_ID, sources: [{ ...LINK, license: 'MIT' }] };
 /** The card the server adds, in the shape the feed serves. */
@@ -86,6 +88,7 @@ async function settle(): Promise<void> {
 
 const testMe = () => screen.getByRole('button', { name: 'Test me' });
 const deeper = () => screen.getByRole('button', { name: 'Go deeper' });
+const askRow = () => screen.getByRole('button', { name: 'Ask a question' });
 const ids = () => (useFeedStore.getState().set?.cards ?? []).map((card) => card.id);
 
 /** Opens the sheet with `answer` for the extra route, presses `row` and lets the answer land. */
@@ -106,7 +109,7 @@ function expectRowsEnabled(enabled: boolean): void {
 }
 
 describe('HelpSheet rows and an added card', () => {
-  it('shows two rows, each with its hint, and no text field', () => {
+  it('shows three rows, each with its hint, and no text field until Ask', () => {
     renderSheet();
     const sheet = screen.getByTestId('help-sheet');
 
@@ -114,8 +117,29 @@ describe('HelpSheet rows and an added card', () => {
     expect(testMe()).toHaveAccessibleName('Test me');
     expect(within(sheet).getByText('One more practice card on this idea')).toBeOnTheScreen();
     expect(within(sheet).getByText('The next idea that builds on this one')).toBeOnTheScreen();
+    expect(within(sheet).getByText('Learners further along can answer')).toBeOnTheScreen();
+    expect(
+      within(sheet)
+        .getAllByRole('button')
+        .slice(0, 3)
+        .map((row) => row.props.accessibilityLabel as string),
+    ).toStrictEqual(['Test me', 'Go deeper', 'Ask a question']);
     expect(screen.UNSAFE_queryByType(TextInput)).toBeNull();
     expectRowsEnabled(true);
+  });
+
+  it('becomes the ask sheet on Ask a question, with its text field, and sends nothing to add', async () => {
+    const requests = serveApi({ [QUESTIONS]: [json(200, { questions: [] })] });
+    renderSheet();
+
+    fireEvent.press(askRow());
+    await settle();
+
+    expect(screen.queryByTestId('help-sheet')).toBeNull();
+    expect(screen.getByTestId('ask-sheet')).toBeOnTheScreen();
+    expect(screen.UNSAFE_queryByType(TextInput)).not.toBeNull();
+    expect(requests.map((r) => `${r.method} ${r.path}`)).toStrictEqual([QUESTIONS]);
+    expect(onAdded).not.toHaveBeenCalled();
   });
 
   it('disables both rows with the adding line while the request is in flight', async () => {

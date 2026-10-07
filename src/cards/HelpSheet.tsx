@@ -2,7 +2,9 @@
  * "Help with this card" (M9 plan H Task 6, spec 5.2; H1, H4–H6, H10): the sheet a card's help
  * icon (src/cards/HelpButton.tsx) opens. Two rows, "Test me" and "Go deeper", and no text field;
  * each asks the API to add a card to the running set (`POST /feed/extra`), named by the date and
- * number the data source served the set with (`currentSet()` of src/data).
+ * number the data source served the set with (`currentSet()` of src/data). A third row, "Ask a
+ * question" (M10 plan Q Task 9, decision Q10), swaps in the ask sheet (src/cards/AskSheet.tsx),
+ * which holds the only text field.
  *
  * - An added card goes into the feed right after this card (`insertCard(card, index + 1)`); the
  *   sheet closes and the frame shows `copy.help.added`. When the feed has nowhere to put it (an
@@ -30,6 +32,7 @@ import { addExtra, type ExtraAction, type ExtraOutcome } from '../data/feedActio
 import { useFeedStore } from '../feed/store';
 import { logWarning } from '../log';
 import { colors, space, type } from '../theme';
+import { AskSheet } from './AskSheet';
 import { SourceSheet } from './SourceSheet';
 
 /** Where the sheet is: no answer yet, a request in flight, or the line an answer left. */
@@ -85,7 +88,9 @@ type HelpSheetProps = {
 export function HelpSheet({ cardId, index, onClose, onAdded }: HelpSheetProps) {
   const [status, setStatus] = useState<Status>('idle');
   const [deeper, setDeeper] = useState(false);
+  const [asking, setAsking] = useState(false);
   if (deeper) return <SourceSheet cardId={cardId} all onClose={onClose} />;
+  if (asking) return <AskSheet cardId={cardId} onClose={onClose} />;
 
   const locked = LOCKED.has(status);
   const ask = async (action: ExtraAction) => {
@@ -140,6 +145,18 @@ export function HelpSheet({ cardId, index, onClose, onAdded }: HelpSheetProps) {
           <Text style={styles.hint}>{hint}</Text>
         </Pressable>
       ))}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={copy.qa.ask}
+        accessibilityHint={copy.qa.askHint}
+        onPress={() => {
+          setAsking(true);
+        }}
+        style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
+      >
+        <Text style={styles.label}>{copy.qa.ask}</Text>
+        <Text style={styles.hint}>{copy.qa.askHint}</Text>
+      </Pressable>
       {status === 'idle' ? null : (
         <View accessibilityLiveRegion="polite">
           <Text style={styles.line}>{LINES[status]}</Text>
