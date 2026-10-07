@@ -33,7 +33,8 @@ const POINTS_TEXT = type.caption;
 const POINTS_MARGIN = 0;
 /**
  * The points line's height, "+3 points" under the title: its line height and its margin. It sits
- * in the title's group, so it adds no gap of the card body (`__tests__/SummaryCard.height.test.ts`).
+ * in the title's group, so it adds no gap of the card body
+ * (`__tests__/SummaryCard.height.test.ts`).
  */
 export const POINTS_LINE_HEIGHT = POINTS_TEXT.lineHeight + POINTS_MARGIN;
 
@@ -85,17 +86,18 @@ function MasteryList({ moved }: { moved: Summary['moved'] }) {
 }
 
 /**
- * The last page of every set (docs/design/card-feed/README.md:143-153, spec section 1a): on the
- * ink card, the kicker "DAY 4 COMPLETE"; the title, counting every card and minute of the session
- * so far from the store's totals, and under it the points the set earned ("+3 points", the
- * store's `pointsEarned`, left out when none); the streak (coral) and topic progress (aqua) tiles; the mastery
- * rows; tomorrow's node and reminder (left out when none is set); and the buttons. Everything is static: the title is lime,
- * with no gradient, shine or count-up, and the bars are drawn at their final values. The session
- * adds the set to the totals and raises the streak when this page is reached; this card only
- * reads them. The progress tile shows the topic's progress after the set beside the set's delta
- * (`progressAfterSet`). The progress, its delta, the mastery rows and tomorrow come from the set's
- * recorded summary once the store holds it (`useSummary`), else from the projected one the set
- * came with; so do the minutes to the next recall that the foot says when no next set is open.
+ * The last page of every set (docs/design/card-feed/README.md:143-153, spec section 1a): on the ink
+ * card, the kicker "DAY 4 COMPLETE"; the title, counting every card and minute of the session so
+ * far from the store's totals, and under it the points the set earned ("+3 points", the store's
+ * `pointsEarned`, left out when none); the streak (coral) and topic progress (aqua) tiles; the
+ * mastery rows; tomorrow's node and reminder (left out when none is set); and the buttons.
+ * Everything is static: the title is lime, with no gradient, shine or count-up, and the bars are
+ * drawn at their final values. The session adds the set to the totals and raises the streak when
+ * this page is reached; this card only reads them. The progress tile shows the topic's progress
+ * after the set beside the set's delta (`progressAfterSet`). The progress, its delta, the mastery
+ * rows and tomorrow come from the set's recorded summary once the store holds it (`useSummary`),
+ * else from the projected one the set came with; so do the minutes to the next recall that the foot
+ * says when no next set is open.
  */
 export function SummaryCard({
   set,

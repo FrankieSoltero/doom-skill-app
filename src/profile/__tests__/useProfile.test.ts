@@ -64,6 +64,27 @@ describe('useProfile', () => {
     expect(result.current.profile).toStrictEqual(changed);
   });
 
+  it.each([{ leaderboard_opt_in: true }, { display_name: 'Frankie2' }])(
+    'invalidates the cached boards after %o, and not after a minutes change',
+    async (patch) => {
+      serveApi({
+        'GET /me': [json(200, PROFILE)],
+        'PATCH /me': [json(200, PROFILE), json(200, { ...PROFILE, ...patch })],
+      });
+      const { client, wrapper } = queryWrapper();
+      const { result } = renderHook(() => useProfile(), { wrapper });
+      await settle();
+      const board = ['leaderboard', 'strudel'];
+      client.setQueryData(board, { entries: [], me: null });
+
+      await act(() => result.current.update({ daily_minutes: 20 }));
+      expect(client.getQueryState(board)?.isInvalidated).toBe(false);
+
+      await act(() => result.current.update(patch));
+      expect(client.getQueryState(board)?.isInvalidated).toBe(true);
+    },
+  );
+
   it('rejects a refused change with its ApiError and keeps the profile', async () => {
     serveApi({ 'GET /me': [json(200, PROFILE)], 'PATCH /me': [json(422, {})] });
     const { result } = await renderProfile();

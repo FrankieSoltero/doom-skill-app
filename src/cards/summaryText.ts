@@ -1,7 +1,7 @@
 /**
  * Pure text helpers behind the Summary card (docs/design/card-feed/README.md:143-153): its title,
- * its points line and its progress tile's value. Kept apart from `SummaryCard` so they are tested without
- * rendering. Every word and every sentence shape comes from `copy`.
+ * its points line and its progress tile's value. Kept apart from `SummaryCard` so they are tested
+ * without rendering. Every word and every sentence shape comes from `copy`.
  */
 import { copy } from '../copy';
 import type { Summary } from '../data';

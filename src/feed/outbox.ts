@@ -56,8 +56,8 @@ export type SessionView = { status: 'loading' | 'signedOut' | 'signedIn'; userId
 
 export type OutboxDeps = {
   /**
-   * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up and no points), rejects
-   * otherwise (an `ApiError` from the client).
+   * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up and no
+   * points), rejects otherwise (an `ApiError` from the client).
    */
   post: (attempt: Queued) => Promise<AttemptReply> | Promise<void>;
   storage: QueueStorage;

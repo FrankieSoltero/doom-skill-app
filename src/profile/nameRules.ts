@@ -1,8 +1,8 @@
 /**
  * The display-name rule (M10 plan P, spec 3.2), checked in the app before `PATCH /me` so the name
  * field can say why a name is refused without a request. The API is the rule's enforcer
- * (`services/api/app/services/display_names.py`); this copy of its shape only saves a round trip. Whether a
- * name is taken or banned only the API knows.
+ * (`services/api/app/services/display_names.py`); this copy of its shape only saves a round trip.
+ * Whether a name is taken or banned only the API knows.
  */
 
 /** The shortest display name. */

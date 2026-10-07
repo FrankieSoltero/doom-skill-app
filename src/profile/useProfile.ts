@@ -2,7 +2,8 @@
  * The signed-in user's profile for the Profile tab: read with `GET /me` (the cached query of
  * src/profile/me.ts) and changed with `PATCH /me`, which takes only the fields given. The answer
  * to a change replaces the cached profile. A refused change rejects with its `ApiError` and leaves
- * the profile as it was.
+ * the profile as it was. A change of the name or the leaderboard opt-in marks every cached
+ * leaderboard stale, so a board shows the change at once.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -35,6 +36,10 @@ export function useProfile(): ProfileState {
   const update = async (patch: ProfilePatch) => {
     const { data } = await requireApi().PATCH('/me', { body: patch });
     if (data !== undefined) cache.setQueryData(ME_KEY, data);
+    // A name or opt-in change moves the caller's row on every board: read them again.
+    if ('leaderboard_opt_in' in patch || 'display_name' in patch) {
+      void cache.invalidateQueries({ queryKey: ['leaderboard'] });
+    }
   };
   const retry = () => {
     void result.refetch();
