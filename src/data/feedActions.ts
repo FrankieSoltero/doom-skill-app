@@ -61,8 +61,11 @@ export type ExtraOutcome =
   | { kind: 'full' }
   | { kind: 'notInFeed' };
 
-/** `data`, its keys mapped, parsed with `schema`; else a FeedActionError, logged as `event`. */
-function parsed<T>(schema: ZodType<T>, data: unknown, event: string): T {
+/**
+ * `data`, its keys mapped, parsed with `schema`; else a FeedActionError, logged as `event`. Also
+ * reads the peer-question replies (src/data/qa.ts).
+ */
+export function parsed<T>(schema: ZodType<T>, data: unknown, event: string): T {
   const result = schema.safeParse(mapFeed(data));
   if (result.success) {
     return result.data;
