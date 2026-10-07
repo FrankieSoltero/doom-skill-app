@@ -1,6 +1,6 @@
 /**
- * Pure text helpers behind the Summary card (docs/design/card-feed/README.md:143-153): its title
- * and its progress tile's value. Kept apart from `SummaryCard` so they are tested without
+ * Pure text helpers behind the Summary card (docs/design/card-feed/README.md:143-153): its title,
+ * its points line and its progress tile's value. Kept apart from `SummaryCard` so they are tested without
  * rendering. Every word and every sentence shape comes from `copy`.
  */
 import { copy } from '../copy';
@@ -40,6 +40,14 @@ export function summaryTitle(cards: number, seconds: number): string {
     quantity(cardCount, card, cardsNoun),
     quantity(minuteCount, minute, minutesNoun),
   );
+}
+
+/**
+ * The line under the Summary title, "+3 points": the points the set earned; `null` (no line)
+ * when they are not above 0.
+ */
+export function pointsLine(points: number): string | null {
+  return orZero(points) > 0 ? copy.summary.points(points) : null;
 }
 
 /**

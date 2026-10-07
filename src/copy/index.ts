@@ -333,6 +333,10 @@ export const copy = deepFreeze({
   counted: (count: string, noun: string) => `${count} ${noun}`,
   /** The Summary title, README.md:146: two sentences, the cards, then the minutes. */
   summaryTitle: (cards: string, minutes: string) => `${cards}. ${minutes}.`,
+  summary: {
+    /** The line under the Summary title: the points the set's attempts earned (M10 plan P). */
+    points: (n: number) => `+${String(n)} points`,
+  },
   /** The label of the Summary's streak tile, README.md:148. */
   dayStreak: 'day streak',
   /** A whole percent, as the Summary's progress tile shows it, README.md:149 ("34%"). */

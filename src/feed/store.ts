@@ -1,7 +1,8 @@
 // The feed session: the set being worked through, the current page, the answers so far, and the
 // day's totals and streak. Held in memory only, so "today" means since the store was created or
 // last reset (the set round alone keeps counting across a reset). The one field kept on the phone
-// is `ratingsMade`, saved in async storage under `feedState` (`loadFeedState`).
+// is `ratingsMade`, saved in async storage under `feedState` (`loadFeedState`); the set's
+// `pointsEarned` is not.
 // Each answered card of a set the API served is also handed to the attempt outbox, which sends it
 // on its own (`sendAttemptsTo`, src/feed/outbox.ts), and so is each card the app dropped from a
 // set (`droppedIds`), as skipped, when the session is served the set (`skipDropped`): the server
@@ -52,6 +53,11 @@ type FeedState = {
    * counts once). Kept in async storage and read back when the app starts; `reset` keeps it.
    */
   ratingsMade: number;
+  /**
+   * The points the current set's attempts earned, summed from the outbox's replies (`addPoints`)
+   * for the Summary card. 0 at `startSet` and `reset`; held in memory only, never stored.
+   */
+  pointsEarned: number;
 };
 
 type FeedActions = {
@@ -77,6 +83,8 @@ type FeedActions = {
    * shift.
    */
   insertCard: (card: Card, at: number) => number;
+  /** Adds `points` to `pointsEarned`; an amount that is not above 0 adds nothing. */
+  addPoints: (points: number) => void;
   reset: () => void;
 };
 
@@ -94,6 +102,7 @@ const initialState: FeedState = {
   seenSent: {},
   recordedSummary: null,
   ratingsMade: 0,
+  pointsEarned: 0,
 };
 
 /** Where the store hands each answered card: the attempt outbox, which installs itself. */
@@ -319,6 +328,7 @@ function started(state: FeedState, set: FeedSet): Partial<FeedState> {
     shownAt: { 0: Date.now() },
     seenSent: {},
     recordedSummary: null,
+    pointsEarned: 0,
   };
 }
 
@@ -401,6 +411,10 @@ export const useFeedStore = create<FeedState & FeedActions>()((setState, getStat
       seenSent: shiftedFrom(state.seenSent, index),
     });
     return index;
+  },
+  addPoints: (points) => {
+    if (!(points > 0)) return;
+    setState((state) => ({ pointsEarned: state.pointsEarned + points }));
   },
   // Every field returns to its start except `round`, which keeps counting: a set started after a
   // reset must not reuse the page keys of a set started before it. `resets` counts up, and

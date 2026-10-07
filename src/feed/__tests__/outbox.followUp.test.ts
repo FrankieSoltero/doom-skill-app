@@ -39,7 +39,7 @@ describe('the outbox and the follow-up', () => {
   it("calls the installed sink with the follow-up and the attempt's card, date and set", async () => {
     const sink = jest.fn();
     installFollowUpSink(sink);
-    const box = boxAnswering(() => Promise.resolve({ followUp }));
+    const box = boxAnswering(() => Promise.resolve({ followUp, points: 0 }));
 
     box.outbox.add(attempt(1));
     await settle();
@@ -60,7 +60,7 @@ describe('the outbox and the follow-up', () => {
   it('calls no sink for a reply with no follow-up, or a post that resolves nothing', async () => {
     const sink = jest.fn();
     installFollowUpSink(sink);
-    const box = boxAnswering(() => Promise.resolve({ followUp: null }));
+    const box = boxAnswering(() => Promise.resolve({ followUp: null, points: 0 }));
     const old = rig();
 
     box.outbox.add(attempt(1));
@@ -73,7 +73,7 @@ describe('the outbox and the follow-up', () => {
   });
 
   it('skips the follow-up with no installed sink (the demo), and the attempt is sent', async () => {
-    const box = boxAnswering(() => Promise.resolve({ followUp }));
+    const box = boxAnswering(() => Promise.resolve({ followUp, points: 0 }));
 
     box.outbox.add(attempt(1));
     await settle();
@@ -86,7 +86,7 @@ describe('the outbox and the follow-up', () => {
     installFollowUpSink(() => {
       throw new TypeError('secret-marker');
     });
-    const box = boxAnswering(() => Promise.resolve({ followUp }));
+    const box = boxAnswering(() => Promise.resolve({ followUp, points: 0 }));
 
     box.outbox.add(attempt(1));
     box.outbox.add(attempt(2));

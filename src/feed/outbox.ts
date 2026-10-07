@@ -12,6 +12,8 @@
  *   and tries again after 5 s, 30 s, then every 2 minutes, and whenever `flush()` is called (the
  *   app does on returning to the foreground). A flush already running is joined.
  * - `pending()` is the number of attempts not yet sent; `subscribe` tells when it changes.
+ * - The points each reply carries are added to the feed store's `pointsEarned`, which the Summary
+ *   card shows for the set.
  *
  * It holds one user's attempts: the signed-in user's, under a storage key with their id, and is
  * inert (it keeps, stores and sends nothing) while no user is signed in or the session is still
@@ -45,7 +47,7 @@ import {
   type Queued,
   type QueueStorage,
 } from './outboxQueue';
-import { sendAttemptsTo } from './store';
+import { sendAttemptsTo, useFeedStore } from './store';
 
 export type { Attempt, AttemptReply } from './outboxQueue';
 
@@ -54,7 +56,7 @@ export type SessionView = { status: 'loading' | 'signedOut' | 'signedIn'; userId
 
 export type OutboxDeps = {
   /**
-   * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up), rejects
+   * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up and no points), rejects
    * otherwise (an `ApiError` from the client).
    */
   post: (attempt: Queued) => Promise<AttemptReply> | Promise<void>;
@@ -93,7 +95,8 @@ function cut(response: Attempt['response']): Attempt['response'] {
 /**
  * Posts `head`: true when it is done with, sent or refused for good (a 404, 409 or 422, logged
  * with its kind); false when it must wait for a retry. A sent attempt's follow-up goes to the
- * installed sink, which cannot make it unsent.
+ * installed sink, which cannot make it unsent, and the points its reply carries to the feed
+ * store's `pointsEarned`; a refused attempt earns none.
  */
 async function sendOne(post: OutboxDeps['post'], head: Queued): Promise<boolean> {
   let reply: AttemptReply | undefined;
@@ -108,6 +111,7 @@ async function sendOne(post: OutboxDeps['post'], head: Queued): Promise<boolean>
     return false;
   }
   handOverFollowUp(head, reply);
+  if (reply !== undefined) useFeedStore.getState().addPoints(reply.points);
   return true;
 }
 
@@ -223,7 +227,10 @@ async function post(client: Client, attempt: Queued): Promise<AttemptReply> {
       set_number: attempt.setNumber,
     },
   });
-  return { followUp: parseFollowUp(data?.follow_up) };
+  return {
+    followUp: parseFollowUp(data?.follow_up),
+    points: typeof data?.points === 'number' ? data.points : 0,
+  };
 }
 
 /** With the demo sets there is no API, and nothing to send. */

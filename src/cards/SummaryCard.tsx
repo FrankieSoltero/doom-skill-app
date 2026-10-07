@@ -12,7 +12,7 @@ import type { NextSetStatus } from '../feed/useFeedSession';
 import { useSummary } from '../feed/useSummary';
 import { colors, type } from '../theme';
 import { SummaryActions } from './SummaryActions';
-import { progressAfterSet, summaryTitle } from './summaryText';
+import { pointsLine, progressAfterSet, summaryTitle } from './summaryText';
 
 // Summary values from docs/design/card-feed/README.md:143-153 and the prototype,
 // docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:243-265, that the theme lacks.
@@ -27,6 +27,15 @@ export const MASTERY_GAP = 10;
  */
 export const TITLE_LINES = 2;
 const TITLE_MIN_SCALE = 0.6;
+/** The points line's text style: a caption, the smallest line the height budget has room for. */
+const POINTS_TEXT = type.caption;
+/** The points line's gap under the title: none, the caption's own leading spaces it. */
+const POINTS_MARGIN = 0;
+/**
+ * The points line's height, "+3 points" under the title: its line height and its margin. It sits
+ * in the title's group, so it adds no gap of the card body (`__tests__/SummaryCard.height.test.ts`).
+ */
+export const POINTS_LINE_HEIGHT = POINTS_TEXT.lineHeight + POINTS_MARGIN;
 
 export type SummaryCardProps = {
   /** The set just finished: its topic (day, progress) and its Summary data. */
@@ -78,7 +87,8 @@ function MasteryList({ moved }: { moved: Summary['moved'] }) {
 /**
  * The last page of every set (docs/design/card-feed/README.md:143-153, spec section 1a): on the
  * ink card, the kicker "DAY 4 COMPLETE"; the title, counting every card and minute of the session
- * so far from the store's totals; the streak (coral) and topic progress (aqua) tiles; the mastery
+ * so far from the store's totals, and under it the points the set earned ("+3 points", the
+ * store's `pointsEarned`, left out when none); the streak (coral) and topic progress (aqua) tiles; the mastery
  * rows; tomorrow's node and reminder (left out when none is set); and the buttons. Everything is static: the title is lime,
  * with no gradient, shine or count-up, and the bars are drawn at their final values. The session
  * adds the set to the totals and raises the streak when this page is reached; this card only
@@ -97,21 +107,29 @@ export function SummaryCard({
   const totals = useFeedStore((state) => state.totals);
   const streak = useFeedStore((state) => state.streak);
   const recorded = useFeedStore((state) => state.recordedSummary);
+  const points = pointsLine(useFeedStore((state) => state.pointsEarned));
   useSummary(active);
   const { topic } = set;
   const summary = recorded ?? set.summary;
 
   return (
     <CardFrame type="summary" kicker={copy.dayComplete(topic.day)}>
-      <Text
-        accessibilityRole="header"
-        numberOfLines={TITLE_LINES}
-        adjustsFontSizeToFit
-        minimumFontScale={TITLE_MIN_SCALE}
-        style={styles.title}
-      >
-        {summaryTitle(totals.cards, totals.seconds)}
-      </Text>
+      <View>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={TITLE_LINES}
+          adjustsFontSizeToFit
+          minimumFontScale={TITLE_MIN_SCALE}
+          style={styles.title}
+        >
+          {summaryTitle(totals.cards, totals.seconds)}
+        </Text>
+        {points === null ? null : (
+          <Text testID="summary-points" style={styles.points}>
+            {points}
+          </Text>
+        )}
+      </View>
       <View style={styles.tiles}>
         <StatTile value={String(streakCount(streak))} label={copy.dayStreak} fill={colors.coral} />
         <StatTile
@@ -135,6 +153,7 @@ export function SummaryCard({
 
 const styles = StyleSheet.create({
   title: { ...type.summaryTitle, color: colors.lime },
+  points: { ...POINTS_TEXT, marginTop: POINTS_MARGIN, color: colors.lime },
   tiles: { flexDirection: 'row', gap: TILES_GAP },
   mastery: { gap: MASTERY_GAP },
   masteryHeading: { ...type.caption, color: colors.neutral[400] },

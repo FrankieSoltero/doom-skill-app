@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { pageCount, useFeedStore } from '../store';
 import { cardsByType, makeSet } from '../testing/sets';
 
@@ -88,6 +90,36 @@ describe('startSet and the round', () => {
     store().reachSummary();
 
     expect(store().round).toBe(1);
+  });
+});
+
+describe('the points earned', () => {
+  it('adds each amount above 0 and ignores the rest', () => {
+    [2, 0, -1, Number.NaN, 1].forEach((points) => {
+      store().addPoints(points);
+    });
+
+    expect(store().pointsEarned).toBe(3);
+  });
+
+  it('starts every set at 0, the same set again included', () => {
+    store().startSet(firstSet);
+    store().addPoints(4);
+
+    store().startSet(firstSet);
+
+    expect(store().pointsEarned).toBe(0);
+  });
+
+  it('returns to 0 on reset, and is never stored on the phone', () => {
+    jest.mocked(AsyncStorage.setItem).mockClear();
+    store().startSet(firstSet);
+    store().addPoints(4);
+
+    store().reset();
+
+    expect(store().pointsEarned).toBe(0);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   });
 });
 

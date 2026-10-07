@@ -197,13 +197,13 @@ describe('handOverFollowUp', () => {
     const sink = jest.fn();
     installFollowUpSink(sink);
 
-    handOverFollowUp(sent, { followUp });
+    handOverFollowUp(sent, { followUp, points: 0 });
 
     expect(sink.mock.calls).toStrictEqual([[placed(1)]]);
   });
 
   it.each([
-    ['no follow-up', { followUp: null }],
+    ['no follow-up', { followUp: null, points: 0 }],
     ['no reply', undefined],
   ])('calls no sink for %s', (_case, reply) => {
     const sink = jest.fn();
@@ -216,7 +216,7 @@ describe('handOverFollowUp', () => {
 
   it('skips the follow-up when no sink is installed (the demo)', () => {
     expect(() => {
-      handOverFollowUp(sent, { followUp });
+      handOverFollowUp(sent, { followUp, points: 0 });
     }).not.toThrow();
   });
 
@@ -226,7 +226,7 @@ describe('handOverFollowUp', () => {
     });
 
     expect(() => {
-      handOverFollowUp(sent, { followUp });
+      handOverFollowUp(sent, { followUp, points: 0 });
     }).not.toThrow();
 
     expect(logWarning).toHaveBeenCalledWith('follow_up_dropped', {

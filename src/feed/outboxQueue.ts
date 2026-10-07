@@ -25,9 +25,10 @@ export type Queued = Attempt & { clientAttemptId: string };
 
 /**
  * What the outbox reads from the API's reply to an attempt (`AttemptResult`): the optional
- * `follow_up`, the card the server added after a wrong answer, parsed; `null` when none.
+ * `follow_up`, the card the server added after a wrong answer, parsed; `null` when none. And the
+ * `points` the attempt earned, 0 when the reply has none (an older server).
  */
-export type AttemptReply = { followUp: Card | null };
+export type AttemptReply = { followUp: Card | null; points: number };
 
 /** What the queue reads and writes: async storage in the app. */
 export type QueueStorage = {

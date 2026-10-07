@@ -3,16 +3,24 @@
 // pushes the Summary past its page fails here.
 import { render, screen } from '@testing-library/react-native';
 import { createElement } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { BAR_HEIGHT, ROW_GAP } from '../../components/MasteryRow';
 import { BUTTON_HEIGHT as OUTLINE_HEIGHT } from '../../components/OutlineButton';
 import { BUTTON_HEIGHT as PRIMARY_HEIGHT } from '../../components/PrimaryButton';
 import { TILE_PADDING_Y } from '../../components/StatTile';
 import type { FeedSet } from '../../data';
+import { useFeedStore } from '../../feed/store';
 import type { NextSetStatus } from '../../feed/useFeedSession';
 import { space, type } from '../../theme';
 import { ACTIONS_GAP } from '../SummaryActions';
-import { MASTERY_GAP, MAX_MASTERY_ROWS, SummaryCard, TITLE_LINES } from '../SummaryCard';
+import {
+  MASTERY_GAP,
+  MAX_MASTERY_ROWS,
+  POINTS_LINE_HEIGHT,
+  SummaryCard,
+  TITLE_LINES,
+} from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
 
 /**
@@ -91,5 +99,43 @@ describe('the Summary height budget', () => {
     expect(MAX_MASTERY_ROWS).toBe(3);
     expect(screen.getByTestId('card-frame-body').children).toHaveLength(BODY_CHILDREN);
     expect(screen.getAllByTestId('mastery-bar')).toHaveLength(MAX_MASTERY_ROWS);
+  });
+});
+
+// The points line ("+3 points") sits under the title in the title's own group, so it adds its
+// line and margin (`POINTS_LINE_HEIGHT`) and no gap of the card body.
+describe('the Summary height budget with the points line', () => {
+  it.each([
+    { status: 'idle', footerLines: 2, height: 508.6 },
+    { status: 'none', footerLines: 2, height: 541.8 },
+    { status: 'error', footerLines: 2, height: 541.8 },
+  ] as const)(
+    '$status with a $footerLines-line footer: $height points, inside 543.5',
+    ({ status, footerLines, height }) => {
+      const sum = summaryHeight(status, footerLines) + POINTS_LINE_HEIGHT;
+
+      expect(sum).toBeCloseTo(height, 5);
+      expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
+    },
+  );
+
+  it('the line is as tall as the budget counts, and the card body keeps its children', () => {
+    useFeedStore.setState({ pointsEarned: 3 });
+    render(
+      createElement(SummaryCard, {
+        set: summarySet(),
+        active: false,
+        onKeepGoing: jest.fn(),
+        onViewTree: jest.fn(),
+        nextSetStatus: 'error',
+      }),
+    );
+
+    const style = StyleSheet.flatten(screen.getByTestId('summary-points').props.style) as {
+      lineHeight: number;
+      marginTop?: number;
+    };
+    expect(style.lineHeight + (style.marginTop ?? 0)).toBe(POINTS_LINE_HEIGHT);
+    expect(screen.getByTestId('card-frame-body').children).toHaveLength(BODY_CHILDREN);
   });
 });
