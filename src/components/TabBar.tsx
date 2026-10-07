@@ -1,10 +1,11 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { GitBranch, Layers, Search, User } from 'lucide-react-native';
+import { GitBranch, Layers, MessageCircle, Search, User } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { copy } from '../copy';
 import { useInputFocused } from '../feed/inputFocus';
+import { useInbox } from '../qa/useInbox';
 import { border, colors, fonts } from '../theme';
 
 // Tab bar values from docs/design/card-feed/README.md:32-35 (or, where it gives none, the
@@ -38,6 +39,16 @@ const LABEL_GAP = 3;
 const LABEL_SIZE = 11;
 /** Minimum touch target, from the plan's accessibility rule. */
 const MIN_TOUCH = 44;
+// The badge (M10 plan Q decision Q11), which the design files do not draw: a 16-point circle
+// centered on the icon box's top-right corner.
+/** The badge's diameter. */
+const BADGE_SIZE = 16;
+/** The badge count's size: the largest that fits two digits in the circle. */
+const BADGE_TEXT_SIZE = 10;
+/** Side padding inside the badge, so `99+` widens it into a pill. */
+const BADGE_PADDING_X = 3;
+/** The largest count the badge shows; above it, it reads `99+`. */
+const MAX_BADGE = 99;
 
 type Tab = { label: string; Icon: LucideIcon; color: string };
 
@@ -46,6 +57,7 @@ const TABS: ReadonlyMap<string, Tab> = new Map([
   ['index', { label: copy.tabs.today, Icon: Layers, color: colors.violet }],
   ['tree', { label: copy.tabs.tree, Icon: GitBranch, color: colors.aqua }],
   ['explore', { label: copy.tabs.explore, Icon: Search, color: colors.coral }],
+  ['questions', { label: copy.qa.tab, Icon: MessageCircle, color: colors.pink }],
   ['profile', { label: copy.tabs.profile, Icon: User, color: colors.yellow }],
 ]);
 
@@ -63,6 +75,8 @@ export type TabBarProps = Pick<BottomTabBarProps, 'insets'> & {
     };
     navigate: (name: string, params?: object) => void;
   };
+  /** Each tab's count of new items, by route name; a tab with none, or 0, shows no badge. */
+  badges?: Readonly<Partial<Record<string, number>>>;
 };
 
 type Route = TabBarProps['state']['routes'][number];
@@ -72,8 +86,23 @@ function barHeight(paddingBottom: number): number {
   return border.strong + BAR_PADDING_TOP + TAB_AREA_HEIGHT + paddingBottom;
 }
 
+/** A tab's count of new items on its icon box's top-right corner, hidden at 0. */
+function Badge({ name, count }: { name: string; count: number }) {
+  if (count <= 0) return null;
+  const text = count > MAX_BADGE ? copy.qa.badgeOver(MAX_BADGE) : String(count);
+  return (
+    <View
+      testID={`tab-badge-${name}`}
+      accessibilityLabel={copy.qa.badge(count)}
+      style={styles.badge}
+    >
+      <Text style={styles.badgeText}>{text}</Text>
+    </View>
+  );
+}
+
 /**
- * The custom tab bar for Expo Router's `Tabs` (README.md:32-35): four equal columns, each an icon
+ * The custom tab bar for Expo Router's `Tabs` (README.md:32-35): equal columns, each an icon
  * box above a label. The focused tab's box is filled with its color and framed in ink. The bar has
  * a 1.5-point ink top border on paper; it is 82 points tall with a 34-point bottom inset and 68
  * with none.
@@ -82,7 +111,7 @@ function barHeight(paddingBottom: number): number {
  * keyboard (a hardware keyboard), iOS floats the editor's Done bar over this bar, above the
  * home-indicator inset, and the labels would show under it.
  */
-export function TabBar({ state, navigation, insets }: TabBarProps) {
+export function TabBar({ state, navigation, insets, badges = {} }: TabBarProps) {
   const paddingBottom = Math.max(insets.bottom - HOME_INDICATOR_OVERLAP, MIN_BAR_PADDING_BOTTOM);
   const editing = useInputFocused();
   /** React Navigation's custom tab bar press: emit, then navigate unless focused or prevented. */
@@ -126,6 +155,7 @@ export function TabBar({ state, navigation, insets }: TabBarProps) {
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               />
+              <Badge name={route.name} count={badges[route.name] ?? 0} />
             </View>
             <Text style={styles.label}>{tab.label}</Text>
           </Pressable>
@@ -164,4 +194,33 @@ const styles = StyleSheet.create({
   // A transparent border of the same width keeps the layout from shifting when a tab is focused.
   idleBox: { backgroundColor: 'transparent', borderColor: 'transparent' },
   label: { fontFamily: fonts.body, fontSize: LABEL_SIZE, color: colors.ink },
+  badge: {
+    position: 'absolute',
+    top: -BADGE_SIZE / 2,
+    right: -BADGE_SIZE / 2,
+    minWidth: BADGE_SIZE,
+    height: BADGE_SIZE,
+    paddingHorizontal: BADGE_PADDING_X,
+    borderRadius: BADGE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
+  },
+  badgeText: {
+    fontFamily: fonts.body,
+    fontSize: BADGE_TEXT_SIZE,
+    lineHeight: BADGE_SIZE,
+    color: colors.paper,
+  },
 });
+
+/**
+ * The app's tab bar: `TabBar` with the Questions tab's badge from the learner's inbox. It mounts
+ * the inbox query once, so the inbox polls while the tabs are shown (plan Q decision Q12) and the
+ * badge updates on every tab. A failed inbox read shows no badge; the Questions screen shows the
+ * error.
+ */
+export function InboxTabBar(props: TabBarProps) {
+  const { badge } = useInbox();
+  return <TabBar {...props} badges={{ questions: badge }} />;
+}

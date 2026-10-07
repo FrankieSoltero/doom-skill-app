@@ -26,8 +26,14 @@ export const qa = {
   you: 'You',
   /** The Questions tab's label. */
   tab: 'Questions',
+  /** The Questions tab's badge, spoken: the count of new items in the inbox. */
+  badge: (n: number) => `${String(n)} new`,
+  /** The badge's text above its largest count (`99+`). */
+  badgeOver: (max: number) => `${String(max)}+`,
   /** The Questions screen's title. */
   inboxTitle: 'Questions',
+  /** The Questions screen when the inbox failed to load. */
+  inboxFailed: "Couldn't load your questions.",
   /** The heading over the questions the learner can answer. */
   toAnswer: 'You can answer',
   /** The heading over the learner's own questions that have an answer. */
