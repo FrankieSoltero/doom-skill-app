@@ -6,15 +6,21 @@
  * own item, else their display name, else "A learner". The question shape carries no topic, so the
  * card shows none.
  *
+ * Under the text, the question's own controls (Task 12): Delete in two taps on the learner's own
+ * question (decision Q13), Flag (the reason `other`, one tap, then "Flagged") on another's; a
+ * refused one shows its line there.
+ *
  * The answers are plain rows here; `renderAnswer` replaces each row (the answer controls, Task 12).
  * `children` is drawn at the card's foot (the answer composer under a question to answer).
  */
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { copy } from '../copy';
-import type { Answer, Question } from '../data/qa';
+import { requireApi } from '../api/query';
+import { deleteQuestion, flagQuestion, type Answer, type Question } from '../data/qa';
 import { colors, space, type } from '../theme';
+import { byline, FlagOrDelete, HiddenLine, OutcomeLines } from './AnswerRow';
+import { questionKeys, useQaAction, useTwoTapAction } from './useQaAction';
 
 type QuestionCardProps = {
   question: Question;
@@ -24,15 +30,19 @@ type QuestionCardProps = {
   children?: ReactNode;
 };
 
-/** The name shown for the author of a question or an answer (module comment). */
-function byline(item: Question | Answer): string {
-  return item.mine ? copy.qa.you : (item.author.name ?? copy.qa.aLearner);
-}
-
-/** The "hidden pending review" line, for an item that flags hid; nothing otherwise. */
-function HiddenLine({ status }: { status: string }) {
-  if (status !== 'hidden') return null;
-  return <Text style={styles.hidden}>{copy.qa.hiddenPending}</Text>;
+/** The question's own Delete or Flag, and the line of a refused one (module comment). */
+function QuestionControls({ question }: { question: Question }) {
+  const keys = questionKeys(question);
+  const flag = useQaAction(() => flagQuestion(requireApi(), question.id, 'other'), keys);
+  const remove = useTwoTapAction(() => deleteQuestion(requireApi(), question.id), keys);
+  return (
+    <>
+      <View style={styles.controls}>
+        <FlagOrDelete mine={question.mine} flag={flag} remove={remove} />
+      </View>
+      <OutcomeLines outcomes={[flag.outcome, remove.outcome]} />
+    </>
+  );
 }
 
 /** An answer as a plain row: its author and its text. */
@@ -56,6 +66,7 @@ export function QuestionCard({ question, renderAnswer, children }: QuestionCardP
       </View>
       <Text style={styles.text}>{question.text}</Text>
       <HiddenLine status={question.status} />
+      <QuestionControls question={question} />
       {question.answers.map((answer) => (
         <View key={answer.id}>
           {renderAnswer === undefined ? (
@@ -78,11 +89,10 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
   },
   head: { flexDirection: 'row', justifyContent: 'space-between', gap: space[2] },
+  controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[2] },
   // An answer sits under its question, set in from the left, as in the ask sheet's list.
   answer: { gap: space[1], paddingLeft: space[4] },
   author: { ...type.kicker, color: colors.ink },
   date: { ...type.small, color: colors.neutral[700] },
   text: { ...type.body, color: colors.ink },
-  // The project has no muted text token: the ink at 60% opacity, as the ask sheet's hidden line.
-  hidden: { ...type.small, color: colors.ink, opacity: 0.6 },
 });

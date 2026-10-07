@@ -71,6 +71,8 @@ export const qa = {
   textRefused: 'Keep it to plain text, 2–300 characters, no links.',
   /** Shown when an answer's text was refused (a 422). */
   answerRefused: 'Keep it to plain text, 2–600 characters, no links.',
+  /** Shown on a 409: the action was already done (an answer already accepted). */
+  conflict: 'Already done.',
   /** Shown on any other failure. */
   failed: "Couldn't send. Try again.",
   /** The points an accepted or helpful answer earned. */
