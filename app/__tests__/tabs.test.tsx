@@ -212,6 +212,10 @@ describe('the Questions tab badge', () => {
     );
     expect(badge).toHaveTextContent('3');
     expect(badge).toHaveProp('accessibilityLabel', '3 new');
+    // VoiceOver reads the tab's own label and value, never a label inside it.
+    expect(screen.getByRole('tab', { name: 'Questions' })).toHaveProp('accessibilityValue', {
+      text: '3 new',
+    });
   });
 
   it('is a 16-point ink circle at the icon box top-right, its count in paper', async () => {
@@ -234,6 +238,10 @@ describe('the Questions tab badge', () => {
 
     expect(screen.getByRole('tab', { name: 'Questions' })).toBeOnTheScreen();
     expect(screen.queryByTestId('tab-badge-questions')).toBeNull();
+    const { props } = screen.getByRole('tab', { name: 'Questions' });
+    expect(
+      (props as { accessibilityValue?: { text?: string } }).accessibilityValue?.text,
+    ).toBeUndefined();
   });
 
   it('reads 99+ above 99', async () => {

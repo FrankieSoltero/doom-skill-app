@@ -120,6 +120,8 @@ function useAsk(cardId: string) {
         result.question,
         ...(old ?? []),
       ]);
+      // Cancels a list read still in flight (it would drop the new question) and reads it again.
+      void client.invalidateQueries({ queryKey: questionsKey(cardId) });
     } catch (error) {
       setLine(failedLine(error));
     } finally {

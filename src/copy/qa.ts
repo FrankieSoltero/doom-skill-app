@@ -75,6 +75,4 @@ export const qa = {
   conflict: 'Already done.',
   /** Shown on any other failure. */
   failed: "Couldn't send. Try again.",
-  /** The points an accepted or helpful answer earned. */
-  points: (n: number) => `+${String(n)} points`,
 } as const;

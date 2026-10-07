@@ -182,7 +182,10 @@ describe('AskSheet after an ask', () => {
   it('sends the text, clears the field, puts the question first and shows the passages', async () => {
     const reply = { question: asked, passages: [{ text: 'Use a comma.', source: SOURCE }] };
     const requests = await renderSheet({
-      [LIST]: [json(200, { questions: QUESTIONS })],
+      [LIST]: [
+        json(200, { questions: QUESTIONS }),
+        json(200, { questions: [asked, ...QUESTIONS] }),
+      ],
       [ASK]: [json(201, reply)],
     });
 
@@ -191,6 +194,7 @@ describe('AskSheet after an ask', () => {
     expect(requests.map((r) => [`${r.method} ${r.path}`, r.body])).toStrictEqual([
       [LIST, null],
       [ASK, { text: ASKED }],
+      [LIST, null],
     ]);
     expect(field()).toHaveDisplayValue('');
     expect(questionBlocks()).toHaveLength(4);
@@ -202,7 +206,7 @@ describe('AskSheet after an ask', () => {
 
   it('shows no passages section when none were found', async () => {
     await renderSheet({
-      [LIST]: [json(200, { questions: [] })],
+      [LIST]: [json(200, { questions: [] }), json(200, { questions: [asked] })],
       [ASK]: [json(201, { question: asked, passages: [] })],
     });
 
@@ -211,6 +215,25 @@ describe('AskSheet after an ask', () => {
     expect(questionBlocks()).toHaveLength(1);
     expect(screen.queryByText('From the sources')).toBeNull();
     expect(screen.queryByText('No questions yet.')).toBeNull();
+  });
+
+  it('keeps the asked question when the list read in flight lands after it, and reads again', async () => {
+    let landFirstRead: (reply: Response) => void = () => undefined;
+    const firstRead = new Promise<Response>((resolve) => {
+      landFirstRead = resolve;
+    });
+    const requests = await renderSheet({
+      [LIST]: [firstRead, json(200, { questions: [asked] })],
+      [ASK]: [json(201, { question: asked, passages: [] })],
+    });
+
+    await askWith(ASKED);
+    landFirstRead(json(200, { questions: [] }));
+    await settle();
+
+    expect(questionBlocks()).toHaveLength(1);
+    expect(within(questionBlocks()[0] ?? screen.root).getByText(ASKED)).toBeOnTheScreen();
+    expect(requests.filter((r) => r.method === 'GET')).toHaveLength(2);
   });
 
   it('sends one request while an ask is in flight, the button disabled', async () => {

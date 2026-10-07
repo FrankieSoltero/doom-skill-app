@@ -132,11 +132,14 @@ export function TabBar({ state, navigation, insets, badges = {} }: TabBarProps) 
         const tab = TABS.get(route.name);
         if (tab === undefined || editing) return null;
         const focused = position === state.index;
+        const count = badges[route.name] ?? 0;
         return (
           <Pressable
             key={route.key}
             accessibilityRole="tab"
             accessibilityLabel={tab.label}
+            // The badge's own label sits inside this labelled tab, so VoiceOver reads the value.
+            accessibilityValue={count > 0 ? { text: copy.qa.badge(count) } : undefined}
             accessibilityState={{ selected: focused }}
             onPress={() => {
               press(route, focused);
@@ -155,7 +158,7 @@ export function TabBar({ state, navigation, insets, badges = {} }: TabBarProps) 
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               />
-              <Badge name={route.name} count={badges[route.name] ?? 0} />
+              <Badge name={route.name} count={count} />
             </View>
             <Text style={styles.label}>{tab.label}</Text>
           </Pressable>

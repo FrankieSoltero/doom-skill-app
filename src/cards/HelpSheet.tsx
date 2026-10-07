@@ -1,10 +1,10 @@
 /**
  * "Help with this card" (M9 plan H Task 6, spec 5.2; H1, H4–H6, H10): the sheet a card's help
- * icon (src/cards/HelpButton.tsx) opens. Two rows, "Test me" and "Go deeper", and no text field;
- * each asks the API to add a card to the running set (`POST /feed/extra`), named by the date and
- * number the data source served the set with (`currentSet()` of src/data). A third row, "Ask a
- * question" (M10 plan Q Task 9, decision Q10), swaps in the ask sheet (src/cards/AskSheet.tsx),
- * which holds the only text field.
+ * icon (src/cards/HelpButton.tsx) opens. Two rows, "Test me" and "Go deeper", add a card: each
+ * asks the API to add one to the running set (`POST /feed/extra`), named by the date and number
+ * the data source served the set with (`currentSet()` of src/data). A third row, "Ask a question"
+ * (M10 plan Q Task 9, decision Q10), swaps in the ask sheet (src/cards/AskSheet.tsx), which holds
+ * the sheet's only text field.
  *
  * - An added card goes into the feed right after this card (`insertCard(card, index + 1)`); the
  *   sheet closes and the frame shows `copy.help.added`. When the feed has nowhere to put it (an
@@ -73,6 +73,29 @@ function failedStatus(error: unknown): Status {
   return MAYBE_SENT.has(kind) ? 'maybeAdded' : 'failed';
 }
 
+/** One row of the sheet: its label over its hint, disabled while `locked`. */
+function Row(props: { label: string; hint: string; locked: boolean; onPress: () => void }) {
+  const { label, hint, locked, onPress } = props;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityState={{ disabled: locked }}
+      disabled={locked}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        locked ? styles.disabled : null,
+        pressed ? styles.pressed : null,
+      ]}
+    >
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.hint}>{hint}</Text>
+    </Pressable>
+  );
+}
+
 type HelpSheetProps = {
   /** The server id of the card the sheet helps with. */
   cardId: string;
@@ -125,38 +148,24 @@ export function HelpSheet({ cardId, index, onClose, onAdded }: HelpSheetProps) {
       testID="help-sheet"
     >
       {ROWS.map(({ action, label, hint }) => (
-        <Pressable
+        <Row
           key={action}
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          accessibilityHint={hint}
-          accessibilityState={{ disabled: locked }}
-          disabled={locked}
+          label={label}
+          hint={hint}
+          locked={locked}
           onPress={() => {
             void ask(action);
           }}
-          style={({ pressed }) => [
-            styles.row,
-            locked ? styles.disabled : null,
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.hint}>{hint}</Text>
-        </Pressable>
+        />
       ))}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={copy.qa.ask}
-        accessibilityHint={copy.qa.askHint}
+      <Row
+        label={copy.qa.ask}
+        hint={copy.qa.askHint}
+        locked={locked}
         onPress={() => {
           setAsking(true);
         }}
-        style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
-      >
-        <Text style={styles.label}>{copy.qa.ask}</Text>
-        <Text style={styles.hint}>{copy.qa.askHint}</Text>
-      </Pressable>
+      />
       {status === 'idle' ? null : (
         <View accessibilityLiveRegion="polite">
           <Text style={styles.line}>{LINES[status]}</Text>

@@ -3,7 +3,8 @@
  * and text, the hidden line on the learner's own hidden answer, the "Accepted" label, the helpful
  * count from 1, and the controls the learner may use on it.
  *
- * - **Accept**: on the learner's own question while it has no accepted answer, on another's answer.
+ * - **Accept**: on the learner's own question while it is open with no accepted answer, on
+ *   another's answer.
  * - **Helpful**: on another's answer; disabled once the learner found it helpful.
  * - **Flag**: on another's answer; one tap sends the reason `other`, then "Flagged" stands in.
  * - **Delete**: on the learner's own answer, in two taps (decision Q13).
@@ -123,7 +124,11 @@ function AnswerControls({ answer, question }: AnswerRowProps) {
   const helpful = useQaAction(() => markHelpful(requireApi(), answer.id), keys);
   const flag = useQaAction(() => flagAnswer(requireApi(), answer.id, 'other'), keys);
   const remove = useTwoTapAction(() => deleteAnswer(requireApi(), answer.id), keys);
-  const acceptable = question.mine && question.acceptedAnswerId === null && !answer.mine;
+  const acceptable =
+    question.mine &&
+    question.status === 'open' &&
+    question.acceptedAnswerId === null &&
+    !answer.mine;
   return (
     <>
       <View style={styles.controls}>

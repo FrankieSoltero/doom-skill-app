@@ -51,7 +51,8 @@ export function useInbox(): InboxState {
   const retry = () => {
     void refetch();
   };
-  if (result.isSuccess) {
+  // Cached data stays ready: a failed background poll keeps the inbox (and any half-written answer).
+  if (result.data !== undefined) {
     return { status: 'ready', inbox: result.data, retry, badge: result.data.badge };
   }
   const error = asApiError(result.error);

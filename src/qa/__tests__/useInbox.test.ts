@@ -114,6 +114,22 @@ describe('useInbox', () => {
     expect(inboxReads(requests)).toBe(2);
     expect(result.current).toMatchObject({ status: 'ready', badge: 3 });
   });
+});
+
+describe('useInbox polling', () => {
+  it('keeps the inbox it has, and its badge, when a later poll fails', async () => {
+    const requests = serveApi({
+      'GET /questions/inbox': [json(200, THREE_NEW), json(404, {})],
+    });
+    const { result } = await renderInbox();
+    const loaded = result.current.inbox;
+
+    await advance(INBOX_POLL_MS);
+
+    expect(inboxReads(requests)).toBe(2);
+    expect(result.current).toMatchObject({ status: 'ready', badge: 3 });
+    expect(result.current.inbox).toBe(loaded);
+  });
 
   it('asks again every INBOX_POLL_MS while the app is active', async () => {
     const requests = serveApi({

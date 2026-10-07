@@ -16,6 +16,7 @@ import TabsLayout from '../(tabs)/_layout';
 import ExploreScreen from '../(tabs)/explore';
 import TodayScreen from '../(tabs)/index';
 import ProfileScreen from '../(tabs)/profile';
+import QuestionsScreen from '../(tabs)/questions';
 import TreeScreen from '../(tabs)/tree';
 import TopicScreen from '../topic/[slug]';
 import PlacementScreen from '../topic/[slug]/placement';
@@ -63,6 +64,7 @@ const ROUTES = {
   '(tabs)/index': TodayScreen,
   '(tabs)/tree': TreeScreen,
   '(tabs)/explore': ExploreScreen,
+  '(tabs)/questions': QuestionsScreen,
   '(tabs)/profile': ProfileScreen,
   'topic/[slug]': TopicScreen,
   'topic/[slug]/placement': PlacementScreen,

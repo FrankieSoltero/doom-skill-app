@@ -153,6 +153,20 @@ describe('HelpSheet rows and an added card', () => {
     expectRowsEnabled(false);
   });
 
+  it('disables the Ask row while a request is in flight, so the sheet stays', async () => {
+    serveApi({ [EXTRA]: [new Promise<Response>(() => undefined)] });
+    renderSheet();
+
+    fireEvent.press(testMe());
+    await settle();
+    fireEvent.press(askRow());
+    await settle();
+
+    expect(askRow()).toBeDisabled();
+    expect(screen.getByTestId('help-sheet')).toBeOnTheScreen();
+    expect(screen.queryByTestId('ask-sheet')).toBeNull();
+  });
+
   it('posts Test me with the card and the served set, then inserts the card after this one', async () => {
     const requests = await press(testMe, json(200, { card: ADDED, added: 1 }));
 

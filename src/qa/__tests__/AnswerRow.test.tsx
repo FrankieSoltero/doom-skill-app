@@ -154,6 +154,8 @@ describe('AnswerRow: Accept', () => {
     ['another learner’s question', {}, { mine: false }],
     ['a question with an accepted answer', {}, { acceptedAnswerId: uuid(11) }],
     ['the learner’s own answer', { mine: true }, {}],
+    ['the learner’s hidden question', {}, { status: 'hidden' as const }],
+    ['an answered question served with no accepted answer', {}, { status: 'answered' as const }],
   ])('is not shown on %s', async (_, answer, question) => {
     await renderRow(answer, question);
 
