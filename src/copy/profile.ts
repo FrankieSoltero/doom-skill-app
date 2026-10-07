@@ -8,6 +8,19 @@ export const profile = {
   title: 'Profile',
   displayName: 'Display name',
   displayNamePlaceholder: 'Your name',
+  /** Why a display name is refused: the rule's three local checks (src/profile/nameRules.ts). */
+  nameShort: 'At least 3 characters',
+  nameLong: 'At most 24 characters',
+  nameChars: 'Letters, digits, spaces and _ only',
+  /** Why the API refused a display name: 409, then 422. */
+  nameTaken: 'That name is taken',
+  nameNotAllowed: "That name isn't allowed",
+  /** The leaderboard opt-in needs a display name (turned on without one, or the API's 422). */
+  nameRequired: 'Add a display name first',
+  /** The leaderboard opt-in switch's caption and spoken label, and the note under it. */
+  leaderboardSwitch: 'Show me on topic leaderboards',
+  leaderboardNote:
+    'Your display name is shown on topic leaderboards and next to questions you ask or answer.',
   /** The daily budget control's caption, README.md:167. */
   dailyMinutes: 'Daily time budget',
   /** A budget option's text and its spoken label. */

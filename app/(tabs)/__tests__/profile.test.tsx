@@ -14,6 +14,7 @@ import {
 } from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { SOURCE_REPOSITORY } from '../../../src/config';
+import * as log from '../../../src/log';
 import { deviceTimezone } from '../../../src/profile/useProfile';
 import { colors } from '../../../src/theme';
 import ProfileScreen from '../profile';
@@ -30,8 +31,14 @@ const FRESH = {
   push_time: null,
   timezone: deviceTimezone(),
   created_at: '2026-09-28T12:00:00Z',
+  leaderboard_opt_in: false,
 };
-const SET_UP = { ...FRESH, display_name: 'Frankie', push_time: '20:30:00' };
+const SET_UP = {
+  ...FRESH,
+  display_name: 'Frankie',
+  push_time: '20:30:00',
+  leaderboard_opt_in: false,
+};
 const notifications = jest.mocked(Notifications);
 
 beforeEach(() => {
@@ -226,5 +233,105 @@ describe('Profile: the daily reminder', () => {
 
     expect(patches()).toStrictEqual([{ push_time: '07:15' }]);
     expect(notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Profile: the display-name rule', () => {
+  it('caps the name field at 24 characters', async () => {
+    await renderProfile(FRESH);
+
+    expect(screen.getByLabelText('Display name')).toHaveProp('maxLength', 24);
+  });
+
+  it.each([
+    ['ab', 'At least 3 characters'],
+    ['x'.repeat(25), 'At most 24 characters'],
+    ['Frank!', 'Letters, digits, spaces and _ only'],
+  ])('shows why %j is refused under the field and sends nothing', async (name, line) => {
+    const patches = await renderProfile(SET_UP);
+    const field = screen.getByLabelText('Display name');
+
+    fireEvent.changeText(field, name);
+    fireEvent(field, 'endEditing');
+    await advance(0);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(patches()).toStrictEqual([]);
+  });
+
+  it.each([
+    [409, 'That name is taken'],
+    [422, "That name isn't allowed"],
+  ])('shows the line for a name the API refuses with %i', async (status, line) => {
+    const warn = jest.spyOn(log, 'logWarning').mockImplementation(() => undefined);
+    serveApi({ 'GET /me': [json(200, SET_UP)], 'PATCH /me': [json(status, { detail: 'no' })] });
+    await renderScreen(<ProfileScreen />);
+    const field = screen.getByLabelText('Display name');
+
+    fireEvent.changeText(field, 'Admin');
+    fireEvent(field, 'endEditing');
+    await advance(0);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(warn).toHaveBeenCalledWith('profile_save_failed', { kind: 'ApiError' });
+  });
+});
+
+describe('Profile: the leaderboard opt-in', () => {
+  it('shows the switch, off, with its note', async () => {
+    await renderProfile(SET_UP);
+
+    const toggle = screen.getByRole('switch', { name: 'Show me on topic leaderboards' });
+    expect(toggle).toHaveProp('value', false);
+    expect(screen.getByTestId('leaderboard-switch')).toBe(toggle);
+    expect(
+      screen.getByText(
+        'Your display name is shown on topic leaderboards and next to questions you ask or answer.',
+      ),
+    ).toBeOnTheScreen();
+  });
+
+  it('saves the opt-in and shows the saved profile', async () => {
+    const patches = await renderProfile(SET_UP, [{ ...SET_UP, leaderboard_opt_in: true }]);
+
+    fireEvent(screen.getByTestId('leaderboard-switch'), 'valueChange', true);
+    await advance(0);
+
+    expect(patches()).toStrictEqual([{ leaderboard_opt_in: true }]);
+    expect(screen.getByTestId('leaderboard-switch')).toHaveProp('value', true);
+  });
+
+  it('saves turning it off', async () => {
+    const opted = { ...SET_UP, leaderboard_opt_in: true };
+    const patches = await renderProfile(opted, [SET_UP]);
+
+    fireEvent(screen.getByTestId('leaderboard-switch'), 'valueChange', false);
+    await advance(0);
+
+    expect(patches()).toStrictEqual([{ leaderboard_opt_in: false }]);
+    expect(screen.getByTestId('leaderboard-switch')).toHaveProp('value', false);
+  });
+
+  it('asks for a display name first and stays off, without a request', async () => {
+    const patches = await renderProfile(FRESH);
+
+    fireEvent(screen.getByTestId('leaderboard-switch'), 'valueChange', true);
+    await advance(0);
+
+    expect(screen.getByText('Add a display name first')).toBeOnTheScreen();
+    expect(patches()).toStrictEqual([]);
+    expect(screen.getByTestId('leaderboard-switch')).toHaveProp('value', false);
+  });
+
+  it('asks for a display name when the API refuses the opt-in with 422', async () => {
+    jest.spyOn(log, 'logWarning').mockImplementation(() => undefined);
+    serveApi({ 'GET /me': [json(200, SET_UP)], 'PATCH /me': [json(422, { detail: 'no' })] });
+    await renderScreen(<ProfileScreen />);
+
+    fireEvent(screen.getByTestId('leaderboard-switch'), 'valueChange', true);
+    await advance(0);
+
+    expect(screen.getByText('Add a display name first')).toBeOnTheScreen();
+    expect(screen.getByTestId('leaderboard-switch')).toHaveProp('value', false);
   });
 });

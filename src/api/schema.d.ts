@@ -356,6 +356,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/{slug}/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Leaderboard
+         * @description The topic's top 50 opted-in learners and the caller's rank (module docstring).
+         */
+        get: operations["get_leaderboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}/placement": {
         parameters: {
             query?: never;
@@ -480,6 +500,11 @@ export interface components {
             /** Next Due */
             next_due: string | null;
             node: components["schemas"]["AttemptNode"];
+            /**
+             * Points
+             * @default 0
+             */
+            points: number;
             rating: components["schemas"]["Rating"] | null;
             /** Score */
             score: number | null;
@@ -959,6 +984,37 @@ export interface components {
             groups: components["schemas"]["KeyGroup"][];
         };
         /**
+         * Leaderboard
+         * @description A topic's board and the caller's place on it.
+         */
+        Leaderboard: {
+            /** Entries */
+            entries: components["schemas"]["LeaderboardEntry"][];
+            me: components["schemas"]["LeaderboardMe"] | null;
+        };
+        /**
+         * LeaderboardEntry
+         * @description One learner on the board: their rank, display name and points on the topic.
+         */
+        LeaderboardEntry: {
+            /** Display Name */
+            display_name: string;
+            /** Points */
+            points: number;
+            /** Rank */
+            rank: number;
+        };
+        /**
+         * LeaderboardMe
+         * @description The caller's rank and points on the topic.
+         */
+        LeaderboardMe: {
+            /** Points */
+            points: number;
+            /** Rank */
+            rank: number;
+        };
+        /**
          * Milestone
          * @description A milestone's id, position and title; its rubric and checks come with the checkpoint.
          */
@@ -1177,6 +1233,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Leaderboard Opt In */
+            leaderboard_opt_in: boolean;
             /** Push Time */
             push_time: string | null;
             /** Timezone */
@@ -1184,13 +1242,15 @@ export interface components {
         };
         /**
          * ProfileUpdate
-         * @description `PATCH /me`: the fields to change, one to four; a field left out is not changed.
+         * @description `PATCH /me`: the fields to change, one to five; a field left out is not changed.
          */
         ProfileUpdate: {
             /** Daily Minutes */
             daily_minutes?: number;
             /** Display Name */
             display_name?: string | null;
+            /** Leaderboard Opt In */
+            leaderboard_opt_in?: boolean;
             /** Push Time */
             push_time?: string | null;
             /**
@@ -2304,13 +2364,22 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Name taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Name not allowed, display name required, or a request of the wrong shape */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorBody"] | components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service unavailable */
@@ -2733,6 +2802,64 @@ export interface operations {
             };
             /** @description Not ready */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_leaderboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Leaderboard"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
