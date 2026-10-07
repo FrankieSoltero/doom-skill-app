@@ -1,6 +1,6 @@
 // The Questions tab's screen shell (app/(tabs)/questions.tsx), over the real API client and a fake
 // network: marking the inbox seen on focus, the loading, empty and error states. The inbox's
-// lists are Task 11's.
+// lists and the answer composer are questions.inbox.test.tsx's.
 import { act, screen } from '@testing-library/react-native';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
@@ -141,7 +141,7 @@ describe('Questions: loading, empty and error', () => {
     expect(screen.queryByTestId('inbox-lists')).toBeNull();
   });
 
-  it('holds the place of the lists when the inbox has a question', async () => {
+  it('shows the lists when the inbox has a question', async () => {
     const { client } = await renderQuestions({
       'GET /questions/inbox': [json(200, ONE_TO_ANSWER)],
     });

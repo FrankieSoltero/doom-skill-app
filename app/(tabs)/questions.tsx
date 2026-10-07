@@ -11,6 +11,7 @@ import { copy } from '../../src/copy';
 import { markInboxSeen } from '../../src/data/qa';
 import { kindOf } from '../../src/feed/outboxQueue';
 import { logWarning } from '../../src/log';
+import { InboxList } from '../../src/qa/InboxList';
 import { INBOX_KEY, useInbox } from '../../src/qa/useInbox';
 import { colors, space, type } from '../../src/theme';
 
@@ -28,8 +29,7 @@ function Inbox({ inbox }: { inbox: ReturnType<typeof useInbox> }) {
   if (inbox.inbox.toAnswer.length === 0 && inbox.inbox.answered.length === 0) {
     return <Text style={styles.line}>{copy.qa.inboxEmpty}</Text>;
   }
-  // The questions to answer and the answers to the learner's questions: Task 11 fills this.
-  return <View testID="inbox-lists" />;
+  return <InboxList inbox={inbox.inbox} />;
 }
 
 /**
