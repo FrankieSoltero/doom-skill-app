@@ -1,6 +1,6 @@
 // The topic detail screen (app/topic/[slug].tsx), over the real API client and a fake network.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
@@ -25,7 +25,7 @@ jest.mock('react-native-safe-area-context', () => {
   return mock.default;
 });
 jest.mock('expo-router', () => ({
-  router: { back: jest.fn(), dismissTo: jest.fn(), replace: jest.fn() },
+  router: { back: jest.fn(), dismissTo: jest.fn(), push: jest.fn(), replace: jest.fn() },
   useLocalSearchParams: () => ({ slug: 'strudel' }),
 }));
 jest.mock('../../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -73,6 +73,7 @@ beforeEach(async () => {
   jest.mocked(router.dismissTo).mockClear();
   jest.mocked(router.replace).mockClear();
   jest.mocked(router.back).mockClear();
+  jest.mocked(router.push).mockClear();
   useSession.setState({ status: 'signedIn', userId: 'user-1' });
   await AsyncStorage.clear();
   useFeedStore.setState(useFeedStore.getInitialState(), true);
@@ -144,6 +145,19 @@ describe('Topic detail: states', () => {
     await renderTopic({ 'GET /topics/strudel': [json(404, {})] });
 
     expect(screen.getByText('This topic does not exist.')).toBeOnTheScreen();
+  });
+
+  it('opens the leaderboard from a link under the milestones', async () => {
+    await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+
+    // OutlineButton takes no testID: the link's section carries it, around the button.
+    const section = screen.getByTestId('leaderboard-link');
+    fireEvent.press(within(section).getByRole('button', { name: 'Leaderboard' }));
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/topic/[slug]/leaderboard',
+      params: { slug: 'strudel' },
+    });
   });
 
   it('goes back', async () => {

@@ -8,6 +8,7 @@ import { ApiError } from '../../src/api/errors';
 import { ErrorScreen } from '../../src/components/ErrorScreen';
 import { LoadingState } from '../../src/components/LoadingState';
 import { milestoneColor } from '../../src/components/milestoneColor';
+import { OutlineButton } from '../../src/components/OutlineButton';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { copy } from '../../src/copy';
 import { placementCopy } from '../../src/copy/placement';
@@ -121,7 +122,10 @@ function MilestoneLine({ position, title }: { position: number; title: string })
   );
 }
 
-/** The topic: kicker, title, end state, milestones, then Start, or why it cannot start yet. */
+/**
+ * The topic: kicker, title, end state, milestones, the link to its leaderboard, then Start, or why
+ * it cannot start yet.
+ */
 function TopicContent({ topic }: { topic: TopicDetail }) {
   const ready = topic.status === 'ready' && topic.milestones.length > 0;
   return (
@@ -148,6 +152,14 @@ function TopicContent({ topic }: { topic: TopicDetail }) {
           ))}
         </View>
       )}
+      <View testID="leaderboard-link" style={styles.section}>
+        <OutlineButton
+          label={copy.leaderboard.link}
+          onPress={() => {
+            router.push({ pathname: '/topic/[slug]/leaderboard', params: { slug: topic.slug } });
+          }}
+        />
+      </View>
       {placement === null ? null : <PlacementReset slug={topic.slug} calls={placement} />}
       {ready ? (
         <StartButton slug={topic.slug} />

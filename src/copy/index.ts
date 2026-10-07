@@ -10,6 +10,7 @@
  */
 
 import { flag } from './flag';
+import { leaderboard } from './leaderboard';
 import { profile, reminder } from './profile';
 import { sources } from './sources';
 import { explore, pendingTopic, topic, tree } from './topics';
@@ -414,6 +415,7 @@ export const copy = deepFreeze({
   pendingTopic,
   topic,
   tree,
+  leaderboard,
   profile,
   reminder,
   flag,
