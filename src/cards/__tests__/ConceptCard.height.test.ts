@@ -7,6 +7,11 @@
 // plan T Task 1): with the title and the body at their limits and the tiles under the code, the
 // tallest of the four things drawn there, that many lines fit and one more does not. An 8-line
 // snippet (the stored Strudel cards had up to 8) under a body at its limit is 652.6 points.
+//
+// A shorter body frees its lines for code (M10 plan T, T22 and T24): the server's
+// `snippet_lines_allowed` gives a body of b lines, counted as `charsIn` counts them, 9 - b code
+// lines, at most 8. Each body at the server's limit beside that many lines fits; one character
+// more takes another body line and is over the frame.
 import { render, screen } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement, Fragment } from 'react';
@@ -41,17 +46,27 @@ const BODY_CHILDREN = 6;
 
 /** The most code lines a stored Strudel concept had before the budget. */
 const STORED_LINES = 8;
+/** textLimits.ts's concept body: 49 characters a line, less a wrap loss of 6 on each but the last. */
+const BODY_PER_LINE = 49;
+const WRAP_LOSS = 6;
+
+/** The body lines `charsIn` gives `chars` characters: the fewest that hold them, at least 1. */
+function bodyLinesOf(chars: number): number {
+  let lines = 1;
+  while (lines * BODY_PER_LINE - (lines - 1) * WRAP_LOSS < chars) lines += 1;
+  return lines;
+}
 
 const fill = (length: number) => 'x'.repeat(length);
 const { title, body, snippetLines } = CARD_TEXT_LIMITS.concept;
 /** A snippet of `lines` code lines. */
 const snippetOf = (lines: number) =>
   Array.from({ length: lines }, () => 'note("<c3 e3 g3 b3>")').join('\n');
-/** A concept at its text limits with `snippet` and a one-line comment. */
-const maximal = (snippet: string): ConceptCardData => ({
+/** A concept at its text limits (its body `bodyChars` long) with `snippet` and a one-line comment. */
+const maximal = (snippet: string, bodyChars: number): ConceptCardData => ({
   ...cardsByType.concept,
   title: fill(title),
-  body: fill(body),
+  body: fill(bodyChars),
   snippet,
   snippetComment: '// cycle 1 → c3 · 2 → e3 · 3 → g3 · 4 → b3',
   cycles: ['c3', 'e3', 'g3', 'b3'],
@@ -65,9 +80,9 @@ type Under = 'tiles' | NoticeName;
  * action whose icon a card from the API has in its kicker row (the flag's icon is the same size),
  * to read its size. Returns the code lines drawn, counted as the server counts them.
  */
-function renderMaximal(lines: number): number {
+function renderMaximal(lines: number, bodyChars = body): number {
   const snippet = snippetOf(lines);
-  const drawn = maximal(snippet);
+  const drawn = maximal(snippet, bodyChars);
   const set = makeSet(0, [drawn]);
   useFeedStore.getState().startSet({ ...set, topic: { ...set.topic, lang: 'strudel' } });
   const card = createElement(ConceptCard, {
@@ -93,8 +108,11 @@ function underHeight(under: Under): number {
   return noticeHeight(under);
 }
 
-/** The card's content height with `under` drawn under its `codeLines` lines of code. */
-function conceptHeight(codeLines: number, under: Under): number {
+/**
+ * The card's content height with `under` drawn under its `codeLines` lines of code, beside a body
+ * of `bodyLines` lines.
+ */
+function conceptHeight(codeLines: number, under: Under, bodyLines = BODY_LINES): number {
   const icon = Number(screen.UNSAFE_getByType(BookOpen).props.size);
   const kicker = Math.max(type.kicker.fontSize * NATURAL_LINE, icon);
   const content = viewStyleOf(screen.getByTestId('code-block-content'));
@@ -104,7 +122,7 @@ function conceptHeight(codeLines: number, under: Under): number {
   const control = Number(viewStyleOf(screen.getByTestId('playable-code-control')).height);
   const innerGap = Number(viewStyleOf(screen.getByTestId('playable-code')).gap);
   const snippet = Math.max(block, control) + innerGap + underHeight(under);
-  const text = TITLE_LINES * type.cardTitleL.lineHeight + BODY_LINES * type.body.lineHeight;
+  const text = TITLE_LINES * type.cardTitleL.lineHeight + bodyLines * type.body.lineHeight;
   return kicker + text + snippet + BUTTON_HEIGHT + (BODY_CHILDREN - 1) * space[4];
 }
 
@@ -150,6 +168,45 @@ describe('the playing concept card height budget', () => {
     expect(sum).toBeCloseTo(row.height, 5);
     expect(sum).toBeGreaterThan(CONTENT_BOX);
   });
+});
+
+describe('the snippet a shorter body allows (T22)', () => {
+  it.each([
+    { bodyChars: 49, lines: 8, height: 537.6 },
+    { bodyChars: 92, lines: 7, height: 538.6 },
+    { bodyChars: 135, lines: 6, height: 539.6 },
+    { bodyChars: 178, lines: 5, height: 540.6 },
+    { bodyChars: 221, lines: 4, height: 541.6 },
+  ])(
+    'a body of $bodyChars characters beside $lines code lines is $height points, inside 543.5',
+    (row) => {
+      const codeLines = renderMaximal(row.lines, row.bodyChars);
+
+      const sum = conceptHeight(codeLines, 'tiles', bodyLinesOf(row.bodyChars));
+
+      expect(bodyLinesOf(row.bodyChars)).toBe(9 - row.lines);
+      expect(sum).toBeCloseTo(row.height, 5);
+      expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
+    },
+  );
+
+  it.each([
+    { bodyChars: 50, lines: 8, height: 560.6 },
+    { bodyChars: 93, lines: 7, height: 561.6 },
+    { bodyChars: 136, lines: 6, height: 562.6 },
+    { bodyChars: 179, lines: 5, height: 563.6 },
+    { bodyChars: 222, lines: 4, height: 564.6 },
+  ])(
+    'one character more, $bodyChars, beside $lines code lines is $height points, over the frame',
+    (row) => {
+      const codeLines = renderMaximal(row.lines, row.bodyChars);
+
+      const sum = conceptHeight(codeLines, 'tiles', bodyLinesOf(row.bodyChars));
+
+      expect(sum).toBeCloseTo(row.height, 5);
+      expect(sum).toBeGreaterThan(CONTENT_BOX);
+    },
+  );
 });
 
 describe('lineCount', () => {

@@ -275,10 +275,19 @@ function shiftedFrom<T>(record: Record<number, T>, at: number): Record<number, T
 }
 
 /**
- * Where a card asked for at `at` goes: `at`, clamped to the checkpoint, when that is after the
- * current card and no answer lies at or after it; else the checkpoint's index (`appended`) when
- * that is after the current card and no answer lies at or after it (a draft typed on the
- * checkpoint); else nowhere (-1).
+ * `at`, or the place after a pair's second half when `at` falls between its halves (the card
+ * before it is "1/2" and the card at it "2/2"): a pair's halves stay adjacent (M10 plan T).
+ */
+function outsidePair(cards: readonly Card[], at: number): number {
+  const between = cards[at - 1]?.sequence?.index === 1 && cards[at]?.sequence?.index === 2;
+  return between ? at + 1 : at;
+}
+
+/**
+ * Where a card asked for at `at` goes: `at`, clamped to the checkpoint and moved past a pair it
+ * falls inside (`outsidePair`), when that is after the current card and no answer lies at or
+ * after it; else the checkpoint's index (`appended`) when that is after the current card and no
+ * answer lies at or after it (a draft typed on the checkpoint); else nowhere (-1).
  */
 function insertionAt(
   state: FeedState,
@@ -286,7 +295,7 @@ function insertionAt(
   at: number,
 ): { index: number; appended: boolean } {
   const end = checkpointIndex(cards);
-  const clamped = Math.min(at, end);
+  const clamped = outsidePair(cards, Math.min(at, end));
   if (clamped > state.index && !answeredFrom(state, clamped)) {
     return { index: clamped, appended: false };
   }

@@ -209,6 +209,58 @@ describe('insertCard after a back-swipe', () => {
   });
 });
 
+// A split pair's halves are adjacent (M10 plan T, T8): an insertion that falls between "1/2" and
+// "2/2" (a follow-up at the answered card + 2, a Test me at the current card + 1) goes after the
+// pair's second half, and the page-keyed records shift from there (the final review's I3).
+describe('insertCard beside a pair', () => {
+  const first = { ...served(concept, 2), sequence: { index: 1, of: 2 } };
+  const second = { ...served(concept, 3), sequence: { index: 2, of: 2 } };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('moves a follow-up that would land between the halves to after the second half', () => {
+    store().startSet(apiSet([served(quiz, 1), first, second, served(predict, 4)]));
+    store().setAnswer(0, { kind: 'choice', picked: 1 });
+
+    expect(store().insertCard(added, store().index + 2)).toBe(3);
+
+    expect(ids()).toStrictEqual([
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+      '00000000-0000-4000-8000-000000000003',
+      '00000000-0000-4000-8000-000000000009',
+      '00000000-0000-4000-8000-000000000004',
+    ]);
+    expect(logWarning).not.toHaveBeenCalled();
+  });
+
+  it('moves a Test me on the first half to after the second, shifting the records from there', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    store().startSet(apiSet([served(quiz, 1), first, second, served(predict, 4)]));
+    store().setAnswer(0, { kind: 'choice', picked: 0 });
+    store().setIndex(1);
+    store().setIndex(2);
+    store().setIndex(1);
+    const { shownAt, seenSent } = store();
+
+    expect(store().insertCard(added, store().index + 1)).toBe(3);
+
+    expect(ids()[3]).toBe('00000000-0000-4000-8000-000000000009');
+    expect(store().shownAt).toStrictEqual(shownAt);
+    expect(store().seenSent).toStrictEqual(seenSent);
+    expect(Object.keys(shownAt)).toStrictEqual(['0', '1', '2']);
+  });
+
+  it('inserts between two cards of different pairs, or after a pair, where asked', () => {
+    const other = { ...served(concept, 5), sequence: { index: 1, of: 2 } };
+    store().startSet(apiSet([served(quiz, 1), first, second, other, served(predict, 6)]));
+
+    expect(store().insertCard(added, 3)).toBe(3);
+  });
+});
+
 describe('insertCard, card ids and no set', () => {
   it('does not insert a card whose id is already in the set, and returns its index', () => {
     store().startSet(apiSet([served(concept, 1), added, served(quiz, 2)]));
