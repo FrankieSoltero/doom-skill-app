@@ -17,14 +17,22 @@ type LeaderboardListProps = {
   optedIn: boolean | undefined;
 };
 
-/** One learner on the board: `#rank`, their name and their points. */
+/**
+ * One learner on the board: `#rank`, their name, their level after it from Level 2 (L14), and
+ * their points. A long name is cut, never the level.
+ */
 function Row({ entry }: { entry: Entry }) {
   return (
     <View testID="leaderboard-row" accessible accessibilityRole="text" style={styles.row}>
       <Text style={styles.rank}>{copy.leaderboard.rank(entry.rank)}</Text>
-      <Text style={styles.name} numberOfLines={1}>
-        {entry.display_name}
-      </Text>
+      <View style={styles.who}>
+        <Text style={styles.name} numberOfLines={1}>
+          {entry.display_name}
+        </Text>
+        {entry.level > 1 ? (
+          <Text style={styles.level}>{copy.levels.byline(entry.level)}</Text>
+        ) : null}
+      </View>
       <Text style={styles.points}>{copy.leaderboard.points(entry.points)}</Text>
     </View>
   );
@@ -72,7 +80,9 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
   },
   rank: { ...type.button, color: colors.ink },
-  name: { ...type.body, color: colors.ink, flex: 1 },
+  who: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  name: { ...type.body, color: colors.ink, flexShrink: 1 },
+  level: { ...type.body, color: colors.ink },
   points: { ...type.body, color: colors.neutral[700] },
   footer: { gap: space[2], paddingTop: space[6] },
   body: { ...type.body, color: colors.ink },

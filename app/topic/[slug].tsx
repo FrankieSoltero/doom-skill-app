@@ -14,6 +14,7 @@ import { copy } from '../../src/copy';
 import { placementCopy } from '../../src/copy/placement';
 import { placement, type Placement } from '../../src/data';
 import { usePlacementReset } from '../../src/placement/usePlacement';
+import { LevelsRow } from '../../src/topics/LevelsRow';
 import { useEnroll } from '../../src/topics/useEnroll';
 import { useTopic, type TopicDetail } from '../../src/topics/useTopic';
 import { border, colors, space, type } from '../../src/theme';
@@ -123,8 +124,8 @@ function MilestoneLine({ position, title }: { position: number; title: string })
 }
 
 /**
- * The topic: kicker, title, end state, milestones, the link to its leaderboard, then Start, or why
- * it cannot start yet.
+ * The topic: kicker, title, its levels when its family has more than the root (`LevelsRow`), end
+ * state, milestones, the link to its leaderboard, then Start, or why it cannot start yet.
  */
 function TopicContent({ topic }: { topic: TopicDetail }) {
   const ready = topic.status === 'ready' && topic.milestones.length > 0;
@@ -134,6 +135,7 @@ function TopicContent({ topic }: { topic: TopicDetail }) {
       <Text accessibilityRole="header" style={styles.title}>
         {topic.title}
       </Text>
+      {topic.levels.length > 1 ? <LevelsRow levels={topic.levels} current={topic.slug} /> : null}
       {topic.end_state === null ? null : (
         <View style={styles.section}>
           <Text style={styles.kicker}>{copy.topic.endState}</Text>

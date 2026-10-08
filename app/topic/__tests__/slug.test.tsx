@@ -47,7 +47,12 @@ const READY = {
   status: 'ready',
   end_state: 'Write a 16-bar layered piece from a blank editor.',
   milestones: MILESTONES,
+  level: 1,
+  parent_slug: null,
+  levels: [{ slug: 'strudel', level: 1, status: 'ready', published: true }],
 };
+const LEVEL_TWO = { slug: 'strudel-level-2', level: 2, status: 'ready', published: true };
+const WITH_LEVELS = { ...READY, levels: [...READY.levels, LEVEL_TWO] };
 const BUILDING = { ...READY, status: 'synthesizing', end_state: null, milestones: [] };
 const ME = {
   id: 'u',
@@ -158,6 +163,27 @@ describe('Topic detail: states', () => {
       pathname: '/topic/[slug]/leaderboard',
       params: { slug: 'strudel' },
     });
+  });
+
+  it('shows the levels row under the title for a topic with levels', async () => {
+    const requests = await renderTopic({
+      'GET /topics/strudel': [json(200, WITH_LEVELS)],
+      'GET /me/enrollments': [json(200, { enrollments: [] })],
+    });
+
+    expect(requests.map((r) => r.path)).toContain('/me/enrollments');
+    const row = screen.getByTestId('levels-row');
+    expect(within(row).getByRole('button', { name: 'Level 1' })).toBeSelected();
+    expect(
+      within(row).getByRole('button', { name: 'Level 2, Finish the level before to unlock' }),
+    ).toBeOnTheScreen();
+  });
+
+  it('shows no levels row, and asks for no enrollments, for a topic without levels', async () => {
+    const requests = await renderTopic({ 'GET /topics/strudel': [json(200, READY)] });
+
+    expect(screen.queryByTestId('levels-row')).toBeNull();
+    expect(requests.map((r) => r.path)).not.toContain('/me/enrollments');
   });
 
   it('goes back', async () => {

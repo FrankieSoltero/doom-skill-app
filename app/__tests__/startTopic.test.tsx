@@ -77,6 +77,9 @@ const TOPIC = {
   status: 'ready',
   end_state: 'Write a 16-bar layered piece from a blank editor.',
   milestones: [{ id: 'm1', position: 1, title: 'First sounds' }],
+  level: 1,
+  parent_slug: null,
+  levels: [{ slug: 'strudel', level: 1, status: 'ready', published: true }],
 };
 const ME = {
   id: 'u',

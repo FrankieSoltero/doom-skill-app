@@ -8,7 +8,7 @@ import { border, colors, space, type } from '../theme';
 const MIN_TOUCH = 44;
 
 type TopicRowProps = {
-  topic: Pick<TopicSummary, 'title' | 'status'>;
+  topic: Pick<TopicSummary, 'title' | 'status' | 'levels'>;
   /** Opens the topic. Without it the row is shown but cannot be pressed. */
   onPress?: () => void;
 };
@@ -22,17 +22,35 @@ function statusLook(status: TopicSummary['status']): { label: string; fill: stri
 }
 
 /**
- * One topic in the Explore tab's list (README.md:164): its title, and a tag with a 1-point ink
- * border naming its status, filled by status. A row that can be opened is a button
- * named after the topic; one that cannot is plain text.
+ * The highest published level of a root's family (`levels`, the root included), or `null` when
+ * only the root is published: an unpublished level is not offered yet (M10 plan L, L16).
+ */
+function deepestPublished(levels: TopicSummary['levels']): number | null {
+  const deepest = Math.max(1, ...levels.filter((m) => m.published).map((m) => m.level));
+  return deepest > 1 ? deepest : null;
+}
+
+/**
+ * One topic in the Explore tab's list (README.md:164): its title, a tag naming its levels'
+ * range when it has published levels ("Levels 1–3"), and a tag with a 1-point ink border naming
+ * its status, filled by status. A row that can be opened is a button named after the topic; one
+ * that cannot is plain text.
  */
 export function TopicRow({ topic, onPress }: TopicRowProps) {
   const look = statusLook(topic.status);
+  const deepest = deepestPublished(topic.levels);
   const content = (
     <>
       <Text style={styles.title}>{topic.title}</Text>
-      <View style={[styles.tag, { backgroundColor: look.fill }]}>
-        <Text style={styles.tagText}>{look.label}</Text>
+      <View style={styles.tags}>
+        {deepest === null ? null : (
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{copy.levels.range(deepest)}</Text>
+          </View>
+        )}
+        <View style={[styles.tag, { backgroundColor: look.fill }]}>
+          <Text style={styles.tagText}>{look.label}</Text>
+        </View>
       </View>
     </>
   );
@@ -69,6 +87,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   title: { ...type.button, color: colors.ink, flexShrink: 1 },
+  tags: { flexDirection: 'row', gap: space[2] },
   tag: {
     borderWidth: border.hairline,
     borderColor: colors.ink,

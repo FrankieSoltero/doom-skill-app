@@ -123,6 +123,16 @@ describe('AnswerRow: the answer', () => {
     expect(screen.getByText('Hidden pending review')).toBeOnTheScreen();
   });
 
+  it('adds the author’s level to the byline from Level 2; none at Level 1', async () => {
+    await renderRow({ author: { name: 'lin', level: 3 } });
+    expect(screen.getByText('lin · Level 3')).toBeOnTheScreen();
+  });
+
+  it('adds the level to the learner’s own byline from Level 2', async () => {
+    await renderRow({ mine: true, author: { name: null, level: 2 } });
+    expect(screen.getByText('You · Level 2')).toBeOnTheScreen();
+  });
+
   it('shows the helpful count from 1, and the Accepted label on the accepted answer', async () => {
     await renderRow({ helpfulCount: 3, accepted: true });
 

@@ -38,9 +38,13 @@ import {
 /** Grows a control's touch target towards 44 points around its small label. */
 const HIT_SLOP = 8;
 
-/** The name shown for the author of a question or an answer: You, their name, or A learner. */
+/**
+ * The name shown for the author of a question or an answer: You, their name, or A learner; then
+ * their level from Level 2 (" · Level 2", L15).
+ */
 export function byline(item: Question | Answer): string {
-  return item.mine ? copy.qa.you : (item.author.name ?? copy.qa.aLearner);
+  const name = item.mine ? copy.qa.you : (item.author.name ?? copy.qa.aLearner);
+  return item.author.level > 1 ? name + copy.levels.byline(item.author.level) : name;
 }
 
 /** The "hidden pending review" line, for an item that flags hid; nothing otherwise. */

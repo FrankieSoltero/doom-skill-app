@@ -20,8 +20,8 @@ jest.mock('../../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn(
 
 const BOARD = {
   entries: [
-    { rank: 1, display_name: 'Noor', points: 120 },
-    { rank: 2, display_name: 'Grace', points: 95 },
+    { rank: 1, display_name: 'Noor', points: 120, level: 2 },
+    { rank: 2, display_name: 'Grace', points: 95, level: 1 },
   ],
   me: { rank: 7, points: 30 },
 };
@@ -58,14 +58,14 @@ async function renderBoard(routes: Parameters<typeof serveApi>[0]) {
 }
 
 describe('Leaderboard: loaded', () => {
-  it('shows the header, a row per learner and the caller line', async () => {
+  it('shows the header, a row per learner (its level after the name from 2) and the caller line', async () => {
     const requests = await renderBoard({ 'GET /topics/strudel/leaderboard': [json(200, BOARD)] });
 
     expect(requests.map((r) => r.path)).toContain('/topics/strudel/leaderboard');
     expect(screen.getByRole('header', { name: 'Leaderboard' })).toBeOnTheScreen();
     const rows = screen.getAllByTestId('leaderboard-row');
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent('#1Noor120 points');
+    expect(rows[0]).toHaveTextContent('#1Noor · Level 2120 points');
     expect(rows[1]).toHaveTextContent('#2Grace95 points');
     expect(rows[0]).toHaveProp('accessibilityRole', 'text');
     expect(screen.getByText('You: #7 · 30 points')).toBeOnTheScreen();

@@ -30,6 +30,16 @@ const topic = (slug: string, title: string, status: string) => ({
   title,
   status,
   description: null,
+  level: 1,
+  parent_slug: null,
+  levels: [{ slug, level: 1, status, published: true }],
+});
+/** The root `strudel` with its levels 2 and 3, as `GET /topics` lists them. */
+const level = (n: number, status: string, published: boolean) => ({
+  slug: `strudel-level-${String(n)}`,
+  level: n,
+  status,
+  published,
 });
 const STRUDEL = topic('strudel', 'Strudel', 'ready');
 const BUILDING = topic('sql', 'SQL window functions', 'ingesting');
@@ -101,6 +111,29 @@ describe('Explore: results', () => {
       pathname: '/topic/[slug]',
       params: { slug: 'strudel' },
     });
+  });
+
+  it.each([
+    { levels: [level(2, 'ready', true), level(3, 'ready', true)], range: 'Levels 1–3' },
+    { levels: [level(2, 'ready', true), level(3, 'ingesting', false)], range: 'Levels 1–2' },
+  ])(
+    'tags a root with published levels "$range"; an unpublished one does not count',
+    async (row) => {
+      const root = { ...STRUDEL, levels: [...STRUDEL.levels, ...row.levels] };
+      await renderExplore({ 'GET /topics': [json(200, { topics: [root] })] });
+      await search('s');
+
+      expect(screen.getByText(row.range)).toBeOnTheScreen();
+    },
+  );
+
+  it('shows no range on a root without published levels', async () => {
+    const waiting = { ...STRUDEL, levels: [...STRUDEL.levels, level(2, 'ready', false)] };
+    await renderExplore({ 'GET /topics': [json(200, { topics: [waiting] })] });
+    await search('s');
+
+    expect(screen.getByText('Strudel')).toBeOnTheScreen();
+    expect(screen.queryByText(/^Levels? 1/)).toBeNull();
   });
 
   it('shows a failed search with Retry, which asks again', async () => {
