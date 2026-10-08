@@ -795,9 +795,12 @@ export interface components {
         };
         /**
          * Author
-         * @description Who wrote a question or answer: their display name, or null (module docstring).
+         * @description Who wrote a question or answer: their display name, or null, and their level (module
+         *     docstring).
          */
         Author: {
+            /** Level */
+            level: number;
             /** Name */
             name: string | null;
         };
@@ -910,13 +913,15 @@ export interface components {
         };
         /**
          * CheckpointGrade
-         * @description A submission's status and grade; the grade's fields are null until it is graded.
+         * @description A submission's status and grade; the grade's fields are null until it is graded, and
+         *     `level` unless the pass completed the topic.
          */
         CheckpointGrade: {
             /** Criteria */
             criteria: components["schemas"]["CriterionGrade"][] | null;
             /** Feedback */
             feedback: string | null;
+            level?: components["schemas"]["LevelOutcome"] | null;
             /** Passed */
             passed: boolean | null;
             score: components["schemas"]["Fraction"] | null;
@@ -1298,11 +1303,13 @@ export interface components {
         };
         /**
          * LeaderboardEntry
-         * @description One learner on the board: their rank, display name and points on the topic.
+         * @description One learner on the board: their rank, display name, points on the topic and level.
          */
         LeaderboardEntry: {
             /** Display Name */
             display_name: string;
+            /** Level */
+            level: number;
             /** Points */
             points: number;
             /** Rank */
@@ -1317,6 +1324,36 @@ export interface components {
             points: number;
             /** Rank */
             rank: number;
+        };
+        /** @enum {string} */
+        LevelNext: "enrolled" | "building" | "waiting" | "deepest" | "failed";
+        /**
+         * LevelOutcome
+         * @description What finishing a level unlocked (module docstring).
+         */
+        LevelOutcome: {
+            /** Completed */
+            completed: boolean;
+            /** Level */
+            level: number;
+            next: components["schemas"]["LevelNext"] | null;
+            /** Next Slug */
+            next_slug: string | null;
+            /** Points */
+            points: number;
+        };
+        /**
+         * LevelSummary
+         * @description One topic of a family: the root (level 1) or one of its levels (M10 plan L Task 2).
+         */
+        LevelSummary: {
+            /** Level */
+            level: number;
+            /** Published */
+            published: boolean;
+            /** Slug */
+            slug: string;
+            status: components["schemas"]["TopicStatus"];
         };
         /**
          * Milestone
@@ -1831,15 +1868,22 @@ export interface components {
         };
         /**
          * TopicDetail
-         * @description `GET /topics/{slug}`: `end_state` is null and `milestones` empty until it is `ready`.
+         * @description `GET /topics/{slug}`: `end_state` is null and `milestones` empty until it is `ready`;
+         *     `level`, `parent_slug` and `levels` as for `TopicSummary`.
          */
         TopicDetail: {
             /** Description */
             description: string | null;
             /** End State */
             end_state: string | null;
+            /** Level */
+            level: number;
+            /** Levels */
+            levels: components["schemas"]["LevelSummary"][];
             /** Milestones */
             milestones: components["schemas"]["Milestone"][];
+            /** Parent Slug */
+            parent_slug: string | null;
             /** Slug */
             slug: string;
             status: components["schemas"]["TopicStatus"];
@@ -1865,11 +1909,18 @@ export interface components {
         TopicStatus: "proposed" | "pending" | "ingesting" | "synthesizing" | "ready" | "failed";
         /**
          * TopicSummary
-         * @description A topic in a list, or the topic `POST /topics` found or created.
+         * @description A topic in a list, or the topic `POST /topics` found or created; `levels` is its root's
+         *     family by level, the root first, and `parent_slug` its root's slug when it is a level.
          */
         TopicSummary: {
             /** Description */
             description: string | null;
+            /** Level */
+            level: number;
+            /** Levels */
+            levels: components["schemas"]["LevelSummary"][];
+            /** Parent Slug */
+            parent_slug: string | null;
             /** Slug */
             slug: string;
             status: components["schemas"]["TopicStatus"];
