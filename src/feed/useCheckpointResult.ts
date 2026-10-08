@@ -18,7 +18,9 @@
  *   arrives after the unmount, or after a later submit or `reset`, is dropped.
  * - `reset()` (the code was edited) forgets the result and stops polling.
  * - `level` is what a graded pass finished (M10 plan L, L13): the grade's `level`, or `null` before
- *   a grade and for a grade without one.
+ *   a grade and for a grade without one. A grade whose level is `completed` marks stale, once, the
+ *   cached server state that finishing a level changes: the profile (its points), the topics list,
+ *   the leaderboards, the finished topic (the active one) and the next level's topic.
  *
  * The result holds the server's grade as the API sent it; a failure keeps only its kind for the
  * log, never the server's text.
@@ -27,10 +29,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { newUuid } from '../api/client';
 import { ApiError } from '../api/errors';
-import { requireApi } from '../api/query';
+import { queryClient, requireApi } from '../api/query';
 import type { components } from '../api/schema';
 import { logWarning } from '../log';
+import { ME_KEY } from '../profile/me';
 import { kindOf } from './outboxQueue';
+import { activeTopic } from './useActiveTopic';
 
 /** The server's grade of one submission. */
 type ServerGrade = components['schemas']['CheckpointGrade'];
@@ -131,6 +135,13 @@ function usePolling(
   }, [submission, active, finish]);
 }
 
+/** Marks stale the cached server state a completed `level` changes (see the module comment). */
+function refreshAfterLevel(level: LevelOutcome): void {
+  const slugs = [activeTopic(), level.next_slug].filter((slug) => slug !== null);
+  const keys = [ME_KEY, ['topics'], ['leaderboard'], ...slugs.map((slug) => ['topic', slug])];
+  for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey });
+}
+
 /** The server's grade of the checkpoint `milestoneId` (see the module comment). */
 export function useCheckpointResult(milestoneId: string | undefined, active: boolean) {
   const [result, setResult] = useState<ServerResult>(NONE);
@@ -178,5 +189,9 @@ export function useCheckpointResult(milestoneId: string | undefined, active: boo
   );
 
   const level = result.status === 'graded' ? (result.grade.level ?? null) : null;
+  useEffect(() => {
+    if (level?.completed === true) refreshAfterLevel(level);
+  }, [level]);
+
   return { result, submit, reset, level };
 }

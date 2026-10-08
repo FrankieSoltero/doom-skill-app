@@ -12,10 +12,11 @@
 // (`flexShrink`), so the test reports that room. A written card leaves it 44.3 points, two of its
 // six lines before it scrolls. A code card at its limits leaves it 8.8 points, less than one line:
 // an open item from before this plan, not this task's to fix.
-// A pass that completes a level adds the unlock (`LevelUnlock`, M10 plan L Task 14) under the
-// server's grade: `LEVEL_UNLOCK_HEIGHT` and one gap more. The written card at its limits then
-// runs 41.7 points past the content box (the grade area has shrunk to nothing): an open item,
-// reported with Task 14.
+// A pass that completes a level draws the unlock (`LevelUnlock`, M10 plan L Task 14, L21) under
+// the server's grade, at most `LEVEL_UNLOCK_HEIGHT` with one gap more, and takes room from what
+// the grade made stale: a code card hides its rubric (the score line and feedback stay), a written
+// card its sent line. The card keeps one button (Continue replaces Finish today when the learner
+// is enrolled in the next level), so both kinds fit with the unlock at its tallest.
 import { render, screen, within } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement, Fragment } from 'react';
@@ -52,6 +53,8 @@ const FEEDBACK_LINES = 2;
 const SERVER_LINES = 6;
 /** The written card's sum at its limits, before an unlock: the first case's. */
 const WRITTEN_SUM = 499.2;
+/** The code card's sum at its limits with the unlock in its rubric's place. */
+const CODE_UNLOCKED_SUM = 457.6;
 /** The task's lines at its most (`WrittenTask`'s clamp). */
 const TASK_LINES = 6;
 /** A rubric label at its limit takes one line. */
@@ -63,12 +66,19 @@ const ONE = 's("bd*4")';
 /** A task at its 600-character limit (`MAX_CHECKPOINT_PROMPT_CHARS`), far past 6 lines. */
 const TASK = 'Explain what a dividend is. '.repeat(22).slice(0, 600);
 
-// The real hook, which a case may replace for one render with a grade already polled.
+// The real hook, which a case may replace with a grade already polled; restored after each case.
 jest.mock('../../feed/useCheckpointResult', () => {
   const actual = jest.requireActual<typeof import('../../feed/useCheckpointResult')>(
     '../../feed/useCheckpointResult',
   );
   return { ...actual, useCheckpointResult: jest.fn(actual.useCheckpointResult) };
+});
+const realHook = jest.requireActual<typeof import('../../feed/useCheckpointResult')>(
+  '../../feed/useCheckpointResult',
+).useCheckpointResult;
+
+afterEach(() => {
+  jest.mocked(useCheckpointResult).mockImplementation(realHook);
 });
 
 const demo = setUpCheckpointCardTests();
@@ -143,6 +153,38 @@ function fixedHeight(middle: number): number {
   return kicker + title + editor + middle + BUTTON_HEIGHT + (children - 1) * gap;
 }
 
+/**
+ * Gives the card, until the case ends, a graded pass that completed level 1 with level 2 being
+ * built: the unlock at its tallest (a heading and two lines), Finish today kept.
+ */
+function unlock(): void {
+  const level: LevelOutcome = {
+    completed: true,
+    level: 1,
+    next: 'building',
+    next_slug: null,
+    points: 100,
+  };
+  const graded = { passed: true, score: 1, feedback: null, criteria: null };
+  jest.mocked(useCheckpointResult).mockReturnValue({
+    result: { status: 'graded', grade: { ...graded, status: 'graded', level } },
+    submit: jest.fn(),
+    reset: jest.fn(),
+    level,
+  });
+}
+
+/** The parts of an unlocked card, its task aside: the unlock under the server's grade. */
+const UNLOCKED = [
+  'card-kicker-row',
+  'checkpoint-editor-panel',
+  'checkpoint-result',
+  'checkpoint-detail',
+  'level-unlock',
+  'checkpoint-spacer',
+  'primary-button-face',
+];
+
 /** The parts of both rows, the rubric aside. */
 const PARTS = [
   'card-kicker-row',
@@ -176,41 +218,35 @@ describe('the checkpoint card height budget', () => {
     expect(Math.floor((CONTENT_BOX - sum) / type.small.lineHeight)).toBe(2);
   });
 
-  it('the written card with a level unlocked under its grade: 585.2 points, past the box', () => {
-    const level: LevelOutcome = {
-      completed: true,
-      level: 1,
-      next: 'enrolled',
-      next_slug: 'strudel-level-2',
-      points: 100,
-    };
-    const graded = { status: 'graded', passed: true, score: 1, feedback: null, criteria: null };
-    jest.mocked(useCheckpointResult).mockReturnValueOnce({
-      result: { status: 'graded', grade: { ...graded, status: 'graded', level } },
-      submit: jest.fn(),
-      reset: jest.fn(),
-      level,
-    });
+  it('the written card with a level unlocked, at its limits: 533.2 points, in the box', () => {
+    unlock();
     const written = { written: true, rubric: [], passThreshold: 0, starterCode: '' };
     renderAt({ ...demo(), ...written, task: TASK }, sent);
     const task = TASK_LINES * lineOf('checkpoint-task-text');
     const gap = Number(viewStyleOf(screen.getByTestId('card-frame-body')).gap);
 
-    const sum = fixedHeight(task + SENT_LINES * lineOf('checkpoint-sent') + LEVEL_UNLOCK_HEIGHT);
+    const sum = fixedHeight(task + LEVEL_UNLOCK_HEIGHT);
 
-    expect(drawnParts()).toStrictEqual([
-      'card-kicker-row',
-      'checkpoint-task',
-      'checkpoint-editor-panel',
-      'checkpoint-result',
-      'checkpoint-detail',
-      'level-unlock',
-      'checkpoint-spacer',
-      'primary-button-face',
-    ]);
-    expect(sum).toBeCloseTo(WRITTEN_SUM + gap + LEVEL_UNLOCK_HEIGHT, 5);
-    expect(sum).toBeCloseTo(585.2, 5);
-    expect(sum - CONTENT_BOX).toBeCloseTo(41.7, 5);
+    expect(drawnParts()).toStrictEqual(UNLOCKED.toSpliced(1, 0, 'checkpoint-task'));
+    expect(screen.queryByTestId('checkpoint-sent')).toBeNull();
+    // The first case's sum, less its two sent lines of 20, plus the unlock and its gap.
+    expect(sum).toBeCloseTo(WRITTEN_SUM - 2 * 20 + gap + LEVEL_UNLOCK_HEIGHT, 5);
+    expect(sum).toBeCloseTo(533.2, 5);
+    expect(CONTENT_BOX - sum).toBeCloseTo(10.3, 5);
+  });
+
+  it('a code card with a level unlocked after a failing grade, at its limits: 457.6 points', () => {
+    unlock();
+    const grade = gradeCheckpoint(ONE, demo());
+    renderAt({ ...demo(), task: TASK }, { kind: 'checkpoint', code: ONE, status: 'done', grade });
+    const result = lineOf('checkpoint-score') + FEEDBACK_LINES * lineOf('checkpoint-feedback');
+    const resultGap = Number(viewStyleOf(screen.getByTestId('checkpoint-result')).gap);
+
+    const sum = fixedHeight(result + resultGap + LEVEL_UNLOCK_HEIGHT);
+
+    expect(drawnParts()).toStrictEqual(UNLOCKED);
+    expect(sum).toBeCloseTo(CODE_UNLOCKED_SUM, 5);
+    expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
   });
 
   it('a code card after a failing grade, at its limits: 534.7 points, for comparison', () => {

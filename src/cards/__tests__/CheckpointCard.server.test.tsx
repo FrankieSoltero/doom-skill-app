@@ -1,12 +1,13 @@
 // The checkpoint card with the server's grade: a card the API served (it has an id) posts the
 // code once the on-phone result shows, and shows the grade under it; the on-phone result still
 // decides the button. Over the real API client and a fake network; nothing leaves the test.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import { json, serveApi } from '../../api/testing/fakeApi';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
-import { activeTopic } from '../../feed/useActiveTopic';
+import { activeTopic, loadActiveTopic } from '../../feed/useActiveTopic';
 import {
   GRADING_MS,
   renderCheckpointCard,
@@ -164,19 +165,56 @@ describe('CheckpointCard with the server grade', () => {
   });
 });
 
-describe('CheckpointCard with a level the pass finished (M10 plan L)', () => {
-  it('shows the unlock under the grade; its button opens the next level in the feed', async () => {
+describe('CheckpointCard with a level the pass finished (M10 plan L, L21)', () => {
+  // Continue makes a level the active topic, module state that outlives a case: forget it.
+  afterEach(async () => {
+    await AsyncStorage.clear();
+    await loadActiveTopic();
+  });
+
+  it("shows the unlock in the rubric's place; Continue replaces Finish today", async () => {
     serve([grade(true, LEVEL)]);
     renderCheckpointCard(served());
     press('Submit for grading');
     await advance(GRADING_MS + 3000);
 
     expect(screen.getByText(COMPLETED)).toBeTruthy();
-    expect(button('Finish today')).toBeTruthy();
+    expect(screen.queryByTestId('rubric-list')).toBeNull();
+    expect(resultTexts()[0]).toBe('Passed · 4 of 4');
+    expect(
+      screen.getAllByRole('button', { name: /^(Continue to Level 2|Finish today)$/ }),
+    ).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Finish today' })).toBeNull();
     press('Continue to Level 2');
 
     expect(activeTopic()).toBe('strudel-level-2');
     expect(router.dismissTo).toHaveBeenCalledWith('/');
+  });
+
+  it('keeps Finish today, with the line about the next level, when not enrolled in it', async () => {
+    serve([grade(true, { ...LEVEL, next: 'waiting', next_slug: null })]);
+    const { onNext } = renderCheckpointCard(served());
+    press('Submit for grading');
+    await advance(GRADING_MS + 3000);
+
+    expect(screen.getByText('Level 2 is nearly ready.')).toBeTruthy();
+    expect(screen.queryByTestId('rubric-list')).toBeNull();
+    press('Finish today');
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('a written card drops its sent line for the unlock, the grade standing for it', async () => {
+    serve([grade(true, LEVEL)]);
+    const written = { written: true, rubric: [], passThreshold: 0, starterCode: 'An answer.' };
+    renderCheckpointCard({ ...served(), ...written });
+    press('Submit for grading');
+    await advance(0);
+    expect(screen.getByTestId('checkpoint-sent')).toBeTruthy();
+    await advance(3000);
+
+    expect(screen.getByText(COMPLETED)).toBeTruthy();
+    expect(screen.queryByTestId('checkpoint-sent')).toBeNull();
+    expect(button('Continue to Level 2')).toBeTruthy();
   });
 
   it.each([
@@ -190,5 +228,7 @@ describe('CheckpointCard with a level the pass finished (M10 plan L)', () => {
 
     expect(screen.getByText('Detailed grade: passed · 90%')).toBeTruthy();
     expect(screen.queryByTestId('level-unlock')).toBeNull();
+    expect(screen.getByTestId('rubric-list')).toBeTruthy();
+    expect(button('Finish today')).toBeTruthy();
   });
 });

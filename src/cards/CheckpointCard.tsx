@@ -20,7 +20,8 @@ import { cardMetaText, checkpointKickerText } from './cardLabels';
 import { CardTitle } from './CardText';
 import { CheckpointFeedback } from './CheckpointFeedback';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
-import { LevelUnlock } from './LevelUnlock';
+import { continueTarget, continueTo, LevelUnlock } from './LevelUnlock';
+import type { ContinueTarget } from './LevelUnlock';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 import { WrittenEditor } from './WrittenEditor';
 import { WrittenTask } from './WrittenTask';
@@ -138,13 +139,16 @@ type ButtonState = { label: string; disabled: boolean; finishes: boolean };
 /**
  * The button for the card's state, README.md:135-140: Submit (enabled once there is code), then
  * Grading (disabled), then Finish today after a pass or Resubmit after a fail. A written answer
- * once sent offers Finish today at once (M9 plan J).
+ * once sent offers Finish today at once (M9 plan J). A pass that put the learner in the next level
+ * (`target`) offers Continue to Level n in their place (M10 plan L, L21); it finishes the card.
  */
 function buttonState(
   status: CheckpointAnswer['status'],
   grade: CheckpointGrade | null,
   code: string,
+  target: ContinueTarget | null,
 ): ButtonState {
+  if (target !== null) return { label: target.label, disabled: false, finishes: true };
   if (status === 'grading') return { label: copy.grading, disabled: true, finishes: false };
   if (status === 'sent') return { label: copy.finishToday, disabled: false, finishes: true };
   if (grade?.passed === true) return { label: copy.finishToday, disabled: false, finishes: true };
@@ -155,21 +159,24 @@ function buttonState(
 /**
  * The score line and the feedback of a grade, README.md:139, in a polite live region that is
  * always there, so Android reads the grade when it appears. Nothing is drawn in it before a grade.
- * A written answer once `sent` has no grade; the region says it was sent instead.
+ * A written answer once `sent` has no grade; the region says it was sent instead, until a level
+ * is `unlocked`: the server's grade has come, and the unlock takes the line's room (L21).
  */
 function CheckpointResult({
   grade,
   card,
   sent,
+  unlocked,
 }: {
   grade: CheckpointGrade | null;
   card: CheckpointCardData;
   sent: boolean;
+  unlocked: boolean;
 }) {
   const color = useCardTextColor();
   return (
     <View testID="checkpoint-result" accessibilityLiveRegion="polite" style={styles.result}>
-      {sent ? (
+      {sent && !unlocked ? (
         <Text testID="checkpoint-sent" style={[styles.feedback, { color }]}>
           {copy.sentForGrading}
         </Text>
@@ -188,9 +195,49 @@ function CheckpointResult({
   );
 }
 
-/** The unlock moment when the server's grade says the pass completed a level; else nothing. */
+/** The level the server's grade says the pass completed, or `null`. */
+function completedLevel(outcome: LevelOutcome | null): LevelOutcome | null {
+  return outcome?.completed === true ? outcome : null;
+}
+
+/** The way into the next level from a completed `level`, or `null`. */
+function targetOf(level: LevelOutcome | null): ContinueTarget | null {
+  return level === null ? null : continueTarget(level);
+}
+
+/** What the button does when it finishes the card: into the next level (L21), else `onNext`. */
+function finisher(target: ContinueTarget | null, onNext: () => void): () => void {
+  return target === null
+    ? onNext
+    : () => {
+        continueTo(target.slug);
+      };
+}
+
+/** The unlock moment for a completed `level`; nothing for none. */
 function CompletedLevel({ level }: { level: LevelOutcome | null }) {
-  return level?.completed === true ? <LevelUnlock outcome={level} /> : null;
+  return level === null ? null : <LevelUnlock outcome={level} />;
+}
+
+/**
+ * A code card's rubric: each criterion, ticked once graded. A written card has none, and a pass
+ * that completed a level hides it for the unlock (L21); the score line and feedback stay.
+ */
+function CheckpointRubric({
+  card,
+  grade,
+  hidden,
+}: {
+  card: CheckpointCardData;
+  grade: CheckpointGrade | null;
+  hidden: boolean;
+}) {
+  if (card.written === true || hidden) return null;
+  const items =
+    grade === null
+      ? card.rubric.map(({ label }) => ({ label, passed: null }))
+      : grade.results.map(({ label, passed }) => ({ label, passed }));
+  return <RubricList items={items} />;
 }
 
 type CheckpointEditorProps = {
@@ -261,24 +308,24 @@ type CheckpointCardProps = {
  * does what the button's Submit or Resubmit would, and nothing while it is disabled or reads
  * Finish today. A written card keeps the system keyboard.
  *
- * When the server's grade says the pass completed a level (M10 plan L, L17), the unlock moment
- * (`LevelUnlock`) shows under the server's grade: the points, then the way to the next level.
+ * When the server's grade says the pass completed a level (M10 plan L, L17, L21), the unlock moment
+ * (`LevelUnlock`) shows under the server's grade: the points, then a line about the next level.
+ * It takes the room of what the grade made stale: the rubric (a code card) or the sent line (a
+ * written card). When the learner is in the next level, the one button reads Continue to Level n
+ * in place of Finish today (or Resubmit) and opens it in the Today feed.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
   const { code, status, grade, edit, submit } = useCheckpointAnswer(card, index, server);
   useDismissKeyboardWhenLeft(active);
-  const button = buttonState(status, grade, code);
+  const level = completedLevel(server.level);
+  const target = targetOf(level);
+  const button = buttonState(status, grade, code, target);
   // The keypad's Submit submits as the button would, and does nothing when the button would not.
   const onSubmitKey = () => {
     if (!button.disabled && !button.finishes) submit();
   };
-  const written = card.written === true;
-  const task = written ? (card.task ?? '') : '';
-  const items =
-    grade === null
-      ? card.rubric.map(({ label }) => ({ label, passed: null }))
-      : grade.results.map(({ label, passed }) => ({ label, passed }));
+  const task = card.written === true ? (card.task ?? '') : '';
 
   return (
     <DismissKeyboardArea>
@@ -292,14 +339,19 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
         <View testID="checkpoint-editor-panel" style={styles.panel}>
           <CheckpointEditor card={card} code={code} onChange={edit} onAction={onSubmitKey} />
         </View>
-        {written ? null : <RubricList items={items} />}
-        <CheckpointResult grade={grade} card={card} sent={status === 'sent'} />
+        <CheckpointRubric card={card} grade={grade} hidden={level !== null} />
+        <CheckpointResult
+          grade={grade}
+          card={card}
+          sent={status === 'sent'}
+          unlocked={level !== null}
+        />
         <CheckpointFeedback result={server.result} localPassed={grade?.passed ?? null} />
-        <CompletedLevel level={server.level} />
+        <CompletedLevel level={level} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
         <PrimaryButton
           label={button.label}
-          onPress={button.finishes ? onNext : submit}
+          onPress={button.finishes ? finisher(target, onNext) : submit}
           disabled={button.disabled}
         />
       </CardFrame>

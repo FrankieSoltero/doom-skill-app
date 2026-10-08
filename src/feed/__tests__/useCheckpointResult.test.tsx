@@ -2,8 +2,10 @@
 // polling, over the real API client and a fake network. Nothing leaves the test.
 import { act, renderHook } from '@testing-library/react-native';
 
+import { queryClient } from '../../api/query';
 import { json, serveApi, type Answer } from '../../api/testing/fakeApi';
 import { logWarning } from '../../log';
+import { switchTo } from '../useActiveTopic';
 import { useCheckpointResult } from '../useCheckpointResult';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -172,6 +174,32 @@ describe('useCheckpointResult: the level a pass finished (M10 plan L)', () => {
     await advance(3000);
     expect(hook.result.current.result.status).toBe('graded');
     expect(hook.result.current.level).toBeNull();
+  });
+
+  it('refreshes the cached state a completed level changes, once, and none for other grades', async () => {
+    await switchTo('sql');
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+    serve([receipt], [graded(), json(200, { ...GRADED, level: { ...LEVEL, completed: false } })]);
+    const hook = renderResult(MILESTONE);
+    await submitCode(hook);
+    await advance(3000);
+    await submitCode(hook);
+    await advance(3000);
+    expect(invalidate).not.toHaveBeenCalled();
+
+    serve([receipt], [json(200, { ...GRADED, level: LEVEL })]);
+    await submitCode(hook);
+    await advance(3000);
+    hook.rerender({ id: MILESTONE, on: true });
+
+    const keys = invalidate.mock.calls.map(([filters]) => filters?.queryKey);
+    expect(keys).toStrictEqual([
+      ['me'],
+      ['topics'],
+      ['leaderboard'],
+      ['topic', 'sql'],
+      ['topic', 'sql-level-2'],
+    ]);
   });
 });
 

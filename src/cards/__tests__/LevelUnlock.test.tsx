@@ -1,14 +1,20 @@
-// The unlock moment under a passed checkpoint (src/cards/LevelUnlock.tsx, M10 plan L, L17): the
-// level finished and its points, then by `next` a button to the next level or one line.
-import { fireEvent, render, screen } from '@testing-library/react-native';
+// The unlock moment under a passed checkpoint (src/cards/LevelUnlock.tsx, M10 plan L, L17, L21):
+// the level finished and its points, then by `next` one line; for `enrolled`, the way into the
+// next level, which the checkpoint card's own button takes.
+import { act, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { AccessibilityInfo, Text } from 'react-native';
 
-import { BUTTON_HEIGHT } from '../../components/PrimaryButton';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import { switchTo } from '../../feed/useActiveTopic';
 import type { LevelOutcome } from '../../feed/useCheckpointResult';
-import { LEVEL_UNLOCK_HEIGHT, LevelUnlock } from '../LevelUnlock';
+import {
+  continueTarget,
+  continueTo,
+  LEVEL_UNLOCK_HEIGHT,
+  LevelUnlock,
+  UNLOCK_ANNOUNCE_DELAY_MS,
+} from '../LevelUnlock';
 
 jest.mock('expo-router', () => ({ router: { dismissTo: jest.fn() } }));
 jest.mock('../../feed/useActiveTopic', () => ({ switchTo: jest.fn(() => Promise.resolve()) }));
@@ -35,13 +41,31 @@ beforeEach(() => {
   announce.mockClear();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('LevelUnlock', () => {
-  it('enrolled: the points, then a button that opens the next level in the Today feed', () => {
+  it("enrolled: the points alone, and no button of its own (the card's button continues)", () => {
     render(<LevelUnlock outcome={outcome()} />);
 
-    expect(texts()).toStrictEqual([COMPLETED, 'Continue to Level 2']);
-    expect(switchTo).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByRole('button', { name: 'Continue to Level 2' }));
+    expect(texts()).toStrictEqual([COMPLETED]);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('continueTarget: the next level and its slug when enrolled in it, else null', () => {
+    expect(continueTarget(outcome())).toStrictEqual({
+      label: 'Continue to Level 2',
+      slug: 'sql-level-2',
+    });
+    expect(continueTarget(outcome({ next_slug: null }))).toBeNull();
+    for (const next of ['building', 'waiting', 'deepest', 'failed', null] as const) {
+      expect(continueTarget(outcome({ next, next_slug: null }))).toBeNull();
+    }
+  });
+
+  it('continueTo: makes the level the active topic and closes to the Today feed', () => {
+    continueTo('sql-level-2');
 
     expect(switchTo).toHaveBeenCalledWith('sql-level-2');
     expect(router.dismissTo).toHaveBeenCalledWith('/');
@@ -68,13 +92,10 @@ describe('LevelUnlock', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('shows the points alone when nothing is said of the next level, or no slug to open', () => {
-    const { rerender } = render(<LevelUnlock outcome={outcome({ next: null, next_slug: null })} />);
-    expect(texts()).toStrictEqual([COMPLETED]);
+  it('shows the points alone when nothing is said of the next level', () => {
+    render(<LevelUnlock outcome={outcome({ next: null, next_slug: null })} />);
 
-    rerender(<LevelUnlock outcome={outcome({ next_slug: null })} />);
     expect(texts()).toStrictEqual([COMPLETED]);
-    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows the points it paid, +0 for a level paid before', () => {
@@ -82,10 +103,20 @@ describe('LevelUnlock', () => {
 
     expect(texts()[0]).toBe('Level 1 complete · +0 points');
   });
+});
 
-  it('sits in a polite live region and is announced once, with its line', () => {
+describe('LevelUnlock: announced and measured', () => {
+  it('sits in a polite live region and is announced once, after the verdict', () => {
+    jest.useFakeTimers();
     const { rerender } = render(<LevelUnlock outcome={outcome({ next: 'building' })} />);
     rerender(<LevelUnlock outcome={outcome({ next: 'building' })} />);
+    act(() => {
+      jest.advanceTimersByTime(UNLOCK_ANNOUNCE_DELAY_MS - 1);
+    });
+    expect(announce).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
 
     expect(screen.getByTestId('level-unlock').props.accessibilityLiveRegion).toBe('polite');
     expect(announce).toHaveBeenCalledTimes(1);
@@ -94,22 +125,28 @@ describe('LevelUnlock', () => {
     );
   });
 
-  it('is at most LEVEL_UNLOCK_HEIGHT tall: one line, its gap and the button', () => {
-    render(<LevelUnlock outcome={outcome()} />);
-    const line = Number(textStyleOf(screen.getByText(COMPLETED)).lineHeight);
-    const gap = Number(viewStyleOf(screen.getByTestId('level-unlock')).gap);
+  it('announces nothing once it is gone before its turn', () => {
+    jest.useFakeTimers();
+    const { unmount } = render(<LevelUnlock outcome={outcome()} />);
+    unmount();
+    act(() => {
+      jest.advanceTimersByTime(UNLOCK_ANNOUNCE_DELAY_MS);
+    });
 
-    expect(screen.getByText(COMPLETED).props.numberOfLines).toBe(1);
-    expect(line + gap + BUTTON_HEIGHT).toBe(LEVEL_UNLOCK_HEIGHT);
-    expect(LEVEL_UNLOCK_HEIGHT).toBeCloseTo(72.4, 5);
+    expect(announce).not.toHaveBeenCalled();
   });
 
-  it('a line about the next level takes at most two lines, under the button height', () => {
+  it('is at most LEVEL_UNLOCK_HEIGHT tall: the heading, its gap and two lines', () => {
     render(<LevelUnlock outcome={outcome({ next: 'failed' })} />);
+    const heading = screen.getByText(COMPLETED);
     const next = screen.getByText("Level 2 couldn't be built.");
+    const line = Number(textStyleOf(heading).lineHeight);
+    const gap = Number(viewStyleOf(screen.getByTestId('level-unlock')).gap);
     const lines = Number(next.props.numberOfLines);
 
+    expect(heading.props.numberOfLines).toBe(1);
     expect(lines).toBe(2);
-    expect(lines * Number(textStyleOf(next).lineHeight)).toBeLessThanOrEqual(BUTTON_HEIGHT);
+    expect(line + gap + lines * Number(textStyleOf(next).lineHeight)).toBe(LEVEL_UNLOCK_HEIGHT);
+    expect(LEVEL_UNLOCK_HEIGHT).toBeCloseTo(60.4, 5);
   });
 });
