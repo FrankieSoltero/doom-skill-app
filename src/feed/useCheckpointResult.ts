@@ -17,6 +17,8 @@
  *   in flight cancelled, when the card leaves the screen or unmounts. A submit answer that
  *   arrives after the unmount, or after a later submit or `reset`, is dropped.
  * - `reset()` (the code was edited) forgets the result and stops polling.
+ * - `level` is what a graded pass finished (M10 plan L, L13): the grade's `level`, or `null` before
+ *   a grade and for a grade without one.
  *
  * The result holds the server's grade as the API sent it; a failure keeps only its kind for the
  * log, never the server's text.
@@ -32,6 +34,9 @@ import { kindOf } from './outboxQueue';
 
 /** The server's grade of one submission. */
 type ServerGrade = components['schemas']['CheckpointGrade'];
+
+/** What finishing a level unlocked, as the grade carries it. */
+export type LevelOutcome = components['schemas']['LevelOutcome'];
 
 /** What the card shows of the server's grade. */
 export type ServerResult =
@@ -172,5 +177,6 @@ export function useCheckpointResult(milestoneId: string | undefined, active: boo
     [milestoneId, finish],
   );
 
-  return { result, submit, reset };
+  const level = result.status === 'graded' ? (result.grade.level ?? null) : null;
+  return { result, submit, reset, level };
 }

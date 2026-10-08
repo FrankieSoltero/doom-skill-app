@@ -14,11 +14,13 @@ import { gradeCheckpoint } from '../feed/checkpoint';
 import type { CheckpointGrade } from '../feed/checkpoint';
 import { useFeedStore } from '../feed/store';
 import { useCheckpointResult } from '../feed/useCheckpointResult';
+import type { LevelOutcome } from '../feed/useCheckpointResult';
 import { cardTheme, colors, fonts } from '../theme';
 import { cardMetaText, checkpointKickerText } from './cardLabels';
 import { CardTitle } from './CardText';
 import { CheckpointFeedback } from './CheckpointFeedback';
 import { DismissKeyboardArea } from './DismissKeyboardArea';
+import { LevelUnlock } from './LevelUnlock';
 import { useDismissKeyboardWhenLeft } from './useDismissKeyboardWhenLeft';
 import { WrittenEditor } from './WrittenEditor';
 import { WrittenTask } from './WrittenTask';
@@ -186,6 +188,11 @@ function CheckpointResult({
   );
 }
 
+/** The unlock moment when the server's grade says the pass completed a level; else nothing. */
+function CompletedLevel({ level }: { level: LevelOutcome | null }) {
+  return level?.completed === true ? <LevelUnlock outcome={level} /> : null;
+}
+
 type CheckpointEditorProps = {
   card: CheckpointCardData;
   code: string;
@@ -253,6 +260,9 @@ type CheckpointCardProps = {
  * A code card served with `keys` gives them to its editor (M9 plan K, P3); the keypad's Submit
  * does what the button's Submit or Resubmit would, and nothing while it is disabled or reads
  * Finish today. A written card keeps the system keyboard.
+ *
+ * When the server's grade says the pass completed a level (M10 plan L, L17), the unlock moment
+ * (`LevelUnlock`) shows under the server's grade: the points, then the way to the next level.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
@@ -285,6 +295,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
         {written ? null : <RubricList items={items} />}
         <CheckpointResult grade={grade} card={card} sent={status === 'sent'} />
         <CheckpointFeedback result={server.result} localPassed={grade?.passed ?? null} />
+        <CompletedLevel level={server.level} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
         <PrimaryButton
           label={button.label}

@@ -7,7 +7,13 @@ import { signOut, useSession } from '../../auth/useSession';
 import { logWarning } from '../../log';
 import { useFeedStore } from '../store';
 import { cardsByType, makeSet } from '../testing/sets';
-import { activeTopic, loadActiveTopic, refreshFeed, useActiveTopic } from '../useActiveTopic';
+import {
+  activeTopic,
+  loadActiveTopic,
+  refreshFeed,
+  switchTo,
+  useActiveTopic,
+} from '../useActiveTopic';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -134,6 +140,34 @@ describe('refreshing the feed', () => {
     act(() => {
       refreshFeed('rust-ownership');
     });
+
+    expect(useFeedStore.getState().set).not.toBeNull();
+    expect(result.current.refreshes).toBe(before);
+  });
+});
+
+describe('switching to a topic (the unlock, M10 plan L)', () => {
+  it('makes another topic active, stores it, and starts its feed afresh', async () => {
+    await startWith(stored('user-1', 'sql'));
+    useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
+    const { result } = renderHook(() => useActiveTopic());
+    const before = result.current.refreshes;
+
+    await act(() => switchTo('sql-level-2'));
+
+    expect(result.current.slug).toBe('sql-level-2');
+    expect(await AsyncStorage.getItem(KEY)).toBe(stored('user-1', 'sql-level-2'));
+    expect(useFeedStore.getState().set).toBeNull();
+    expect(result.current.refreshes).toBe(before + 1);
+  });
+
+  it('leaves the feed alone when the topic is already the active one', async () => {
+    await startWith(stored('user-1', 'sql-level-2'));
+    useFeedStore.getState().startSet(makeSet(1, [cardsByType.concept]));
+    const { result } = renderHook(() => useActiveTopic());
+    const before = result.current.refreshes;
+
+    await act(() => switchTo('sql-level-2'));
 
     expect(useFeedStore.getState().set).not.toBeNull();
     expect(result.current.refreshes).toBe(before);

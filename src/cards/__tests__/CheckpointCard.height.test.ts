@@ -12,6 +12,10 @@
 // (`flexShrink`), so the test reports that room. A written card leaves it 44.3 points, two of its
 // six lines before it scrolls. A code card at its limits leaves it 8.8 points, less than one line:
 // an open item from before this plan, not this task's to fix.
+// A pass that completes a level adds the unlock (`LevelUnlock`, M10 plan L Task 14) under the
+// server's grade: `LEVEL_UNLOCK_HEIGHT` and one gap more. The written card at its limits then
+// runs 41.7 points past the content box (the grade area has shrunk to nothing): an open item,
+// reported with Task 14.
 import { render, screen, within } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement, Fragment } from 'react';
@@ -23,8 +27,11 @@ import type { CheckpointCard as CheckpointCardData } from '../../data';
 import type { CardAnswer } from '../../feed/answers';
 import { gradeCheckpoint } from '../../feed/checkpoint';
 import { useFeedStore } from '../../feed/store';
+import { useCheckpointResult } from '../../feed/useCheckpointResult';
+import type { LevelOutcome } from '../../feed/useCheckpointResult';
 import { type } from '../../theme';
 import { CheckpointCard } from '../CheckpointCard';
+import { LEVEL_UNLOCK_HEIGHT } from '../LevelUnlock';
 import { SourcesButton } from '../SourcesButton';
 import { setUpCheckpointCardTests } from '../testing/checkpointCards';
 
@@ -43,6 +50,10 @@ const SENT_LINES = 2;
 const FEEDBACK_LINES = 2;
 /** The most lines of small text the server's grade area takes before it scrolls. */
 const SERVER_LINES = 6;
+/** The written card's sum at its limits, before an unlock: the first case's. */
+const WRITTEN_SUM = 499.2;
+/** The task's lines at its most (`WrittenTask`'s clamp). */
+const TASK_LINES = 6;
 /** A rubric label at its limit takes one line. */
 const LABEL_LINES = 1;
 /** The answer's text, which the height does not depend on: the editor scrolls. */
@@ -51,6 +62,14 @@ const ANSWER = 'A dividend is a share of profit paid to the owners of a stock.';
 const ONE = 's("bd*4")';
 /** A task at its 600-character limit (`MAX_CHECKPOINT_PROMPT_CHARS`), far past 6 lines. */
 const TASK = 'Explain what a dividend is. '.repeat(22).slice(0, 600);
+
+// The real hook, which a case may replace for one render with a grade already polled.
+jest.mock('../../feed/useCheckpointResult', () => {
+  const actual = jest.requireActual<typeof import('../../feed/useCheckpointResult')>(
+    '../../feed/useCheckpointResult',
+  );
+  return { ...actual, useCheckpointResult: jest.fn(actual.useCheckpointResult) };
+});
 
 const demo = setUpCheckpointCardTests();
 /** A written answer once sent, with no grade. */
@@ -93,13 +112,19 @@ function rubricHeight(): number {
   return Number(list.borderTopWidth) + screen.getAllByTestId('rubric-row').length * each;
 }
 
-/** The body's parts with a test ID, as drawn in order; the title is the one part without. */
+/**
+ * The body's parts with a test ID, as drawn in order; the title is the one part without. The
+ * unlock's own button is part of the unlock, not of the body.
+ */
 function drawnParts(): string[] {
   const body = screen.getByTestId('card-frame-body');
   const ids =
-    /^(card-kicker-row|checkpoint-(task|editor-panel|result|detail|spacer)|rubric-list|primary-button-face)$/;
+    /^(card-kicker-row|checkpoint-(task|editor-panel|result|detail|spacer)|rubric-list|level-unlock|primary-button-face)$/;
+  const unlock = within(body).queryByTestId('level-unlock');
+  const inner = unlock === null ? [] : within(unlock).queryAllByTestId('primary-button-face');
   return within(body)
     .getAllByTestId(ids)
+    .filter((part) => !inner.includes(part))
     .map((part) => String(part.props.testID));
 }
 
@@ -114,7 +139,7 @@ function fixedHeight(middle: number): number {
   const kicker = Math.max(type.kicker.fontSize * NATURAL_LINE, icon);
   const title = TITLE_LINES * Number(textStyleOf(screen.getByRole('header')).lineHeight);
   const editor = Number(textStyleOf(screen.UNSAFE_getByType(TextInput)).height);
-  const children = drawnParts().length + 2;
+  const children = drawnParts().filter((part) => part !== 'checkpoint-detail').length + 2;
   return kicker + title + editor + middle + BUTTON_HEIGHT + (children - 1) * gap;
 }
 
@@ -149,6 +174,43 @@ describe('the checkpoint card height budget', () => {
     // The grade area shrinks to the room left: two of its six small lines, then it scrolls.
     expect(CONTENT_BOX - sum).toBeCloseTo(44.3, 5);
     expect(Math.floor((CONTENT_BOX - sum) / type.small.lineHeight)).toBe(2);
+  });
+
+  it('the written card with a level unlocked under its grade: 585.2 points, past the box', () => {
+    const level: LevelOutcome = {
+      completed: true,
+      level: 1,
+      next: 'enrolled',
+      next_slug: 'strudel-level-2',
+      points: 100,
+    };
+    const graded = { status: 'graded', passed: true, score: 1, feedback: null, criteria: null };
+    jest.mocked(useCheckpointResult).mockReturnValueOnce({
+      result: { status: 'graded', grade: { ...graded, status: 'graded', level } },
+      submit: jest.fn(),
+      reset: jest.fn(),
+      level,
+    });
+    const written = { written: true, rubric: [], passThreshold: 0, starterCode: '' };
+    renderAt({ ...demo(), ...written, task: TASK }, sent);
+    const task = TASK_LINES * lineOf('checkpoint-task-text');
+    const gap = Number(viewStyleOf(screen.getByTestId('card-frame-body')).gap);
+
+    const sum = fixedHeight(task + SENT_LINES * lineOf('checkpoint-sent') + LEVEL_UNLOCK_HEIGHT);
+
+    expect(drawnParts()).toStrictEqual([
+      'card-kicker-row',
+      'checkpoint-task',
+      'checkpoint-editor-panel',
+      'checkpoint-result',
+      'checkpoint-detail',
+      'level-unlock',
+      'checkpoint-spacer',
+      'primary-button-face',
+    ]);
+    expect(sum).toBeCloseTo(WRITTEN_SUM + gap + LEVEL_UNLOCK_HEIGHT, 5);
+    expect(sum).toBeCloseTo(585.2, 5);
+    expect(sum - CONTENT_BOX).toBeCloseTo(41.7, 5);
   });
 
   it('a code card after a failing grade, at its limits: 534.7 points, for comparison', () => {

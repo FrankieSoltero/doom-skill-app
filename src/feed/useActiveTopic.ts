@@ -15,6 +15,8 @@
  *   a reset of either), resets the feed store and counts a refresh (`refreshes`), when `slug` is
  *   the active topic; the Today screen keys its feed by both, so the feed asks for a set again
  *   instead of showing (and answering) one the server no longer has. Another topic is left alone.
+ * - `switchTo(slug)`, the unlock's "Continue to Level n" (M10 plan L, L17), makes `slug` the active
+ *   topic and refreshes its feed; a topic already active is left as it is.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -92,6 +94,18 @@ export function refreshFeed(slug: string): void {
   if (activeTopic() !== slug) return;
   useFeedStore.getState().reset();
   useChoice.setState((state) => ({ refreshes: state.refreshes + 1 }));
+}
+
+/**
+ * Makes `slug` the active topic and starts its feed, unless it is already the active one. The
+ * choice and the refresh land in the same tick, so the Today feed is drawn again once; the write
+ * to storage finishes after.
+ */
+export async function switchTo(slug: string): Promise<void> {
+  if (activeTopic() === slug) return;
+  const storing = setActive(slug);
+  refreshFeed(slug);
+  await storing;
 }
 
 /**

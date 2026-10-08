@@ -140,6 +140,41 @@ describe('useCheckpointResult: the polling', () => {
   });
 });
 
+describe('useCheckpointResult: the level a pass finished (M10 plan L)', () => {
+  const LEVEL = {
+    completed: true,
+    level: 1,
+    next: 'enrolled',
+    next_slug: 'sql-level-2',
+    points: 100,
+  };
+
+  it('is null before a grade, and while pending', async () => {
+    serve([receipt]);
+    const hook = renderResult(MILESTONE);
+    expect(hook.result.current.level).toBeNull();
+    await submitCode(hook);
+    await advance(3000);
+
+    expect(hook.result.current.level).toBeNull();
+  });
+
+  it("is the grade's level once graded, and null for a grade without one", async () => {
+    serve([receipt], [json(200, { ...GRADED, level: LEVEL })]);
+    const hook = renderResult(MILESTONE);
+    await submitCode(hook);
+    await advance(3000);
+    expect(hook.result.current.level).toStrictEqual(LEVEL);
+
+    serve([receipt], [graded()]);
+    await submitCode(hook);
+    expect(hook.result.current.level).toBeNull();
+    await advance(3000);
+    expect(hook.result.current.result.status).toBe('graded');
+    expect(hook.result.current.level).toBeNull();
+  });
+});
+
 describe('useCheckpointResult: failures', () => {
   it.each([
     ['429', json(429, { detail: 'Too many submissions' })],

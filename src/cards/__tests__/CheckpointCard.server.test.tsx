@@ -2,9 +2,11 @@
 // code once the on-phone result shows, and shows the grade under it; the on-phone result still
 // decides the button. Over the real API client and a fake network; nothing leaves the test.
 import { act, screen } from '@testing-library/react-native';
+import { router } from 'expo-router';
 
 import { json, serveApi } from '../../api/testing/fakeApi';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
+import { activeTopic } from '../../feed/useActiveTopic';
 import {
   GRADING_MS,
   renderCheckpointCard,
@@ -21,18 +23,29 @@ const UNAVAILABLE_LINE = "Detailed feedback isn't available right now.";
 const ONE = 's("bd*4")';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('expo-router', () => ({ router: { dismissTo: jest.fn() } }));
 
 const demo = setUpCheckpointCardTests();
 const served = (): CheckpointCardData => ({ ...demo(), id: MILESTONE });
 
-const grade = (passed: boolean) =>
+const grade = (passed: boolean, level: Record<string, unknown> | null = null) =>
   json(200, {
     status: 'graded',
     passed,
     score: passed ? 0.9 : 0.2,
     feedback: passed ? 'A full groove.' : 'Only a kick.',
     criteria: [{ name: 'rhythm', score: 0.5, justification: 'One voice.' }],
+    level,
   });
+/** The level the pass finished (M10 plan L): level 1, its points, the learner in level 2. */
+const LEVEL = {
+  completed: true,
+  level: 1,
+  next: 'enrolled',
+  next_slug: 'strudel-level-2',
+  points: 100,
+};
+const COMPLETED = 'Level 1 complete · +100 points';
 const PENDING = { status: 'pending', passed: null, score: null, feedback: null, criteria: null };
 
 function serve(polls: Response[]) {
@@ -148,5 +161,34 @@ describe('CheckpointCard with the server grade', () => {
     await advance(30_000);
 
     expect(requests.filter((r) => r.method === 'GET')).toHaveLength(0);
+  });
+});
+
+describe('CheckpointCard with a level the pass finished (M10 plan L)', () => {
+  it('shows the unlock under the grade; its button opens the next level in the feed', async () => {
+    serve([grade(true, LEVEL)]);
+    renderCheckpointCard(served());
+    press('Submit for grading');
+    await advance(GRADING_MS + 3000);
+
+    expect(screen.getByText(COMPLETED)).toBeTruthy();
+    expect(button('Finish today')).toBeTruthy();
+    press('Continue to Level 2');
+
+    expect(activeTopic()).toBe('strudel-level-2');
+    expect(router.dismissTo).toHaveBeenCalledWith('/');
+  });
+
+  it.each([
+    ['a grade without a level', null],
+    ['a level not completed', { ...LEVEL, completed: false }],
+  ])('shows no unlock for %s', async (_name, level) => {
+    serve([grade(true, level)]);
+    renderCheckpointCard(served());
+    press('Submit for grading');
+    await advance(GRADING_MS + 3000);
+
+    expect(screen.getByText('Detailed grade: passed · 90%')).toBeTruthy();
+    expect(screen.queryByTestId('level-unlock')).toBeNull();
   });
 });
