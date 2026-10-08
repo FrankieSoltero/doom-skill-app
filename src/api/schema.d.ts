@@ -3896,7 +3896,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not ready */
+            /** @description Not ready, or a level whose level below is not completed */
             409: {
                 headers: {
                     [name: string]: unknown;
