@@ -23,7 +23,7 @@ export const levels = {
   /** The next level's build failed (`next` = `failed`). */
   failed: (n: number) => `Level ${String(n)} couldn't be built.`,
   /** The hint on a locked level in the levels row. */
-  locked: 'Finish the level before to unlock',
+  locked: 'Finish the level below to unlock',
   /** The Q&A byline's level, after the author's name; shown only when n > 1. */
   byline: (n: number) => ` · Level ${String(n)}`,
 };

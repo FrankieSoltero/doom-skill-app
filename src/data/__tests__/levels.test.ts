@@ -27,7 +27,7 @@ describe('copy.levels', () => {
   });
 
   it('writes the locked hint and the byline', () => {
-    expect(copy.levels.locked).toBe('Finish the level before to unlock');
+    expect(copy.levels.locked).toBe('Finish the level below to unlock');
     expect(copy.levels.byline(2)).toBe(' · Level 2');
   });
 });

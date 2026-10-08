@@ -33,19 +33,24 @@ function deepestPublished(levels: TopicSummary['levels']): number | null {
 /**
  * One topic in the Explore tab's list (README.md:164): its title, a tag naming its levels'
  * range when it has published levels ("Levels 1–3"), and a tag with a 1-point ink border naming
- * its status, filled by status. A row that can be opened is a button named after the topic; one
- * that cannot is plain text.
+ * its status, filled by status. A row that can be opened is a button named after the topic and
+ * its tags ("Open Strudel, Levels 1–3, Ready"); one that cannot is plain text.
  */
 export function TopicRow({ topic, onPress }: TopicRowProps) {
   const look = statusLook(topic.status);
   const deepest = deepestPublished(topic.levels);
+  // The button's spoken name holds the tags too, so a screen reader hears the range and status.
+  const range = deepest === null ? null : copy.levels.range(deepest);
+  const label = [copy.explore.openTopic(topic.title), range, look.label]
+    .filter((part) => part !== null)
+    .join(', ');
   const content = (
     <>
       <Text style={styles.title}>{topic.title}</Text>
       <View style={styles.tags}>
-        {deepest === null ? null : (
+        {range === null ? null : (
           <View style={styles.tag}>
-            <Text style={styles.tagText}>{copy.levels.range(deepest)}</Text>
+            <Text style={styles.tagText}>{range}</Text>
           </View>
         )}
         <View style={[styles.tag, { backgroundColor: look.fill }]}>
@@ -66,7 +71,7 @@ export function TopicRow({ topic, onPress }: TopicRowProps) {
     <Pressable
       testID="topic-row"
       accessibilityRole="button"
-      accessibilityLabel={copy.explore.openTopic(topic.title)}
+      accessibilityLabel={label}
       onPress={onPress}
       style={styles.row}
     >

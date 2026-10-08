@@ -2,12 +2,13 @@
  * A topic's levels on its screen (M10 plan L Task 15; decisions L16, L20): one chip per topic of
  * its family (`levels`, the root first), each a button named after the level and its state.
  *
- * - **current**: the topic on screen, highlighted.
- * - **continue**: a published level the learner is enrolled in but is not their active topic —
+ * - **current**: the topic on screen, highlighted and announced as selected; a press does nothing.
+ * - **continue**: a published level the learner is enrolled in, above their active topic's level —
  *   "Continue to Level n" makes it the active topic and closes to the Today tab. This is how a
  *   learner who waited for a level finds it once it is published.
- * - **open**: a published level the learner may enter — enrolled in and active, the root, or the
- *   level above one whose enrollment is `completed` — opens that level's topic screen.
+ * - **open**: a published level the learner may enter — enrolled in and active, enrolled in and
+ *   below the active level, the root, or the level above one whose enrollment is `completed` —
+ *   opens that level's topic screen.
  * - **locked**: any other published level, greyed with the locked hint (L20: a level is entered
  *   only after the level below; the server's enroll applies the same rule).
  * - **building** / **waiting** / **failed**: a level not ready (`failed`, else still being built),
@@ -63,13 +64,20 @@ function belowCompleted(level: LevelSummary, ctx: Context): boolean {
   return below !== undefined && ctx.enrolled.get(below.slug) === 'completed';
 }
 
+/** An enrolled level's chip: open when it is the active topic or below its level, else continue. */
+function enrolledKind(level: LevelSummary, ctx: Context): ChipKind {
+  const activeLevel = ctx.levels.find((m) => m.slug === ctx.active)?.level;
+  const below = activeLevel !== undefined && level.level < activeLevel;
+  return level.slug === ctx.active || below ? 'open' : 'continue';
+}
+
 /** The chip's state for `level` (see the module comment). */
 function chipKind(level: LevelSummary, ctx: Context): ChipKind {
   if (level.slug === ctx.current) return 'current';
   if (level.status === 'failed') return 'failed';
   if (level.status !== 'ready') return 'building';
   if (!level.published) return 'waiting';
-  if (ctx.enrolled.has(level.slug)) return level.slug === ctx.active ? 'open' : 'continue';
+  if (ctx.enrolled.has(level.slug)) return enrolledKind(level, ctx);
   return belowCompleted(level, ctx) ? 'open' : 'locked';
 }
 
@@ -111,12 +119,14 @@ function Chip({ level, kind }: { level: LevelSummary; kind: ChipKind }) {
   const action = chipAction(kind, level.slug);
   const locked = kind === 'locked';
   const label = locked ? `${text}, ${copy.levels.locked}` : text;
+  // The current chip is selected, not dimmed: it cannot be pressed, but it is not disabled.
+  const disabled = action === null && kind !== 'current';
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: action === null, selected: kind === 'current' }}
-      disabled={action === null}
+      accessibilityState={{ disabled, selected: kind === 'current' }}
+      disabled={disabled}
       onPress={action}
       style={[styles.chip, kind === 'current' ? styles.current : null, locked ? styles.dim : null]}
     >

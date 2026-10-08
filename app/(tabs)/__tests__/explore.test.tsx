@@ -105,7 +105,7 @@ describe('Explore: results', () => {
     expect(screen.queryByRole('button', { name: 'Open SQL window functions' })).toBeNull();
     expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Open C++ templates' })).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: 'Open Strudel' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Open Strudel, Ready' }));
 
     expect(router.push).toHaveBeenCalledWith({
       pathname: '/topic/[slug]',
@@ -124,6 +124,8 @@ describe('Explore: results', () => {
       await search('s');
 
       expect(screen.getByText(row.range)).toBeOnTheScreen();
+      const name = `Open Strudel, ${row.range}, Ready`;
+      expect(screen.getByRole('button', { name })).toBeOnTheScreen();
     },
   );
 
@@ -146,7 +148,7 @@ describe('Explore: results', () => {
     await pressRetry();
 
     expect(requests).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Open Strudel' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Open Strudel, Ready' })).toBeOnTheScreen();
   });
 });
 

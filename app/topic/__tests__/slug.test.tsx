@@ -175,7 +175,7 @@ describe('Topic detail: states', () => {
     const row = screen.getByTestId('levels-row');
     expect(within(row).getByRole('button', { name: 'Level 1' })).toBeSelected();
     expect(
-      within(row).getByRole('button', { name: 'Level 2, Finish the level before to unlock' }),
+      within(row).getByRole('button', { name: 'Level 2, Finish the level below to unlock' }),
     ).toBeOnTheScreen();
   });
 

@@ -37,7 +37,7 @@ const enrollment = (slug: string, status: string) => ({
 const enrolled = (...rows: ReturnType<typeof enrollment>[]) => json(200, { enrollments: rows });
 
 const BUILDING = "Level 2 is being built — you'll be the first in.";
-const LOCKED = 'Level 2, Finish the level before to unlock';
+const LOCKED = 'Level 2, Finish the level below to unlock';
 
 beforeEach(async () => {
   jest.useFakeTimers();
@@ -78,6 +78,7 @@ describe('LevelsRow: the chips', () => {
     expect(requests.map((r) => r.path)).toStrictEqual(['/me/enrollments']);
     const current = screen.getByRole('button', { name: 'Level 1' });
     expect(current).toBeSelected();
+    expect(current).not.toBeDisabled();
     expect(viewStyleOf(current)).toMatchObject({ backgroundColor: colors.yellow });
   });
 
@@ -111,11 +112,11 @@ describe('LevelsRow: the chips', () => {
     );
 
     const locked = screen.getByRole('button', {
-      name: 'Level 3, Finish the level before to unlock',
+      name: 'Level 3, Finish the level below to unlock',
     });
     expect(locked).toBeDisabled();
     expect(viewStyleOf(locked)).toMatchObject({ opacity: 0.45 });
-    expect(screen.getByText('Finish the level before to unlock')).toBeOnTheScreen();
+    expect(screen.getByText('Finish the level below to unlock')).toBeOnTheScreen();
     fireEvent.press(locked);
     expect(router.push).not.toHaveBeenCalled();
   });
@@ -125,7 +126,9 @@ describe('LevelsRow: the chips', () => {
 
     expect(screen.getByRole('button', { name: LOCKED })).toBeDisabled();
   });
+});
 
+describe('LevelsRow: the levels the learner is enrolled in', () => {
   it('continues a level the learner is enrolled in but not on: it becomes active, Today opens', async () => {
     await makeActive('strudel');
     await renderRow(
@@ -140,6 +143,25 @@ describe('LevelsRow: the chips', () => {
     expect(activeTopic()).toBe('strudel-level-2');
     expect(router.dismissTo).toHaveBeenCalledWith('/');
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('opens, not continues, an enrolled level below the active one', async () => {
+    await makeActive('strudel-level-2');
+    await renderRow(
+      [ROOT, TWO],
+      'strudel-level-2',
+      enrolled(enrollment('strudel', 'completed'), enrollment('strudel-level-2', 'active')),
+    );
+
+    expect(screen.queryByRole('button', { name: 'Continue to Level 1' })).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Level 1' }));
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/topic/[slug]',
+      params: { slug: 'strudel' },
+    });
+    expect(router.dismissTo).not.toHaveBeenCalled();
+    expect(activeTopic()).toBe('strudel-level-2');
   });
 
   it('opens, not continues, the level that is already the active topic', async () => {
