@@ -38,7 +38,7 @@ const QUESTION = {
   text: 'Why does the bracket nest?',
   status: 'open',
   created_at: '2026-10-07T12:00:00Z',
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: false,
   accepted_answer_id: null,
   answers: [],

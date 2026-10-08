@@ -22,7 +22,7 @@ const ANSWER: Answer = {
   text: 'Stack them.',
   status: 'visible',
   createdAt: WHEN,
-  author: { name: 'lin' },
+  author: { name: 'lin', level: 1 },
   mine: false,
   helpfulCount: 0,
   helpfulByMe: false,
@@ -35,7 +35,7 @@ const QUESTION: Question = {
   text: 'How do two patterns play at once?',
   status: 'open',
   createdAt: WHEN,
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: true,
   acceptedAnswerId: null,
   answers: [ANSWER],
@@ -47,7 +47,7 @@ const SERVED_ANSWER = {
   text: 'Stack them.',
   status: 'visible',
   created_at: WHEN,
-  author: { name: 'lin' },
+  author: { name: 'lin', level: 1 },
   mine: false,
   helpful_count: 1,
   helpful_by_me: true,
@@ -61,7 +61,7 @@ const SERVED_QUESTION = {
   text: 'How do two patterns play at once?',
   status: 'answered',
   created_at: WHEN,
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: true,
   accepted_answer_id: A_ID,
   answers: [SERVED_ANSWER],
@@ -117,7 +117,7 @@ describe('AnswerRow: the answer', () => {
   });
 
   it('names the learner’s own answer You and shows the hidden line on it', async () => {
-    await renderRow({ mine: true, status: 'hidden', author: { name: null } });
+    await renderRow({ mine: true, status: 'hidden', author: { name: null, level: 1 } });
 
     expect(screen.getByText('You')).toBeOnTheScreen();
     expect(screen.getByText('Hidden pending review')).toBeOnTheScreen();

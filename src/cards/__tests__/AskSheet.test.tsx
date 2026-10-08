@@ -27,7 +27,7 @@ const question = (n: number, text: string, extra: object = {}) => ({
   text,
   status: 'open',
   created_at: CREATED,
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: false,
   accepted_answer_id: null,
   answers: [],
@@ -40,7 +40,7 @@ const answer = (n: number, text: string, extra: object = {}) => ({
   text,
   status: 'visible',
   created_at: CREATED,
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: false,
   helpful_count: 0,
   helpful_by_me: false,
@@ -50,11 +50,11 @@ const answer = (n: number, text: string, extra: object = {}) => ({
 
 const QUESTIONS = [
   question(10, 'Why does the bracket nest?', {
-    author: { name: 'ada' },
-    answers: [answer(20, 'It groups a step.', { author: { name: 'lin' } })],
+    author: { name: 'ada', level: 1 },
+    answers: [answer(20, 'It groups a step.', { author: { name: 'lin', level: 1 } })],
   }),
   question(11, 'What is a cycle?'),
-  question(12, 'Is this mine?', { mine: true, status: 'hidden', author: { name: 'me' } }),
+  question(12, 'Is this mine?', { mine: true, status: 'hidden', author: { name: 'me', level: 1 } }),
 ];
 
 const onClose = jest.fn<undefined, []>();

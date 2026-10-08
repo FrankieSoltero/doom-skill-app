@@ -46,7 +46,7 @@ const ANSWER_OUT = {
   text: 'Use a comma inside the brackets.',
   status: 'visible',
   created_at: CREATED,
-  author: { name: 'ada' },
+  author: { name: 'ada', level: 2 },
   mine: false,
   helpful_count: 2,
   helpful_by_me: true,
@@ -61,14 +61,14 @@ const QUESTION_OUT = {
   text: 'How do two patterns play at once?',
   status: 'answered',
   created_at: CREATED,
-  author: { name: null },
+  author: { name: null, level: 1 },
   mine: true,
   accepted_answer_id: ANSWER_ID,
   answers: [ANSWER_OUT],
 };
 
-const ADA: Author = { name: 'ada' };
-const A_LEARNER: Author = { name: null };
+const ADA: Author = { name: 'ada', level: 2 };
+const A_LEARNER: Author = { name: null, level: 1 };
 
 /** `ANSWER_OUT` as the app reads it. */
 const ANSWER: Answer = {
@@ -174,6 +174,21 @@ describe('listCardQuestions', () => {
       'questions.0.answers.0.status',
     ],
     ['no author', { ...QUESTION_OUT, author: undefined }, 'questions.0.author'],
+    [
+      'an author with no level',
+      { ...QUESTION_OUT, author: { name: null } },
+      'questions.0.author.level',
+    ],
+    [
+      'an author at level 0',
+      { ...QUESTION_OUT, author: { name: null, level: 0 } },
+      'questions.0.author.level',
+    ],
+    [
+      'an author at level 1.5',
+      { ...QUESTION_OUT, author: { name: null, level: 1.5 } },
+      'questions.0.author.level',
+    ],
   ])('refuses a question with %s with FeedActionError schema', async (_case, question, paths) => {
     const { api } = served({
       [`GET /cards/${CARD_ID}/questions`]: [json(200, { questions: [question] })],

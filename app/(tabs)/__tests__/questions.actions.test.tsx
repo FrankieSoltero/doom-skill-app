@@ -23,7 +23,7 @@ const INBOX = 'GET /questions/inbox';
 const item = (n: number, extra: object) => ({
   id: uuid(n),
   text: `Item ${String(n)}`,
-  author: { name: null },
+  author: { name: null, level: 1 },
   created_at: '2026-10-05T09:30:00Z',
   status: 'visible',
   ...extra,

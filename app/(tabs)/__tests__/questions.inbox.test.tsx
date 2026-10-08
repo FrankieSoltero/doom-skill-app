@@ -26,7 +26,7 @@ const reply = (n: number, extra: Record<string, unknown>) => ({
   helpful_by_me: false,
   helpful_count: 0,
   mine: false,
-  author: { name: null },
+  author: { name: null, level: 1 },
   created_at: WHEN,
   status: 'visible',
   text: `Answer ${String(n)}`,
@@ -39,7 +39,7 @@ const asked = (n: number, extra: Record<string, unknown>) => ({
   answers: [],
   accepted_answer_id: null,
   mine: false,
-  author: { name: null },
+  author: { name: null, level: 1 },
   created_at: WHEN,
   status: 'open',
   text: `Question ${String(n)}`,
@@ -50,16 +50,16 @@ const asked = (n: number, extra: Record<string, unknown>) => ({
 });
 
 const TO_ANSWER = [
-  asked(1, { author: { name: 'ada' }, text: 'Why does the bracket nest?' }),
+  asked(1, { author: { name: 'ada', level: 1 }, text: 'Why does the bracket nest?' }),
   asked(2, { text: 'What is a cycle?' }),
 ];
 const ANSWERED = [
   asked(3, {
     mine: true,
-    author: { name: 'me' },
+    author: { name: 'me', level: 1 },
     text: 'How do two patterns play at once?',
     answers: [
-      reply(10, { author: { name: 'lin' }, text: 'Stack them.' }),
+      reply(10, { author: { name: 'lin', level: 1 }, text: 'Stack them.' }),
       reply(11, { text: 'Use a comma.' }),
     ],
   }),

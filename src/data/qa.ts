@@ -13,8 +13,11 @@ import { parsed, passageSchema } from './feedActions';
 
 type ApiClient = ReturnType<typeof createApiClient>;
 
-/** Who wrote a question or an answer: the display name when they opted in, else null. */
-const authorSchema = z.object({ name: z.string().nullable() });
+/**
+ * Who wrote a question or an answer: the display name when they opted in, else null, and their
+ * highest level under the question's root (1 when none; plan L decision L15).
+ */
+const authorSchema = z.object({ name: z.string().nullable(), level: z.number().int().min(1) });
 
 /** One answer to a question (`AnswerOut`); a hidden one reaches its author only. */
 const answerSchema = z.object({

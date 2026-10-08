@@ -11,6 +11,7 @@
 
 import { flag } from './flag';
 import { leaderboard } from './leaderboard';
+import { levels } from './levels';
 import { profile, reminder } from './profile';
 import { qa } from './qa';
 import { sources } from './sources';
@@ -421,6 +422,7 @@ export const copy = deepFreeze({
   topic,
   tree,
   leaderboard,
+  levels,
   profile,
   reminder,
   flag,
