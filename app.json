@@ -14,7 +14,10 @@
     },
     "ios": {
       "bundleIdentifier": "com.franciscosoltero.doomskill",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
