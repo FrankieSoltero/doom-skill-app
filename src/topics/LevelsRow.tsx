@@ -66,11 +66,15 @@ type Context = {
   levels: readonly LevelSummary[];
 };
 
-/** Whether the learner completed the level below `level` (the root counts as entered always). */
+/**
+ * Whether the learner completed the level below `level` (the root counts as entered always): any
+ * of its members, as the server's L20 rule accepts any completed project of that level.
+ */
 function belowCompleted(level: LevelSummary, ctx: Context): boolean {
   if (level.level === 1) return true;
-  const below = ctx.levels.find((m) => m.level === level.level - 1);
-  return below !== undefined && ctx.enrolled.get(below.slug) === 'completed';
+  return ctx.levels.some(
+    (m) => m.level === level.level - 1 && ctx.enrolled.get(m.slug) === 'completed',
+  );
 }
 
 /** An enrolled level's chip: open when it is the active topic or below its level, else continue. */

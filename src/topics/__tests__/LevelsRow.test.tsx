@@ -277,6 +277,23 @@ describe('LevelsRow: the projects of a level 2 (M11 plan Task 21; decision M21)'
     expect(activeTopic()).toBe('strudel-level-2-2');
   });
 
+  it('opens a published level 3 once any project of level 2 is completed (L20)', async () => {
+    const published = (n: number, title: string) =>
+      variant(n, title, { status: 'ready', published: true });
+    await renderRow(
+      [ROOT, published(1, 'Drum machine'), published(2, 'Ambient pad'), THREE],
+      'strudel',
+      enrolled(enrollment('strudel', 'completed'), enrollment('strudel-level-2-2', 'completed')),
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'Level 3' }));
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/topic/[slug]',
+      params: { slug: 'strudel-level-3' },
+    });
+  });
+
   it('marks the project on screen as the current one', async () => {
     await renderRow([ROOT, DRUMS, PADS], 'strudel-level-2-1', completedRoot());
 
