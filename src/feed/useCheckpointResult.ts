@@ -25,7 +25,8 @@
  *   decision M21) may come before the projects are drafted (`choices` empty). The grade is then
  *   asked again every 2 s, at most 15 times (`CHOICE_POLL_MS`, `CHOICE_POLLS`), while the card is
  *   on the screen; a grade with the projects replaces the shown one (and marks the cached state
- *   stale again: the projects' level rows now exist). After the 15th ask without them,
+ *   stale again: the projects' level rows now exist), as does any grade whose level no longer
+ *   awaits them (a proposal that failed: `next` = `failed`). After the 15th ask without them,
  *   `choicesLater` is true: the learner picks a project on the topic screen. A submit or `reset`
  *   stops the asking and clears `choicesLater`.
  *
@@ -179,7 +180,9 @@ function useChoicePolling(
       const result = await poll(drafting, controller.signal);
       if (controller.signal.aborted) return;
       asked.current += 1;
-      if (result !== null && (levelOf(result)?.choices.length ?? 0) > 0) offer(result);
+      const level = result === null ? null : levelOf(result);
+      const awaiting = level !== null && level.next === 'choose' && level.choices.length === 0;
+      if (result !== null && level !== null && !awaiting) offer(result);
       else if (asked.current >= CHOICE_POLLS) later();
       else timer = setTimeout(() => void tick(), CHOICE_POLL_MS);
     };

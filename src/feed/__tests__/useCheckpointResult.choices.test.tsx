@@ -1,9 +1,10 @@
 // The projects of a level 2 in the server's grade of a checkpoint (src/feed/useCheckpointResult.ts;
 // M11 plan Task 21, decision M21): asked for every 2 s, at most 15 times, while they are drafted,
 // over the real API client and a fake network. Nothing leaves the test.
-import { act, renderHook } from '@testing-library/react-native';
+import { act, render, renderHook, screen } from '@testing-library/react-native';
 
 import { json, serveApi, type Answer } from '../../api/testing/fakeApi';
+import { LevelUnlock } from '../../cards/LevelUnlock';
 import { advance } from '../../components/testing/screen';
 import { CHOICE_POLL_MS, CHOICE_POLLS, useCheckpointResult } from '../useCheckpointResult';
 
@@ -45,20 +46,22 @@ async function submitCode(hook: ReturnType<typeof renderResult>) {
 
 const polls = (requests: { method: string }[]) => requests.filter((r) => r.method === 'GET');
 
+/** A completed level 1 whose next level is a choice of projects not drafted yet. */
+const CHOOSE = {
+  choices: [],
+  completed: true,
+  level: 1,
+  next: 'choose',
+  next_slug: null,
+  points: 100,
+};
+const drafting = () => json(200, { ...GRADED, level: CHOOSE });
+
 describe('useCheckpointResult: the projects of a level 2 (M11 plan Task 21; decision M21)', () => {
-  const CHOOSE = {
-    choices: [],
-    completed: true,
-    level: 1,
-    next: 'choose',
-    next_slug: null,
-    points: 100,
-  };
   const CHOICES = [
     { slug: 'strudel-level-2-1', title: 'Drum machine', style: 'techno', brief: 'A kit.' },
     { slug: 'strudel-level-2-2', title: 'Ambient pad', style: 'ambient', brief: 'A drone.' },
   ];
-  const drafting = () => json(200, { ...GRADED, level: CHOOSE });
   const offered = () => json(200, { ...GRADED, level: { ...CHOOSE, choices: CHOICES } });
 
   it('asks every 2 s while the projects are drafted, and shows them once they arrive', async () => {
@@ -131,5 +134,27 @@ describe('useCheckpointResult: the projects of a level 2 (M11 plan Task 21; deci
     });
     expect(hook.result.current.choicesLater).toBe(false);
     expect(jest.getTimerCount()).toBe(0);
+  });
+});
+
+describe('useCheckpointResult: a proposal that failed while it was asked for (M11 final review)', () => {
+  it('shows a proposal that failed at once: the grade is replaced and asked no more', async () => {
+    // The grading job rewrites a failed offer to `next: "failed"`, `choices: []`.
+    const failed = { ...CHOOSE, next: 'failed' };
+    const requests = serve([receipt], [drafting(), json(200, { ...GRADED, level: failed })]);
+    const hook = renderResult(MILESTONE);
+    await submitCode(hook);
+    await advance(3000);
+    await advance(CHOICE_POLL_MS);
+
+    const { level, choicesLater } = hook.result.current;
+    expect(level).toStrictEqual(failed);
+    expect(choicesLater).toBe(false);
+    if (level === null) throw new Error('The grade has no level');
+    render(<LevelUnlock outcome={level} choicesLater={choicesLater} />);
+    expect(screen.getByText("Level 2 couldn't be built.")).toBeOnTheScreen();
+    await advance(60_000);
+    expect(polls(requests)).toHaveLength(2);
+    expect(hook.result.current.choicesLater).toBe(false);
   });
 });
