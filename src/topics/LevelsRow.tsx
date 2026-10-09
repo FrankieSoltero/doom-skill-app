@@ -18,9 +18,9 @@
  * sit under one `Level 2` label, one chip each, named by the project's title with its state's line
  * under it. A variant not built yet (`pending`) is **choosable** (`Choose`) once the root's
  * enrollment is `completed`, else **locked**; a press chooses it (`useChoose`): its answer's line
- * (or that another project was chosen) shows under the row, and the row reads the topic and the
- * enrollments again. Any other variant takes the kinds above. A family without variants is drawn
- * as before.
+ * (or that another project was chosen) shows under the row and is announced (the pressed chip is
+ * gone), and the row reads the topic and the enrollments again. Any other variant takes the kinds
+ * above. A family without variants is drawn as before.
  *
  * The learner's enrollments come from `GET /me/enrollments`, read again each time the row is drawn.
  * While they load, or when they cannot be read, they count as none: a level above the root is then
@@ -28,11 +28,12 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { requireApi } from '../api/query';
 import type { components } from '../api/schema';
+import { announce } from '../components/announce';
 import { copy } from '../copy';
 import { switchTo, useActiveTopic } from '../feed/useActiveTopic';
 import type { ChoiceOutcome } from '../data/levels';
@@ -238,12 +239,18 @@ export function LevelsRow({ levels, current }: LevelsRowProps) {
   const ctx: Context = { current, active, enrolled: enrollments.data ?? new Map(), levels };
   const { choose, pending, error } = useChoose();
   const [said, setSaid] = useState<string | null>(null);
+  // The pressed chip is gone, so the line a choice shows is announced (iOS has no live region).
+  useEffect(() => {
+    if (error !== null) announce(failureLine(error));
+  }, [error]);
   const pick = (slug: string, n: number) => {
     setSaid(null);
-    // A failed choice is the hook's `error`, drawn under the row.
+    // A failed choice is the hook's `error`, drawn under the row and announced by the effect.
     choose(slug).then(
       (answer) => {
-        setSaid(answerLine(answer, n));
+        const line = answerLine(answer, n);
+        setSaid(line);
+        if (line !== null) announce(line);
       },
       () => undefined,
     );

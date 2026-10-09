@@ -128,6 +128,11 @@ function ChoiceRow({
   );
 }
 
+/** What a choice did, as said: the way into the chosen level's label, else its line, or none. */
+function answerLine(answer: ChoiceOutcome, n: number): string | null {
+  return answer.next === 'enrolled' ? copy.levels.continueTo(n) : nextLine(answer.next, n);
+}
+
 /** What a choice did: the way into the chosen level (`enrolled`), else its line. */
 function ChoiceAnswer({ answer, n }: { answer: ChoiceOutcome; n: number }) {
   if (answer.next === 'enrolled') {
@@ -149,18 +154,31 @@ function ChoiceAnswer({ answer, n }: { answer: ChoiceOutcome; n: number }) {
  * one row each; a press chooses it (`useChoose`) and its answer takes the rows' place. With no
  * projects yet, `drafting(n)`, or `choicesLater(n)` once the grade was asked for them in vain
  * (`later`). A 409 says another project was chosen; another failure says so in the heading's
- * place and keeps the rows to press again.
+ * place and keeps the rows to press again. The pressed row is gone, so the line an answer or a
+ * failure shows is announced (`announce`: iOS has no live region).
  */
 function ProjectChoice({ outcome, later }: { outcome: LevelOutcome; later: boolean }) {
   const n = outcome.level + 1;
   const { choose, pending, error } = useChoose();
   const [answer, setAnswer] = useState<ChoiceOutcome | null>(null);
+  useEffect(() => {
+    if (error !== null) {
+      announce(error === 'chosenOther' ? copy.levels.chosenOther : copy.topic.enrollFailed);
+    }
+  }, [error]);
   if (answer !== null) return <ChoiceAnswer answer={answer} n={n} />;
   if (error === 'chosenOther') return <Line text={copy.levels.chosenOther} />;
   if (outcome.choices.length === 0) return <Line text={choiceLine(outcome, later)} />;
   const pick = (slug: string) => {
-    // A failed choice is the hook's `error`, drawn above.
-    choose(slug).then(setAnswer, () => undefined);
+    // A failed choice is the hook's `error`, drawn above and announced by the effect.
+    choose(slug).then(
+      (chosen) => {
+        setAnswer(chosen);
+        const line = answerLine(chosen, n);
+        if (line !== null) announce(line);
+      },
+      () => undefined,
+    );
   };
   const prompt = error === 'failed' ? copy.topic.enrollFailed : copy.levels.choose(n);
   return (

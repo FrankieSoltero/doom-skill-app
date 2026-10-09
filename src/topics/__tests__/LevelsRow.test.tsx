@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
+import { AccessibilityInfo } from 'react-native';
 
 import type { components } from '../../api/schema';
 import { json, queryWrapper, serveApi, type Answer } from '../../api/testing/fakeApi';
@@ -327,5 +328,27 @@ describe('LevelsRow: choosing a project (M11 plan Task 21; decision M21)', () =>
     await advance(0);
 
     expect(screen.getByText('You picked another project for this level.')).toBeOnTheScreen();
+  });
+});
+
+describe('LevelsRow: what a choice did is announced (final review: iOS has no live region)', () => {
+  const announce = jest.mocked(AccessibilityInfo).announceForAccessibility;
+  beforeEach(() => {
+    announce.mockClear();
+  });
+
+  it.each([
+    [json(200, { next: 'building', slug: 'strudel-level-2-2' }), BUILDING],
+    [json(409, { detail: 'Variant chosen' }), 'You picked another project for this level.'],
+    [json(503, { detail: 'Service unavailable' }), "Couldn't start this topic. Try again."],
+  ])('announces the line it shows under the row, once (%#)', async (answer, line) => {
+    await renderRow([ROOT, DRUMS, PADS], 'strudel', completedRoot(), { [CHOOSE]: [answer] });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Ambient pad, Choose' }));
+    await advance(0);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(line);
   });
 });

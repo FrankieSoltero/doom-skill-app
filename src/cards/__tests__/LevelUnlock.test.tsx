@@ -26,6 +26,7 @@ jest.mock('../../feed/useActiveTopic', () => ({ switchTo: jest.fn(() => Promise.
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 const COMPLETED = 'Level 1 complete · +100 points';
+const BUILDING = "Level 2 is being built — you'll be the first in.";
 
 const outcome = (overrides: Partial<LevelOutcome> = {}): LevelOutcome => ({
   choices: [],
@@ -303,5 +304,24 @@ describe('LevelUnlock: choosing a project (M11 plan Task 21; decision M21)', () 
     await pickSecond();
 
     for (const row of screen.getAllByRole('button')) expect(row).toBeDisabled();
+  });
+});
+
+describe('LevelUnlock: what a choice did is announced (final review: iOS has no live region)', () => {
+  beforeEach(signIn);
+
+  it.each([
+    [json(200, { next: 'building', slug: 'strudel-level-2-2' }), BUILDING],
+    [json(200, { next: 'enrolled', slug: 'strudel-level-2-2' }), 'Continue to Level 2'],
+    [json(409, { detail: 'Variant chosen' }), 'You picked another project for this level.'],
+    [json(503, { detail: 'Service unavailable' }), "Couldn't start this topic. Try again."],
+  ])('announces the line it shows, once (%#)', async (answer, line) => {
+    renderChoice(choosing(), answer);
+
+    await pickSecond();
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(line);
   });
 });
