@@ -542,6 +542,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/{slug}/choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose Level
+         * @description Choose the level-2 project, or read what choosing it did (module docstring).
+         */
+        post: operations["choose_level"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}/enroll": {
         parameters: {
             query?: never;
@@ -935,6 +955,15 @@ export interface components {
             /** Choice */
             choice: number;
         };
+        /**
+         * ChoiceOutcome
+         * @description What choosing a level-2 project did (module docstring).
+         */
+        ChoiceOutcome: {
+            next: components["schemas"]["LevelNext"];
+            /** Slug */
+            slug: string;
+        };
         /** @enum {string} */
         ChoiceType: "quiz" | "predict";
         /** ClozeCard */
@@ -1326,12 +1355,17 @@ export interface components {
             rank: number;
         };
         /** @enum {string} */
-        LevelNext: "enrolled" | "building" | "waiting" | "deepest" | "failed";
+        LevelNext: "enrolled" | "building" | "waiting" | "deepest" | "failed" | "choose";
         /**
          * LevelOutcome
          * @description What finishing a level unlocked (module docstring).
          */
         LevelOutcome: {
+            /**
+             * Choices
+             * @default []
+             */
+            choices: components["schemas"]["ProjectChoice"][];
             /** Completed */
             completed: boolean;
             /** Level */
@@ -1344,16 +1378,21 @@ export interface components {
         };
         /**
          * LevelSummary
-         * @description One topic of a family: the root (level 1) or one of its levels (M10 plan L Task 2).
+         * @description One topic of a family: the root (level 1) or one of its levels (M10 plan L Task 2); a
+         *     code root's level 2 is one member per project `variant`, each with its `project` (null on any
+         *     other member).
          */
         LevelSummary: {
             /** Level */
             level: number;
+            project: components["schemas"]["ProjectSummary"] | null;
             /** Published */
             published: boolean;
             /** Slug */
             slug: string;
             status: components["schemas"]["TopicStatus"];
+            /** Variant */
+            variant: number;
         };
         /**
          * Milestone
@@ -1599,6 +1638,32 @@ export interface components {
              * @description An IANA timezone name
              */
             timezone?: string;
+        };
+        /**
+         * ProjectChoice
+         * @description One level-2 project of a code root the learner may choose (module docstring).
+         */
+        ProjectChoice: {
+            /** Brief */
+            brief: string;
+            /** Slug */
+            slug: string;
+            /** Style */
+            style: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * ProjectSummary
+         * @description A level-2 variant's project: its title, style and brief (M11 plan Task 4).
+         */
+        ProjectSummary: {
+            /** Brief */
+            brief: string;
+            /** Style */
+            style: string;
+            /** Title */
+            title: string;
         };
         /** @enum {string} */
         QaFlagReason: "wrong" | "abusive" | "spam" | "other";
@@ -3845,6 +3910,73 @@ export interface operations {
             };
         };
     };
+    choose_level: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceOutcome"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not choosable, Level locked, or Variant chosen */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     enroll_topic: {
         parameters: {
             query?: never;
@@ -3896,7 +4028,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not ready, or a level whose level below is not completed */
+            /** @description Not ready, a level whose level below is not completed, or another variant chosen */
             409: {
                 headers: {
                     [name: string]: unknown;
