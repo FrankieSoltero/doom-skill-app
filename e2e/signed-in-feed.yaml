@@ -5,7 +5,7 @@
 #
 # The demo topic is the app's demo cards, written by `python -m scripts.seed_demo_topic`. A new
 # learner's first set is its first node's three cards: concept, quiz and exercise (set 1's).
-appId: com.frankiesoltero.doomskill
+appId: com.franciscosoltero.doomskill
 env:
   DEV_SERVER_LINK: exp+doomskill://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
 ---

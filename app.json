@@ -13,7 +13,7 @@
       "resizeMode": "contain"
     },
     "ios": {
-      "bundleIdentifier": "com.frankiesoltero.doomskill",
+      "bundleIdentifier": "com.franciscosoltero.doomskill",
       "supportsTablet": false
     },
     "android": {

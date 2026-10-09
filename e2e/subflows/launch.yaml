@@ -2,7 +2,7 @@
 # The app is a development build (expo-dev-client), so a launch alone shows the dev launcher;
 # the link below tells it which server to load. The app keeps no state between launches, so
 # every run starts on set 1, card 1.
-appId: com.frankiesoltero.doomskill
+appId: com.franciscosoltero.doomskill
 env:
   DEV_SERVER_LINK: exp+doomskill://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
 ---
