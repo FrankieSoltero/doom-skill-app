@@ -70,6 +70,8 @@ const ENROLLMENT = {
   horizon_days: 14,
   progress: 0,
   started_at: '2026-09-30T12:00:00Z',
+  level: 1,
+  last_studied_at: null,
 };
 
 beforeEach(async () => {

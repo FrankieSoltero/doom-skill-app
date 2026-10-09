@@ -1097,6 +1097,10 @@ export interface components {
             daily_minutes: number;
             /** Horizon Days */
             horizon_days: number;
+            /** Last Studied At */
+            last_studied_at: string | null;
+            /** Level */
+            level: number;
             /** Progress */
             progress: number;
             /**
