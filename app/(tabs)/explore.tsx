@@ -51,16 +51,23 @@ function useEnrollmentsOnFocus() {
   return useEnrollments();
 }
 
-/** The learner's topics over the idle line, or one fixed line when they could not be read. */
+/**
+ * The learner's topics over the idle line, and one fixed line when they could not be read. A
+ * failed re-read keeps the list from the last good read above the line.
+ */
 function Enrolled({ enrollments }: { enrollments: ReturnType<typeof useEnrollments> }) {
-  if (enrollments.isError) {
-    return (
-      <Text testID="explore-my-topics-failed" style={styles.line}>
-        {copy.explore.myTopicsFailed}
-      </Text>
-    );
-  }
-  return <MyTopics enrollments={enrollments.data ?? []} onOpen={openTopic} />;
+  const failed = enrollments.isError ? (
+    <Text testID="explore-my-topics-failed" style={styles.line}>
+      {copy.explore.myTopicsFailed}
+    </Text>
+  ) : null;
+  if (enrollments.data === undefined) return failed;
+  return (
+    <>
+      <MyTopics enrollments={enrollments.data} onOpen={openTopic} />
+      {failed}
+    </>
+  );
 }
 
 /** A topic the user asked to be built in this visit, and whether its job is done. */
