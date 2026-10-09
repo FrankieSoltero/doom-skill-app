@@ -26,19 +26,18 @@
  * While they load, or when they cannot be read, they count as none: a level above the root is then
  * locked unless it is the one on screen.
  */
-import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { requireApi } from '../api/query';
 import type { components } from '../api/schema';
 import { announce } from '../components/announce';
 import { copy } from '../copy';
 import { switchTo, useActiveTopic } from '../feed/useActiveTopic';
 import type { ChoiceOutcome } from '../data/levels';
 import { border, colors, space, type } from '../theme';
-import { ENROLLMENTS_KEY, useChoose } from './useChoose';
+import { useChoose } from './useChoose';
+import { enrollmentStatuses, useEnrollments } from './useEnrollments';
 
 type LevelSummary = components['schemas']['LevelSummary'];
 type EnrollmentStatus = components['schemas']['EnrollmentStatus'];
@@ -52,13 +51,6 @@ const MIN_TOUCH = 44;
 
 /** A dimmed chip, as a disabled button is (OutlineButton's 0.45). */
 const DIMMED = 0.45;
-
-/** The learner's enrollments, by topic slug. */
-async function fetchEnrollments(signal: AbortSignal): Promise<Map<string, EnrollmentStatus>> {
-  const { data } = await requireApi().GET('/me/enrollments', { signal });
-  if (data === undefined) throw new Error('The enrollments request gave no body');
-  return new Map(data.enrollments.map((e) => [e.topic_slug, e.status]));
-}
 
 type Context = {
   current: string;
@@ -231,12 +223,8 @@ type LevelsRowProps = {
 /** The row (see the module comment). */
 export function LevelsRow({ levels, current }: LevelsRowProps) {
   const { slug: active } = useActiveTopic();
-  const enrollments = useQuery({
-    queryKey: ENROLLMENTS_KEY,
-    queryFn: ({ signal }) => fetchEnrollments(signal),
-    staleTime: 0,
-  });
-  const ctx: Context = { current, active, enrolled: enrollments.data ?? new Map(), levels };
+  const enrolled = enrollmentStatuses(useEnrollments().data ?? []);
+  const ctx: Context = { current, active, enrolled, levels };
   const { choose, pending, error } = useChoose();
   const [said, setSaid] = useState<string | null>(null);
   // The pressed chip is gone, so the line a choice shows is announced (iOS has no live region).
