@@ -1,6 +1,8 @@
 // The Explore tab (app/(tabs)/explore.tsx), over the real API client and a fake network.
-import { fireEvent, screen } from '@testing-library/react-native';
+import { QueryClient } from '@tanstack/react-query';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
+import { RefreshControl } from 'react-native';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
 import {
@@ -11,7 +13,12 @@ import {
 } from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { colors } from '../../../src/theme';
-import { useFocusEffect as mockUseFocusEffect } from '../../../src/topics/testing/focus';
+import {
+  useFocusEffect as mockUseFocusEffect,
+  setFocused,
+} from '../../../src/topics/testing/focus';
+import { ENROLLMENTS_KEY } from '../../../src/topics/useChoose';
+import type { Enrollment } from '../../../src/topics/useEnrollments';
 import ExploreScreen from '../explore';
 
 jest.mock('react-native-safe-area-context', () => {
@@ -47,10 +54,24 @@ const RUST = topic('rust-ownership', 'Rust ownership', 'pending');
 const PROPOSED = topic('c-templates', 'C++ templates', 'proposed');
 const job = (status: string) =>
   json(200, { id: 'job-1', kind: 'k', progress: {}, reason: null, status });
+const PLAN = { status: 'active', daily_minutes: 15, horizon_days: 14, progress: 0.25 } as const;
+const enrollment = (topic_slug: string, level: number, last_studied_at: string): Enrollment => ({
+  ...PLAN,
+  topic_slug,
+  topic_title: topic_slug,
+  started_at: '2026-09-30T12:00:00Z',
+  level,
+  last_studied_at,
+});
+const OLDER = enrollment('strudel', 1, '2026-10-01T09:00:00Z');
+const NEWER = enrollment('sql', 2, '2026-10-08T09:00:00Z');
+const enrolled = (...list: Enrollment[]) => json(200, { enrollments: list });
+const IDLE = 'Search for a topic to learn.';
 
 beforeEach(() => {
   jest.useFakeTimers();
   jest.mocked(router.push).mockClear();
+  setFocused(true);
 });
 
 afterEach(() => {
@@ -59,7 +80,7 @@ afterEach(() => {
 });
 
 async function renderExplore(routes: Parameters<typeof serveApi>[0]) {
-  const requests = serveApi(routes);
+  const requests = serveApi({ 'GET /me/enrollments': [enrolled()], ...routes });
   await renderScreen(<ExploreScreen />);
   return requests;
 }
@@ -77,7 +98,7 @@ describe('Explore: idle and loading', () => {
     const field = screen.getByLabelText('Search topics');
     expect(field).toHaveProp('maxLength', 80);
     expect(field).toHaveProp('placeholder', 'Learn anything technical…');
-    expect(screen.getByText('Search for a topic to learn.')).toBeOnTheScreen();
+    expect(screen.getByText(IDLE)).toBeOnTheScreen();
     expect(viewStyleOf(screen.getByTestId('explore-screen'))).toMatchObject({
       paddingTop: SCREEN_TOP_INSET,
       backgroundColor: colors.paper,
@@ -99,7 +120,7 @@ describe('Explore: results', () => {
     });
     await search('s');
 
-    expect(requests.map((r) => r.query)).toStrictEqual(['?q=s']);
+    expect(requests.filter((r) => r.path === '/topics')).toMatchObject([{ query: '?q=s' }]);
     expect(screen.getByText('SQL window functions')).toBeOnTheScreen();
     expect(screen.getByText('Being built')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Open SQL window functions' })).toBeNull();
@@ -147,7 +168,7 @@ describe('Explore: results', () => {
 
     await pressRetry();
 
-    expect(requests).toHaveLength(2);
+    expect(requests.filter((r) => r.path === '/topics')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Open Strudel, Ready' })).toBeOnTheScreen();
   });
 });
@@ -226,5 +247,103 @@ describe('Explore: creating a topic', () => {
 
     expect(screen.getByText(line)).toBeOnTheScreen();
     expect(screen.queryByText('server text')).toBeNull();
+  });
+});
+
+// How many times the enrollments were read.
+const reads = (requests: { path: string }[]) =>
+  requests.filter((r) => r.path === '/me/enrollments').length;
+// The props of the list's pull-to-refresh control.
+const refresher = () =>
+  screen.UNSAFE_getByType(RefreshControl).props as { refreshing: boolean; onRefresh: () => void };
+
+describe('Explore: my topics', () => {
+  it('lists the learner’s topics above the idle line, most recent first; a row opens', async () => {
+    await renderExplore({ 'GET /me/enrollments': [enrolled(OLDER, NEWER)] });
+
+    expect(screen.getByRole('header', { name: 'My topics' })).toBeOnTheScreen();
+    const ids = screen.getAllByTestId(/^my-topic-[a-z]+$/).map((row) => row.props.testID as string);
+    expect(ids).toStrictEqual(['my-topic-sql', 'my-topic-strudel']);
+    const lines = screen.getAllByText(/^(My topics|Search for a topic to learn\.)$/);
+    expect(lines.map((line) => line.props.children as string)).toStrictEqual(['My topics', IDLE]);
+
+    fireEvent.press(screen.getByTestId('my-topic-strudel'));
+    expect(router.push).toHaveBeenCalledTimes(1);
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/topic/[slug]',
+      params: { slug: 'strudel' },
+    });
+  });
+
+  it.each([
+    { when: 'the learner has no topics', answer: enrolled() },
+    { when: 'the first read is in flight', answer: new Promise<Response>(() => undefined) },
+  ])('shows only the idle line when $when, with no heading or spinner', async ({ answer }) => {
+    await renderExplore({ 'GET /me/enrollments': [answer] });
+
+    expect(screen.getByText(IDLE)).toBeOnTheScreen();
+    expect(screen.queryByRole('header', { name: 'My topics' })).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByTestId('explore-my-topics-failed')).toBeNull();
+    expect(refresher().refreshing).toBe(false);
+  });
+
+  it('shows one fixed line over the idle state when the topics cannot be read', async () => {
+    await renderExplore({ 'GET /me/enrollments': [json(500, { detail: 'server text' })] });
+
+    const failed = "Couldn't load your topics.";
+    expect(screen.getByText(failed)).toHaveProp('testID', 'explore-my-topics-failed');
+    expect(screen.getByText(IDLE)).toBeOnTheScreen();
+    expect(screen.queryByText('server text')).toBeNull();
+    expect(screen.queryByTestId('explore-my-topics')).toBeNull();
+  });
+
+  it('hides the list while a search is typed; cleared, shows it again from the cache', async () => {
+    const requests = await renderExplore({
+      'GET /me/enrollments': [enrolled(OLDER, NEWER)],
+      'GET /topics': [json(200, { topics: [STRUDEL] })],
+    });
+    await search('str');
+    expect(screen.queryByTestId('explore-my-topics')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open Strudel, Ready' })).toBeOnTheScreen();
+
+    await search('');
+    expect(screen.getByTestId('explore-my-topics')).toBeOnTheScreen();
+    expect(reads(requests)).toBe(1);
+  });
+});
+
+describe('Explore: my topics, read again', () => {
+  it('reads them again each time the tab regains focus, but not on its first focus', async () => {
+    const invalidate = jest.spyOn(QueryClient.prototype, 'invalidateQueries');
+    const requests = await renderExplore({ 'GET /me/enrollments': [enrolled(OLDER)] });
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(reads(requests)).toBe(1);
+
+    act(() => {
+      setFocused(false);
+    });
+    act(() => {
+      setFocused(true);
+    });
+    await advance(0);
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ENROLLMENTS_KEY });
+    expect(reads(requests)).toBe(2);
+  });
+
+  it('reads them again on pull to refresh, refreshing while the read is in flight', async () => {
+    const later = Promise.withResolvers<Response>();
+    await renderExplore({ 'GET /me/enrollments': [enrolled(OLDER), later.promise] });
+    expect(refresher().refreshing).toBe(false);
+
+    fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    await advance(0);
+    expect(refresher().refreshing).toBe(true);
+
+    later.resolve(enrolled(OLDER, NEWER));
+    await advance(0);
+    expect(refresher().refreshing).toBe(false);
+    expect(screen.getByTestId('my-topic-sql')).toBeOnTheScreen();
   });
 });

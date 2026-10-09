@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '../../src/api/errors';
 import { LoadingState } from '../../src/components/LoadingState';
@@ -11,6 +12,9 @@ import { SearchField } from '../../src/components/SearchField';
 import { TabScreen } from '../../src/components/TabScreen';
 import { TopicRow } from '../../src/components/TopicRow';
 import { copy } from '../../src/copy';
+import { MyTopics } from '../../src/topics/MyTopics';
+import { ENROLLMENTS_KEY } from '../../src/topics/useChoose';
+import { useEnrollments } from '../../src/topics/useEnrollments';
 import {
   MAX_QUERY_LENGTH,
   useCreateTopic,
@@ -29,6 +33,34 @@ function createFailure(error: unknown): string {
   if (error instanceof ApiError && error.status === 422) return copy.explore.notAvailable;
   if (error instanceof ApiError && error.kind === 'rateLimited') return copy.explore.limit;
   return copy.explore.createFailed;
+}
+
+/**
+ * The learner's enrollments, read again each time the tab regains focus. The first focus (the
+ * mount) does not mark them stale: the first read covers it.
+ */
+function useEnrollmentsOnFocus() {
+  const cache = useQueryClient();
+  const focusedBefore = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedBefore.current) void cache.invalidateQueries({ queryKey: ENROLLMENTS_KEY });
+      focusedBefore.current = true;
+    }, [cache]),
+  );
+  return useEnrollments();
+}
+
+/** The learner's topics over the idle line, or one fixed line when they could not be read. */
+function Enrolled({ enrollments }: { enrollments: ReturnType<typeof useEnrollments> }) {
+  if (enrollments.isError) {
+    return (
+      <Text testID="explore-my-topics-failed" style={styles.line}>
+        {copy.explore.myTopicsFailed}
+      </Text>
+    );
+  }
+  return <MyTopics enrollments={enrollments.data ?? []} onOpen={openTopic} />;
 }
 
 /** A topic the user asked to be built in this visit, and whether its job is done. */
@@ -88,7 +120,8 @@ function Results({ search, creating, onCreate }: ResultsProps) {
  * state. A query with no match offers Create (`POST /topics`): a topic that exists opens; a new
  * one shows its building card, polled until its job is done, when the card opens the topic.
  * A refused request shows one fixed line ("Not available yet", the pending limit, or a failure).
- * Only a ready topic's row opens.
+ * Only a ready topic's row opens. Before anything is typed, the learner's topics show over the
+ * idle line; they are read again when the tab regains focus and on pull to refresh.
  */
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');
@@ -96,6 +129,7 @@ export default function ExploreScreen() {
   const [failure, setFailure] = useState<string | null>(null);
   const search = useTopics(query);
   const request = useCreateTopic();
+  const enrollments = useEnrollmentsOnFocus();
 
   const onCreate = async () => {
     setFailure(null);
@@ -120,7 +154,16 @@ export default function ExploreScreen() {
         label={copy.explore.searchLabel}
         maxLength={MAX_QUERY_LENGTH}
       />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={enrollments.isRefetching}
+            onRefresh={() => void enrollments.refetch()}
+          />
+        }
+      >
         {pending === null ? null : (
           <Pressable
             accessibilityRole="button"
@@ -146,6 +189,7 @@ export default function ExploreScreen() {
             <Text style={styles.line}>{failure}</Text>
           </View>
         )}
+        {search.status === 'idle' ? <Enrolled enrollments={enrollments} /> : null}
         <Results
           search={search}
           creating={request.status === 'loading'}
