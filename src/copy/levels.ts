@@ -26,4 +26,16 @@ export const levels = {
   locked: 'Finish the level below to unlock',
   /** The Q&A byline's level, after the author's name; shown only when n > 1. */
   byline: (n: number) => ` · Level ${String(n)}`,
+  /** The unlock card's heading when the next level is a choice of projects (`next` = `choose`; M21). */
+  choose: (n: number) => `Choose your Level ${String(n)} project`,
+  /** Shown while the projects are drafted (`choose` with no choices yet). */
+  drafting: (n: number) => `Drafting your Level ${String(n)} projects…`,
+  /** Shown when the projects did not arrive within the polls. */
+  choicesLater: (n: number) => `Pick your Level ${String(n)} project on the topic screen.`,
+  /** A 409 `Variant chosen`: the learner already chose another variant of this level. */
+  chosenOther: 'You picked another project for this level.',
+  /** One project choice: its title and style. */
+  choiceLine: (title: string, style: string) => `${title} · ${style}`,
+  /** The button that chooses a project. */
+  pick: 'Choose',
 };

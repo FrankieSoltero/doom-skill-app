@@ -21,9 +21,17 @@ jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 type Level = components['schemas']['LevelSummary'];
 type Status = Level['status'];
 
-const ROOT: Level = { slug: 'strudel', level: 1, status: 'ready', published: true };
-const TWO: Level = { slug: 'strudel-level-2', level: 2, status: 'ready', published: true };
-const THREE: Level = { slug: 'strudel-level-3', level: 3, status: 'ready', published: true };
+/** A level row's M11 fields: one variant, no project. */
+const ONE = { variant: 1, project: null };
+const ROOT: Level = { slug: 'strudel', level: 1, status: 'ready', published: true, ...ONE };
+const TWO: Level = { slug: 'strudel-level-2', level: 2, status: 'ready', published: true, ...ONE };
+const THREE: Level = {
+  slug: 'strudel-level-3',
+  level: 3,
+  status: 'ready',
+  published: true,
+  ...ONE,
+};
 
 const enrollment = (slug: string, status: string) => ({
   topic_slug: slug,

@@ -30,4 +30,13 @@ describe('copy.levels', () => {
     expect(copy.levels.locked).toBe('Finish the level below to unlock');
     expect(copy.levels.byline(2)).toBe(' · Level 2');
   });
+
+  it('writes the level-2 project choice (M11 plan Task 13; decision M21)', () => {
+    expect(copy.levels.choose(2)).toBe('Choose your Level 2 project');
+    expect(copy.levels.drafting(2)).toBe('Drafting your Level 2 projects…');
+    expect(copy.levels.choicesLater(2)).toBe('Pick your Level 2 project on the topic screen.');
+    expect(copy.levels.chosenOther).toBe('You picked another project for this level.');
+    expect(copy.levels.choiceLine('Drum machine', 'techno')).toBe('Drum machine · techno');
+    expect(copy.levels.pick).toBe('Choose');
+  });
 });

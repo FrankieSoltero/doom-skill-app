@@ -22,6 +22,7 @@ jest.mock('../../feed/useActiveTopic', () => ({ switchTo: jest.fn(() => Promise.
 const COMPLETED = 'Level 1 complete · +100 points';
 
 const outcome = (overrides: Partial<LevelOutcome> = {}): LevelOutcome => ({
+  choices: [],
   completed: true,
   level: 1,
   next: 'enrolled',

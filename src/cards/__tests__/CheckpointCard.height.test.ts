@@ -159,6 +159,7 @@ function fixedHeight(middle: number): number {
  */
 function unlock(): void {
   const level: LevelOutcome = {
+    choices: [],
     completed: true,
     level: 1,
     next: 'building',
