@@ -1,14 +1,19 @@
 // The unlock moment under a passed checkpoint (src/cards/LevelUnlock.tsx, M10 plan L, L17, L21):
 // the level finished and its points, then by `next` one line; for `enrolled`, the way into the
-// next level, which the checkpoint card's own button takes.
-import { act, render, screen } from '@testing-library/react-native';
+// next level, which the checkpoint card's own button takes. For `choose` (M11 plan Task 21,
+// decision M21): the level-2 projects to pick from, over the real API client and a fake network.
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { AccessibilityInfo, Text } from 'react-native';
 
+import { json, queryWrapper, serveApi, type Answer } from '../../api/testing/fakeApi';
+import { useSession } from '../../auth/useSession';
+import { advance } from '../../components/testing/screen';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import { switchTo } from '../../feed/useActiveTopic';
 import type { LevelOutcome } from '../../feed/useCheckpointResult';
 import {
+  CHOICE_ROW_HEIGHT,
   continueTarget,
   continueTo,
   LEVEL_UNLOCK_HEIGHT,
@@ -18,6 +23,7 @@ import {
 
 jest.mock('expo-router', () => ({ router: { dismissTo: jest.fn() } }));
 jest.mock('../../feed/useActiveTopic', () => ({ switchTo: jest.fn(() => Promise.resolve()) }));
+jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 const COMPLETED = 'Level 1 complete · +100 points';
 
@@ -44,6 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 describe('LevelUnlock', () => {
@@ -149,5 +156,152 @@ describe('LevelUnlock: announced and measured', () => {
     expect(lines).toBe(2);
     expect(line + gap + lines * Number(textStyleOf(next).lineHeight)).toBe(LEVEL_UNLOCK_HEIGHT);
     expect(LEVEL_UNLOCK_HEIGHT).toBeCloseTo(60.4, 5);
+  });
+});
+
+const CHOICES = [
+  {
+    slug: 'strudel-level-2-1',
+    title: 'Drum machine',
+    style: 'techno',
+    brief: 'A kit, step by step.',
+  },
+  { slug: 'strudel-level-2-2', title: 'Ambient pad', style: 'ambient', brief: 'A slow drone.' },
+  { slug: 'strudel-level-2-3', title: 'Break remix', style: 'jungle', brief: 'Chop a break.' },
+];
+const ROUTE = 'POST /topics/strudel-level-2-2/choose';
+const choosing = (overrides: Partial<LevelOutcome> = {}) =>
+  outcome({ next: 'choose', next_slug: null, choices: CHOICES, ...overrides });
+
+/** Fake timers and a signed-in learner, for the choice's cases. */
+function signIn(): void {
+  jest.useFakeTimers();
+  useSession.setState({ status: 'signedIn', userId: 'user-1' });
+}
+
+/** Draws the unlock for `level` in a query cache, the choice answering `answer`. */
+function renderChoice(level: LevelOutcome, answer: Answer, choicesLater = false) {
+  const requests = serveApi({ [ROUTE]: [answer] });
+  const { wrapper: Cache } = queryWrapper();
+  render(
+    <Cache>
+      <LevelUnlock outcome={level} choicesLater={choicesLater} />
+    </Cache>,
+  );
+  return requests;
+}
+
+/** Presses the second project and lets the choice answer. */
+async function pickSecond() {
+  fireEvent.press(screen.getByRole('button', { name: 'Ambient pad · ambient' }));
+  await advance(0);
+}
+
+describe('LevelUnlock: the level-2 projects (M11 plan Task 21; decision M21)', () => {
+  beforeEach(signIn);
+
+  it('heads the projects and draws one row each: its title and style, its brief on one line', () => {
+    renderChoice(choosing(), json(200, { next: 'building', slug: 'strudel-level-2-2' }));
+
+    expect(texts().slice(0, 4)).toStrictEqual([
+      COMPLETED,
+      'Choose your Level 2 project',
+      'Drum machine · techno',
+      'A kit, step by step.',
+    ]);
+    const rows = screen.getAllByRole('button');
+    expect(rows.map((row) => row.props.accessibilityLabel as string)).toStrictEqual([
+      'Drum machine · techno',
+      'Ambient pad · ambient',
+      'Break remix · jungle',
+    ]);
+    expect(screen.getByText('A slow drone.').props.numberOfLines).toBe(1);
+    for (const row of rows) {
+      expect(viewStyleOf(row).height).toBe(CHOICE_ROW_HEIGHT);
+      expect(CHOICE_ROW_HEIGHT).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('no projects yet: they are being drafted, then, after the asks, picked later', () => {
+    const drafting = choosing({ choices: [] });
+    renderChoice(drafting, json(200, {}));
+    expect(texts()).toStrictEqual([COMPLETED, 'Drafting your Level 2 projects…']);
+
+    renderChoice(drafting, json(200, {}), true);
+    expect(texts()).toStrictEqual([COMPLETED, 'Pick your Level 2 project on the topic screen.']);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('is at most LEVEL_UNLOCK_HEIGHT and three rows tall with three projects', () => {
+    renderChoice(choosing(), json(200, {}));
+    const line = Number(textStyleOf(screen.getByText(COMPLETED)).lineHeight);
+    const gap = Number(viewStyleOf(screen.getByTestId('level-unlock')).gap);
+    const prompt = screen.getByText('Choose your Level 2 project');
+    const rows = screen
+      .getAllByRole('button')
+      .reduce((sum, row) => sum + Number(viewStyleOf(row).height), 0);
+    const drawn = line + gap + Number(prompt.props.numberOfLines) * line + gap + rows;
+
+    expect(prompt.props.numberOfLines).toBe(1);
+    expect(screen.getByTestId('choice-rows').props.style).toBeUndefined();
+    expect(drawn).toBeCloseTo(200.8, 5);
+    expect(drawn).toBeLessThanOrEqual(LEVEL_UNLOCK_HEIGHT + 3 * CHOICE_ROW_HEIGHT);
+  });
+});
+
+describe('LevelUnlock: choosing a project (M11 plan Task 21; decision M21)', () => {
+  beforeEach(signIn);
+
+  it.each([
+    ['building', "Level 2 is being built — you'll be the first in."],
+    ['waiting', 'Level 2 is nearly ready.'],
+    ['failed', "Level 2 couldn't be built."],
+  ] as const)(
+    'a press chooses the project; %s: its line in place of the rows',
+    async (next, line) => {
+      const requests = renderChoice(choosing(), json(200, { next, slug: 'strudel-level-2-2' }));
+
+      await pickSecond();
+
+      expect(requests.map((r) => `${r.method} ${r.path}`)).toStrictEqual([ROUTE]);
+      expect(texts()).toStrictEqual([COMPLETED, line]);
+      expect(screen.queryByRole('button')).toBeNull();
+    },
+  );
+
+  it('enrolled: the way into the chosen level, which continues to it', async () => {
+    renderChoice(choosing(), json(200, { next: 'enrolled', slug: 'strudel-level-2-2' }));
+    await pickSecond();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Continue to Level 2' }));
+
+    expect(switchTo).toHaveBeenCalledWith('strudel-level-2-2');
+    expect(router.dismissTo).toHaveBeenCalledWith('/');
+  });
+
+  it('a 409 (another project chosen): says so in place of the rows', async () => {
+    renderChoice(choosing(), json(409, { detail: 'Variant chosen' }));
+
+    await pickSecond();
+
+    expect(texts()).toStrictEqual([COMPLETED, 'You picked another project for this level.']);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('a failed choice: says so in place of the heading and keeps the rows to try again', async () => {
+    renderChoice(choosing(), json(503, { detail: 'Service unavailable' }));
+
+    await pickSecond();
+
+    expect(texts().slice(0, 2)).toStrictEqual([COMPLETED, "Couldn't start this topic. Try again."]);
+    expect(screen.getAllByRole('button')).toHaveLength(3);
+  });
+
+  it('greys the rows while a choice is in flight', async () => {
+    renderChoice(choosing(), new Promise<Response>(() => undefined));
+
+    await pickSecond();
+
+    for (const row of screen.getAllByRole('button')) expect(row).toBeDisabled();
   });
 });

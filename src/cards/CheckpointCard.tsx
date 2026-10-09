@@ -160,18 +160,22 @@ function buttonState(
  * The score line and the feedback of a grade, README.md:139, in a polite live region that is
  * always there, so Android reads the grade when it appears. Nothing is drawn in it before a grade.
  * A written answer once `sent` has no grade; the region says it was sent instead, until a level
- * is `unlocked`: the server's grade has come, and the unlock takes the line's room (L21).
+ * is `unlocked`: the server's grade has come, and the unlock takes the line's room (L21). While
+ * the unlock lists level-2 projects (`offering`, M11 plan decision M38), the score line and the
+ * feedback give it their room too.
  */
 function CheckpointResult({
   grade,
   card,
   sent,
   unlocked,
+  offering,
 }: {
   grade: CheckpointGrade | null;
   card: CheckpointCardData;
   sent: boolean;
   unlocked: boolean;
+  offering: boolean;
 }) {
   const color = useCardTextColor();
   return (
@@ -181,7 +185,7 @@ function CheckpointResult({
           {copy.sentForGrading}
         </Text>
       ) : null}
-      {grade === null ? null : (
+      {grade === null || offering ? null : (
         <>
           <Text testID="checkpoint-score" style={[styles.score, { color }]}>
             {scoreLine(grade)}
@@ -214,9 +218,20 @@ function finisher(target: ContinueTarget | null, onNext: () => void): () => void
       };
 }
 
+/** Whether the unlock of `level` lists the level-2 projects to choose from (M11 plan M21). */
+function offersProjects(level: LevelOutcome | null): boolean {
+  return level?.next === 'choose' && level.choices.length > 0;
+}
+
 /** The unlock moment for a completed `level`; nothing for none. */
-function CompletedLevel({ level }: { level: LevelOutcome | null }) {
-  return level === null ? null : <LevelUnlock outcome={level} />;
+function CompletedLevel({
+  level,
+  choicesLater,
+}: {
+  level: LevelOutcome | null;
+  choicesLater: boolean;
+}) {
+  return level === null ? null : <LevelUnlock outcome={level} choicesLater={choicesLater} />;
 }
 
 /**
@@ -312,7 +327,8 @@ type CheckpointCardProps = {
  * (`LevelUnlock`) shows under the server's grade: the points, then a line about the next level.
  * It takes the room of what the grade made stale: the rubric (a code card) or the sent line (a
  * written card). When the learner is in the next level, the one button reads Continue to Level n
- * in place of Finish today (or Resubmit) and opens it in the Today feed.
+ * in place of Finish today (or Resubmit) and opens it in the Today feed. With the level-2 projects
+ * shown (M11 plan decision M38), the card hides the score line, the feedback and the criteria.
  */
 export function CheckpointCard({ card, index, active, onNext }: CheckpointCardProps) {
   const server = useCheckpointResult(card.id, active);
@@ -345,9 +361,10 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
           card={card}
           sent={status === 'sent'}
           unlocked={level !== null}
+          offering={offersProjects(level)}
         />
         <CheckpointFeedback result={server.result} localPassed={grade?.passed ?? null} />
-        <CompletedLevel level={level} />
+        <CompletedLevel level={level} choicesLater={server.choicesLater} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
         <PrimaryButton
           label={button.label}

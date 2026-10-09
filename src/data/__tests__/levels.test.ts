@@ -1,8 +1,16 @@
 // The level strings (src/copy/levels.ts, M10 plan L Task 13; decisions L16, L17), read through
 // `copy`: the badge, Explore's range, the unlock moment's lines by `next`, the locked hint and the
 // Q&A byline. `TopicDetail` and `CheckpointGrade` are read through the generated types, so their
-// level fields need no parse here; the author's level is parsed in qa.test.ts.
+// level fields need no parse here; the author's level is parsed in qa.test.ts. Then the choice of a
+// level-2 project (src/data/levels.ts), through the real API client over a fake network.
+import { ApiError } from '../../api/errors';
 import { copy } from '../../copy';
+import { logWarning } from '../../log';
+import { FeedActionError } from '../feedActions';
+import { chooseLevel } from '../levels';
+import { json, network } from '../testing/network';
+
+jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 describe('copy.levels', () => {
   it('is frozen with the rest of copy', () => {
@@ -38,5 +46,35 @@ describe('copy.levels', () => {
     expect(copy.levels.chosenOther).toBe('You picked another project for this level.');
     expect(copy.levels.choiceLine('Drum machine', 'techno')).toBe('Drum machine · techno');
     expect(copy.levels.pick).toBe('Choose');
+  });
+});
+
+describe('chooseLevel (M11 plan Task 21; decision M21)', () => {
+  it('posts the choice and reads the answer back', async () => {
+    const { api, requests, sent } = network(
+      json(200, { next: 'building', slug: 'strudel-level-2-1' }),
+    );
+
+    const answer = await chooseLevel(api, 'strudel-level-2-1');
+
+    expect(answer).toStrictEqual({ next: 'building', slug: 'strudel-level-2-1' });
+    expect(requests).toStrictEqual(['/topics/strudel-level-2-1/choose']);
+    expect(sent[0]?.method).toBe('POST');
+  });
+
+  it('rejects an answer the schema refuses, logging only its paths', async () => {
+    const { api } = network(json(200, { next: 'later', slug: 'strudel-level-2-1' }));
+
+    await expect(chooseLevel(api, 'strudel-level-2-1')).rejects.toBeInstanceOf(FeedActionError);
+    expect(logWarning).toHaveBeenCalledWith('choice_invalid', { paths: 'next' });
+  });
+
+  it("rejects a refused choice with the client's ApiError", async () => {
+    const { api } = network(json(409, { detail: 'Variant chosen' }));
+
+    const refused = chooseLevel(api, 'strudel-level-2-2');
+
+    await expect(refused).rejects.toBeInstanceOf(ApiError);
+    await expect(refused).rejects.toMatchObject({ status: 409 });
   });
 });

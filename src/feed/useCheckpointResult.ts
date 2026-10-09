@@ -21,11 +21,18 @@
  *   a grade and for a grade without one. A grade whose level is `completed` marks stale, once, the
  *   cached server state that finishing a level changes: the profile (its points), the topics list,
  *   the leaderboards, the finished topic (the active one) and the next level's topic.
+ * - A completed level whose next level is a choice of projects (`next` = `choose`, M11 plan
+ *   decision M21) may come before the projects are drafted (`choices` empty). The grade is then
+ *   asked again every 2 s, at most 15 times (`CHOICE_POLL_MS`, `CHOICE_POLLS`), while the card is
+ *   on the screen; a grade with the projects replaces the shown one (and marks the cached state
+ *   stale again: the projects' level rows now exist). After the 15th ask without them,
+ *   `choicesLater` is true: the learner picks a project on the topic screen. A submit or `reset`
+ *   stops the asking and clears `choicesLater`.
  *
  * The result holds the server's grade as the API sent it; a failure keeps only its kind for the
  * log, never the server's text.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 import { newUuid } from '../api/client';
 import { ApiError } from '../api/errors';
@@ -55,6 +62,10 @@ const POLL_MS = 3000;
 const MAX_WAIT_MS = 120_000;
 /** The server stores at most this many characters of code; more is refused. */
 const MAX_CODE_CHARACTERS = 5000;
+/** Between two asks for the projects of a level (see the module comment). */
+export const CHOICE_POLL_MS = 2000;
+/** The most asks for the projects of a level, then they are picked on the topic screen. */
+export const CHOICE_POLLS = 15;
 /** The poll failures worth asking again: no answer, or the server down for now. */
 const TRANSIENT: ReadonlySet<string> = new Set(['offline', 'timeout', 'unavailable']);
 
@@ -63,6 +74,17 @@ const PENDING: ServerResult = { status: 'pending' };
 const UNAVAILABLE: ServerResult = { status: 'unavailable' };
 
 type Submission = { id: string; deadline: number };
+
+/** The level `result` completed, when its grade has one. */
+function levelOf(result: ServerResult): LevelOutcome | null {
+  return result.status === 'graded' ? (result.grade.level ?? null) : null;
+}
+
+/** Whether `result` completed a level whose projects are not drafted yet. */
+function awaitsChoices(result: ServerResult): boolean {
+  const level = levelOf(result);
+  return level?.completed === true && level.next === 'choose' && level.choices.length === 0;
+}
 
 /** `code` cut to 5,000 characters, counted as the server counts them. */
 function cut(code: string): string {
@@ -102,12 +124,13 @@ async function poll(id: string, signal: AbortSignal): Promise<ServerResult | nul
 
 /**
  * Polls `submission` every 3 s while `active`, until a result or its deadline, then hands the
- * result to `finish`. Everything it started stops when the effect is cleaned up.
+ * result and the submission's id to `finish`. Everything it started stops when the effect is
+ * cleaned up.
  */
 function usePolling(
   submission: Submission | null,
   active: boolean,
-  finish: (result: ServerResult) => void,
+  finish: (result: ServerResult, id: string) => void,
 ): void {
   useEffect(() => {
     if (submission === null || !active) return undefined;
@@ -116,7 +139,7 @@ function usePolling(
     const tick = async () => {
       timer = null;
       if (Date.now() >= submission.deadline) {
-        finish(UNAVAILABLE);
+        finish(UNAVAILABLE, submission.id);
         return;
       }
       const result = await poll(submission.id, controller.signal);
@@ -124,7 +147,7 @@ function usePolling(
       if (result === null) {
         timer = setTimeout(() => void tick(), POLL_MS);
       } else {
-        finish(result);
+        finish(result, submission.id);
       }
     };
     timer = setTimeout(() => void tick(), POLL_MS);
@@ -133,6 +156,39 @@ function usePolling(
       if (timer !== null) clearTimeout(timer);
     };
   }, [submission, active, finish]);
+}
+
+/**
+ * Asks for the grade of `drafting` (a submission's id) every 2 s while `active`, counting the asks
+ * in `asked`, which outlives a pause: a grade with the projects goes to `offer`; after the last ask
+ * without them, `later` is called. Everything it started stops when the effect is cleaned up.
+ */
+function useChoicePolling(
+  drafting: string | null,
+  active: boolean,
+  asked: RefObject<number>,
+  done: { offer: (result: ServerResult) => void; later: () => void },
+): void {
+  const { offer, later } = done;
+  useEffect(() => {
+    if (drafting === null || !active) return undefined;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tick = async () => {
+      timer = null;
+      const result = await poll(drafting, controller.signal);
+      if (controller.signal.aborted) return;
+      asked.current += 1;
+      if (result !== null && (levelOf(result)?.choices.length ?? 0) > 0) offer(result);
+      else if (asked.current >= CHOICE_POLLS) later();
+      else timer = setTimeout(() => void tick(), CHOICE_POLL_MS);
+    };
+    timer = setTimeout(() => void tick(), CHOICE_POLL_MS);
+    return () => {
+      controller.abort();
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [drafting, active, asked, offer, later]);
 }
 
 /** Marks stale the cached server state a completed `level` changes (see the module comment). */
@@ -146,6 +202,10 @@ function refreshAfterLevel(level: LevelOutcome): void {
 export function useCheckpointResult(milestoneId: string | undefined, active: boolean) {
   const [result, setResult] = useState<ServerResult>(NONE);
   const [submission, setSubmission] = useState<Submission | null>(null);
+  // The submission whose projects are being drafted, and how many times they were asked for.
+  const [drafting, setDrafting] = useState<string | null>(null);
+  const asked = useRef(0);
+  const [choicesLater, setChoicesLater] = useState(false);
   // Raised by every submit, reset and the unmount: an answer for an older value is dropped.
   const generation = useRef(0);
 
@@ -158,9 +218,29 @@ export function useCheckpointResult(milestoneId: string | undefined, active: boo
 
   const finish = useCallback((next: ServerResult) => {
     setSubmission(null);
+    setDrafting(null);
+    setChoicesLater(false);
     setResult(next);
   }, []);
-  usePolling(submission, active, finish);
+  const graded = useCallback(
+    (next: ServerResult, id: string) => {
+      finish(next);
+      if (!awaitsChoices(next)) return;
+      asked.current = 0;
+      setDrafting(id);
+    },
+    [finish],
+  );
+  usePolling(submission, active, graded);
+  const offer = useCallback((offered: ServerResult) => {
+    setDrafting(null);
+    setResult(offered);
+  }, []);
+  const later = useCallback(() => {
+    setDrafting(null);
+    setChoicesLater(true);
+  }, []);
+  useChoicePolling(drafting, active, asked, { offer, later });
 
   const reset = useCallback(() => {
     generation.current += 1;
@@ -188,10 +268,10 @@ export function useCheckpointResult(milestoneId: string | undefined, active: boo
     [milestoneId, finish],
   );
 
-  const level = result.status === 'graded' ? (result.grade.level ?? null) : null;
+  const level = levelOf(result);
   useEffect(() => {
     if (level?.completed === true) refreshAfterLevel(level);
   }, [level]);
 
-  return { result, submit, reset, level };
+  return { result, submit, reset, level, choicesLater };
 }

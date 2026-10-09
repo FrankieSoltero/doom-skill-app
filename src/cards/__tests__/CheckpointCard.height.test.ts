@@ -17,11 +17,16 @@
 // the grade made stale: a code card hides its rubric (the score line and feedback stay), a written
 // card its sent line. The card keeps one button (Continue replaces Finish today when the learner
 // is enrolled in the next level), so both kinds fit with the unlock at its tallest.
+// A pass that offers the level-2 projects (`next` = `choose`, M11 plan Task 21, decision M21) draws
+// them in the unlock: the heading, `choose(n)` on one line and three rows of `CHOICE_ROW_HEIGHT`.
+// Only a code root has projects, so the case is the code card's. With the projects shown, the card
+// hides the score line and the feedback as well as the criteria (decision M38): 522.0 points.
 import { render, screen, within } from '@testing-library/react-native';
 import { BookOpen } from 'lucide-react-native';
 import { createElement, Fragment } from 'react';
 import { TextInput } from 'react-native';
 
+import { queryWrapper } from '../../api/testing/fakeApi';
 import { BUTTON_HEIGHT } from '../../components/PrimaryButton';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
@@ -32,7 +37,7 @@ import { useCheckpointResult } from '../../feed/useCheckpointResult';
 import type { LevelOutcome } from '../../feed/useCheckpointResult';
 import { type } from '../../theme';
 import { CheckpointCard } from '../CheckpointCard';
-import { LEVEL_UNLOCK_HEIGHT } from '../LevelUnlock';
+import { CHOICE_ROW_HEIGHT, LEVEL_UNLOCK_HEIGHT } from '../LevelUnlock';
 import { SourcesButton } from '../SourcesButton';
 import { setUpCheckpointCardTests } from '../testing/checkpointCards';
 
@@ -89,7 +94,7 @@ const sent: CardAnswer = { kind: 'checkpoint', code: ANSWER, status: 'sent', gra
  * Draws `card` at page 0 over `answer`, with the Sources action beside it to read the icon size
  * the kicker row of a card from the API holds (the flag's icon is the same size).
  */
-function renderAt(card: CheckpointCardData, answer: CardAnswer): void {
+function renderAt(card: CheckpointCardData, answer: CardAnswer, cached = false): void {
   useFeedStore.setState({ answers: { 0: answer } });
   const drawn = createElement(CheckpointCard, {
     card,
@@ -97,7 +102,9 @@ function renderAt(card: CheckpointCardData, answer: CardAnswer): void {
     active: false,
     onNext: jest.fn(),
   });
-  render(createElement(Fragment, null, createElement(SourcesButton), drawn));
+  const parts = createElement(Fragment, null, createElement(SourcesButton), drawn);
+  // The projects' rows choose through the server-state cache (useChoose).
+  render(cached ? createElement(queryWrapper().wrapper, null, parts) : parts);
 }
 
 /** The line height of the text with test ID `id`. */
@@ -157,7 +164,7 @@ function fixedHeight(middle: number): number {
  * Gives the card, until the case ends, a graded pass that completed level 1 with level 2 being
  * built: the unlock at its tallest (a heading and two lines), Finish today kept.
  */
-function unlock(): void {
+function unlock(overrides: Partial<LevelOutcome> = {}): void {
   const level: LevelOutcome = {
     choices: [],
     completed: true,
@@ -165,6 +172,7 @@ function unlock(): void {
     next: 'building',
     next_slug: null,
     points: 100,
+    ...overrides,
   };
   const graded = { passed: true, score: 1, feedback: null, criteria: null };
   jest.mocked(useCheckpointResult).mockReturnValue({
@@ -172,8 +180,17 @@ function unlock(): void {
     submit: jest.fn(),
     reset: jest.fn(),
     level,
+    choicesLater: false,
   });
 }
+
+/** Three projects at the limits a brief's `title` (60) and `style` (40) allow. */
+const CHOICES = [1, 2, 3].map((n) => ({
+  slug: `strudel-level-2-${String(n)}`,
+  title: `Project ${String(n)} `.padEnd(60, 'x'),
+  style: 'techno'.padEnd(40, 'x'),
+  brief: 'A brief. '.repeat(33),
+}));
 
 /** The parts of an unlocked card, its task aside: the unlock under the server's grade. */
 const UNLOCKED = [
@@ -247,6 +264,31 @@ describe('the checkpoint card height budget', () => {
 
     expect(drawnParts()).toStrictEqual(UNLOCKED);
     expect(sum).toBeCloseTo(CODE_UNLOCKED_SUM, 5);
+    expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
+  });
+
+  it('a code card offering three projects after a failing grade, at its limits: 522.0 points', () => {
+    unlock({ next: 'choose', choices: CHOICES });
+    const grade = gradeCheckpoint(ONE, demo());
+    const done: CardAnswer = { kind: 'checkpoint', code: ONE, status: 'done', grade };
+    renderAt({ ...demo(), task: TASK }, done, true);
+    const unlocked = screen.getByTestId('level-unlock');
+    const gap = Number(viewStyleOf(unlocked).gap);
+    const small = type.small.lineHeight;
+    const rows = within(unlocked).getAllByRole('button');
+    const drawn = small + gap + small + gap + rows.length * CHOICE_ROW_HEIGHT;
+
+    // The result region stays (a live region) and draws nothing: no score line, no feedback.
+    const sum = fixedHeight(drawn);
+
+    expect(drawnParts()).toStrictEqual(UNLOCKED);
+    expect(screen.queryByTestId('checkpoint-score')).toBeNull();
+    expect(screen.queryByTestId('checkpoint-feedback')).toBeNull();
+    expect(screen.queryByTestId('rubric-list')).toBeNull();
+    expect(rows).toHaveLength(3);
+    expect(drawn).toBeCloseTo(200.8, 5);
+    expect(drawn).toBeLessThanOrEqual(LEVEL_UNLOCK_HEIGHT + 3 * CHOICE_ROW_HEIGHT);
+    expect(sum).toBeCloseTo(522.0, 5);
     expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
   });
 
