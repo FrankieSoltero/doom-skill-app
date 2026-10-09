@@ -4,6 +4,8 @@
  * through `copy`, not from here.
  */
 
+import { levels } from './levels';
+
 /** A topic outside the registry whose sources a person has not approved yet (status `proposed`). */
 const WAITING_FOR_APPROVAL = 'Waiting for approval';
 
@@ -37,6 +39,19 @@ export const explore = {
   failed: 'Failed to build',
   /** Spoken label of a topic row that opens the topic. */
   openTopic: (title: string) => `Open ${title}`,
+  /** The heading over the learner's enrollments, shown before anything is typed. */
+  myTopics: 'My topics',
+  /** Spoken label of the tick on a completed enrollment's row. */
+  completed: 'Done',
+  /** The tick drawn on a completed enrollment's row in place of its percent. */
+  tick: '✓',
+  /** The enrollments could not be read; the idle state shows under it. */
+  myTopicsFailed: "Couldn't load your topics.",
+  /** An enrollment's progress as a whole percent. */
+  progress: (pct: number) => `${String(pct)}%`,
+  /** An enrollment's row as a screen reader hears it: its title, level and percent or `completed`. */
+  rowLabel: (title: string, level: number, state: string) =>
+    `${title}, ${levels.badge(level)}, ${state}`,
 } as const;
 
 /** The pending topic card (src/components/PendingTopic.tsx), README.md:163. */
