@@ -159,6 +159,17 @@ describe('Tree: the active topic', () => {
     expect(viewStyleOf(within(section).getByTestId('points-rest')).flex).toBe(0);
   });
 
+  it('draws an empty bar for a section with no target yet, whatever it earned', async () => {
+    const [first, second] = TREE.milestones;
+    const milestones = [{ ...first, earned: 40, target: 0 }, second];
+    await renderTree({ 'GET /topics/strudel/tree': [json(200, { ...TREE, milestones })] });
+
+    const section = screen.getByRole('progressbar', { name: '40 / 0 points' });
+    expect(section.props.accessibilityValue).toStrictEqual({ min: 0, max: 100, now: 0 });
+    expect(viewStyleOf(within(section).getByTestId('points-fill')).flex).toBe(0);
+    expect(viewStyleOf(within(section).getByTestId('points-rest')).flex).toBe(100);
+  });
+
   it('says a topic with no nodes has no skills yet', async () => {
     await renderTree({ 'GET /topics/strudel/tree': [json(200, { ...TREE, nodes: [] })] });
 

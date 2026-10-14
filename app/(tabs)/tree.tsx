@@ -60,10 +60,11 @@ function sectionsOf(tree: Tree): Section[] {
 /**
  * Earned over target points as a bar filled in `color` to `earned / target` and the line
  * "12 / 100 points", read to a screen reader as a progress bar labelled by the line. A section
- * at its target reads as complete; a target of 0 draws an empty bar.
+ * at its target reads as complete; a target of 0 (none computed yet) draws an empty bar, at 0,
+ * whatever was earned.
  */
 function PointsBar({ points, color, height }: { points: Points; color: string; height: number }) {
-  const percent = wholePercent(points.earned / points.target);
+  const percent = points.target > 0 ? wholePercent(points.earned / points.target) : 0;
   const line = copy.tree.sectionPoints(points.earned, points.target);
   return (
     <View
