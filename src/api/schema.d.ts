@@ -522,6 +522,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Topics
+         * @description At most 8 catalog topics for `q` (trimmed, 1 to 80 characters), best first.
+         */
+        get: operations["suggest_topics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}": {
         parameters: {
             query?: never;
@@ -1248,6 +1268,8 @@ export interface components {
             reason: components["schemas"]["FlagReason"];
         };
         Fraction: number;
+        /** @enum {string} */
+        Group: "code" | "prose" | "quantitative";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1919,6 +1941,32 @@ export interface components {
         SubmissionStatus: "pending" | "graded" | "failed";
         SubmittedCode: string;
         /**
+         * Suggestion
+         * @description A catalog topic for what the user typed; `built_slug` is the topic made from it, if any
+         *     learner may open it.
+         */
+        Suggestion: {
+            /** Built Slug */
+            built_slug: string | null;
+            group: components["schemas"]["Group"];
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Rank */
+            rank: number;
+        };
+        /**
+         * SuggestionList
+         * @description `GET /topics/suggest`: at most 8 catalog topics, best first.
+         */
+        SuggestionList: {
+            /** Suggestions */
+            suggestions: components["schemas"]["Suggestion"][];
+        };
+        /**
          * Summary
          * @description What the set would do if every card were answered correctly (K12's projected summary), in
          *     `FeedSet`; what its recorded attempts did, in `GET /feed/summary` (M3 plan, Task 11).
@@ -1985,9 +2033,12 @@ export interface components {
         };
         /**
          * TopicRequest
-         * @description `POST /topics`: what the user typed, to be matched against the registry.
+         * @description `POST /topics`: what the user typed, to be matched against the registry; or a catalog
+         *     entry's key, whose label is the topic's title (the query is then not read).
          */
         TopicRequest: {
+            /** Catalog Key */
+            catalog_key?: string | null;
             query: components["schemas"]["QueryText"];
         };
         /** @enum {string} */
@@ -3841,6 +3892,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Topic not supported, or a request of the wrong shape */
             422: {
                 headers: {
@@ -3859,6 +3919,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    suggest_topics: {
+        parameters: {
+            query: {
+                q: components["schemas"]["QueryText"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionList"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service unavailable */
