@@ -336,8 +336,11 @@ export const copy = deepFreeze({
   /** The Summary title, README.md:146: two sentences, the cards, then the minutes. */
   summaryTitle: (cards: string, minutes: string) => `${cards}. ${minutes}.`,
   summary: {
-    /** The line under the Summary title: the points the set's attempts earned (M10 plan P). */
-    points: (n: number) => `+${String(n)} points`,
+    /** The Summary's points tile: the points the set's attempts earned (section points). */
+    pointsGained: (n: number) => `+${String(n)} points`,
+    /** Under it, the section of the set's last card: "Rhythm basics: 12 / 100 points". */
+    sectionPoints: (title: string, earned: number, target: number) =>
+      `${title}: ${String(earned)} / ${String(target)} points`,
   },
   /** The label of the Summary's streak tile, README.md:148. */
   dayStreak: 'day streak',
@@ -420,7 +423,12 @@ export const copy = deepFreeze({
   explore,
   pendingTopic,
   topic,
-  tree,
+  tree: {
+    ...tree,
+    /** A section's points, and the topic's (the sum of its sections): "12 / 100 points". */
+    sectionPoints: (earned: number, target: number) =>
+      `${String(earned)} / ${String(target)} points`,
+  },
   leaderboard,
   levels,
   profile,

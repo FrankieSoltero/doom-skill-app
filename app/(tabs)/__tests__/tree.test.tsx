@@ -42,8 +42,8 @@ const TREE = {
     end_state: 'Write a 16-bar layered piece from a blank editor.',
   },
   milestones: [
-    { id: 'm1', position: 1, title: 'First sounds' },
-    { id: 'm2', position: 2, title: 'Mini-notation' },
+    { id: 'm1', position: 1, title: 'First sounds', earned: 12, target: 100 },
+    { id: 'm2', position: 2, title: 'Mini-notation', earned: 0, target: 280 },
   ],
   nodes: [
     node('The REPL', 'm1', 1),
@@ -110,7 +110,7 @@ describe('Tree: the active topic', () => {
     expect(screen.getByText('Skill tree')).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Strudel' })).toBeOnTheScreen();
     expect(screen.getByText(TREE.topic.end_state)).toBeOnTheScreen();
-    expect(screen.getByText('34%')).toBeOnTheScreen();
+    expect(screen.getByRole('progressbar', { name: '12 / 380 points' })).toBeOnTheScreen();
     const sections = screen.getAllByTestId('milestone-section').map((section) => within(section));
     expect(sections).toHaveLength(3);
     const [first, second, other] = sections;
@@ -120,6 +120,43 @@ describe('Tree: the active topic', () => {
     expect(second?.getByLabelText('Euclid, locked')).toBeOnTheScreen();
     expect(other?.getByRole('header', { name: 'Other skills' })).toBeOnTheScreen();
     expect(other?.getByLabelText('Tempo, 0% mastered')).toBeOnTheScreen();
+  });
+
+  it("draws each section's earned over target points as a line and a bar", async () => {
+    await renderTree({ 'GET /topics/strudel/tree': [json(200, TREE)] });
+
+    const first = screen.getByRole('progressbar', { name: '12 / 100 points' });
+    expect(within(first).getByText('12 / 100 points')).toBeOnTheScreen();
+    expect(first.props.accessibilityValue).toStrictEqual({ min: 0, max: 100, now: 12 });
+    expect(viewStyleOf(within(first).getByTestId('points-fill')).flex).toBe(12);
+    const second = screen.getByRole('progressbar', { name: '0 / 280 points' });
+    expect(viewStyleOf(within(second).getByTestId('points-fill')).flex).toBe(0);
+    // Other skills belongs to no milestone: it has no points of its own.
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3);
+  });
+
+  it("draws the topic's bar as the sum of its sections: 12 / 380 is 3%", async () => {
+    await renderTree({ 'GET /topics/strudel/tree': [json(200, TREE)] });
+
+    const overall = screen.getByRole('progressbar', { name: '12 / 380 points' });
+    expect(within(overall).getByText('12 / 380 points')).toBeOnTheScreen();
+    expect(overall.props.accessibilityValue).toStrictEqual({ min: 0, max: 100, now: 3 });
+    expect(viewStyleOf(within(overall).getByTestId('points-fill'))).toMatchObject({
+      flex: 3,
+      backgroundColor: colors.lime,
+    });
+    expect(screen.queryByText(/%$/)).toBeNull();
+  });
+
+  it('fills the bar of a section at its target', async () => {
+    const [first, second] = TREE.milestones;
+    const milestones = [{ ...first, earned: 100, target: 100 }, second];
+    await renderTree({ 'GET /topics/strudel/tree': [json(200, { ...TREE, milestones })] });
+
+    const section = screen.getByRole('progressbar', { name: '100 / 100 points' });
+    expect(within(section).getByText('100 / 100 points')).toBeOnTheScreen();
+    expect(viewStyleOf(within(section).getByTestId('points-fill')).flex).toBe(100);
+    expect(viewStyleOf(within(section).getByTestId('points-rest')).flex).toBe(0);
   });
 
   it('says a topic with no nodes has no skills yet', async () => {

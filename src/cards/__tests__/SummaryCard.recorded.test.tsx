@@ -2,13 +2,22 @@
 // of the projected one once the store holds it; until then, the projected one.
 import { render, screen } from '@testing-library/react-native';
 
+import { queryWrapper } from '../../api/testing/fakeApi';
 import type { Summary } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { useSummary } from '../../feed/useSummary';
+import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { SummaryCard } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
 
 jest.mock('../../feed/useSummary', () => ({ useSummary: jest.fn() }));
+// The card reads the topic's tree through the query cache, under a stand-in for Expo Router's
+// focus; with no API here the tree is not read.
+jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
 
 const RECORDED: Summary = {
   title: 'Recorded',
@@ -20,14 +29,17 @@ const RECORDED: Summary = {
 };
 
 function renderCard(active: boolean, set = summarySet()) {
+  const { wrapper: Cache } = queryWrapper();
   render(
-    <SummaryCard
-      set={set}
-      active={active}
-      onKeepGoing={jest.fn()}
-      onViewTree={jest.fn()}
-      nextSetStatus="idle"
-    />,
+    <Cache>
+      <SummaryCard
+        set={set}
+        active={active}
+        onKeepGoing={jest.fn()}
+        onViewTree={jest.fn()}
+        nextSetStatus="idle"
+      />
+    </Cache>,
   );
 }
 
@@ -40,7 +52,6 @@ describe('SummaryCard and the recorded summary', () => {
   it('shows the projected summary while none is recorded', () => {
     renderCard(true);
 
-    expect(screen.getByText('topic progress, +3')).toBeOnTheScreen();
     expect(screen.getByText('0.42 → 0.61')).toBeOnTheScreen();
     expect(screen.getByText('Tomorrow: Euclidean rhythms · reminder at 8:30 pm')).toBeOnTheScreen();
   });
@@ -50,8 +61,6 @@ describe('SummaryCard and the recorded summary', () => {
 
     renderCard(true);
 
-    expect(screen.getByText('topic progress, +1')).toBeOnTheScreen();
-    expect(screen.getByText('41%')).toBeOnTheScreen();
     expect(screen.getByText('0.20 → 0.25')).toBeOnTheScreen();
     expect(screen.queryByText('0.42 → 0.61')).toBeNull();
     expect(screen.getByText('Tomorrow: Polymeter · reminder at 7:00 pm')).toBeOnTheScreen();
@@ -65,15 +74,18 @@ describe('SummaryCard and the recorded summary', () => {
   });
 });
 
-describe('SummaryCard progress tile and footer', () => {
-  it('shows the progress after the set beside its delta, not the progress before it', () => {
+describe('SummaryCard points tile and footer', () => {
+  it("shows the set's points, never the recorded summary's mastery-based progress", () => {
+    useFeedStore.setState({
+      recordedSummary: { ...RECORDED, progressDelta: 5, progressAfter: 0.05 },
+    });
+    useFeedStore.getState().addPoints(4);
     const set = summarySet();
-    const summary = { ...set.summary, progressDelta: 5, progressAfter: 0.05 };
 
-    renderCard(true, { ...set, topic: { ...set.topic, progress: 0 }, summary });
+    renderCard(true, { ...set, topic: { ...set.topic, progress: 0 } });
 
-    expect(screen.getByText('5%')).toBeOnTheScreen();
-    expect(screen.queryByText('0%')).toBeNull();
+    expect(screen.getByTestId('points-tile')).toHaveTextContent('+4 points', { exact: true });
+    expect(screen.queryByText(/%|topic progress/)).toBeNull();
   });
 
   it('leaves the reminder out of the footer when none is set', () => {

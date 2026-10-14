@@ -1,9 +1,11 @@
 // The Summary's height budget: the card's fixed heights, summed from the constants its parts draw
 // with, must fit the card's content box on the reference device in every state. A change that
 // pushes the Summary past its page fails here.
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
+
+import { json, queryWrapper, serveApi } from '../../api/testing/fakeApi';
 
 import { BAR_HEIGHT, ROW_GAP } from '../../components/MasteryRow';
 import { BUTTON_HEIGHT as OUTLINE_HEIGHT } from '../../components/OutlineButton';
@@ -13,15 +15,35 @@ import type { FeedSet } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import type { NextSetStatus } from '../../feed/useFeedSession';
 import { space, type } from '../../theme';
+import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { ACTIONS_GAP } from '../SummaryActions';
 import {
   MASTERY_GAP,
   MAX_MASTERY_ROWS,
-  POINTS_LINE_HEIGHT,
+  SECTION_LINES,
   SummaryCard,
+  type SummaryCardProps,
   TITLE_LINES,
 } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
+
+// The card reads the topic's tree through the query cache, under a stand-in for Expo Router's
+// focus.
+jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+/** Renders the card in a fresh query cache. */
+function renderCard(props: SummaryCardProps) {
+  const { wrapper } = queryWrapper();
+  render(createElement(wrapper, null, createElement(SummaryCard, props)));
+}
 
 /**
  * The card body's content box on the 390x844 reference device, from the task 28 review: screen
@@ -51,7 +73,8 @@ function actionsHeight(status: NextSetStatus): number {
 function summaryHeight(status: NextSetStatus, footerLines: 1 | 2): number {
   const kicker = type.kicker.fontSize * NATURAL_LINE;
   const title = TITLE_LINES * type.summaryTitle.lineHeight;
-  const tiles = type.stat.lineHeight + type.caption.lineHeight + 2 * TILE_PADDING_Y;
+  // The taller tile is the points tile: its value, and a section line of up to SECTION_LINES.
+  const tiles = type.stat.lineHeight + SECTION_LINES * type.caption.lineHeight + 2 * TILE_PADDING_Y;
   const masteryRow = type.small.lineHeight + ROW_GAP + BAR_HEIGHT;
   const mastery = type.caption.lineHeight + MAX_MASTERY_ROWS * (MASTERY_GAP + masteryRow);
   const footer = footerLines * type.small.lineHeight;
@@ -61,13 +84,13 @@ function summaryHeight(status: NextSetStatus, footerLines: 1 | 2): number {
 
 describe('the Summary height budget', () => {
   it.each([
-    { status: 'idle', footerLines: 1, height: 472.6 },
-    { status: 'idle', footerLines: 2, height: 491.6 },
-    { status: 'loading', footerLines: 2, height: 491.6 },
-    { status: 'none', footerLines: 1, height: 505.8 },
-    { status: 'none', footerLines: 2, height: 524.8 },
-    { status: 'error', footerLines: 1, height: 505.8 },
-    { status: 'error', footerLines: 2, height: 524.8 },
+    { status: 'idle', footerLines: 1, height: 489.6 },
+    { status: 'idle', footerLines: 2, height: 508.6 },
+    { status: 'loading', footerLines: 2, height: 508.6 },
+    { status: 'none', footerLines: 1, height: 522.8 },
+    { status: 'none', footerLines: 2, height: 541.8 },
+    { status: 'error', footerLines: 1, height: 522.8 },
+    { status: 'error', footerLines: 2, height: 541.8 },
   ] as const)(
     '$status with a $footerLines-line footer: $height points, inside 543.5',
     ({ status, footerLines, height }) => {
@@ -86,15 +109,13 @@ describe('the Summary height budget', () => {
       ['D', 0, 0.4],
       ['E', 0, 0.5],
     ];
-    render(
-      createElement(SummaryCard, {
-        set: summarySet(moved),
-        active: true,
-        onKeepGoing: jest.fn(),
-        onViewTree: jest.fn(),
-        nextSetStatus: 'error',
-      }),
-    );
+    renderCard({
+      set: summarySet(moved),
+      active: true,
+      onKeepGoing: jest.fn(),
+      onViewTree: jest.fn(),
+      nextSetStatus: 'error',
+    });
 
     expect(MAX_MASTERY_ROWS).toBe(3);
     expect(screen.getByTestId('card-frame-body').children).toHaveLength(BODY_CHILDREN);
@@ -102,40 +123,46 @@ describe('the Summary height budget', () => {
   });
 });
 
-// The points line ("+3 points") sits under the title in the title's own group, so it adds its
-// line and margin (`POINTS_LINE_HEIGHT`) and no gap of the card body.
-describe('the Summary height budget with the points line', () => {
-  it.each([
-    { status: 'idle', footerLines: 2, height: 508.6 },
-    { status: 'none', footerLines: 2, height: 541.8 },
-    { status: 'error', footerLines: 2, height: 541.8 },
-  ] as const)(
-    '$status with a $footerLines-line footer: $height points, inside 543.5',
-    ({ status, footerLines, height }) => {
-      const sum = summaryHeight(status, footerLines) + POINTS_LINE_HEIGHT;
-
-      expect(sum).toBeCloseTo(height, 5);
-      expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
-    },
-  );
-
-  it('the line is as tall as the budget counts, and the card body keeps its children', () => {
-    useFeedStore.setState({ pointsEarned: 3 });
-    render(
-      createElement(SummaryCard, {
-        set: summarySet(),
-        active: false,
-        onKeepGoing: jest.fn(),
-        onViewTree: jest.fn(),
-        nextSetStatus: 'error',
-      }),
-    );
-
-    const style = StyleSheet.flatten(screen.getByTestId('summary-points').props.style) as {
-      lineHeight: number;
-      marginTop?: number;
+// The points tile replaced the topic progress tile and the points line under the title: its value
+// is one line, shrunk to fit, and its section line at most SECTION_LINES, as the budget counts.
+describe('the Summary height budget with the points tile', () => {
+  it('the tile draws its value on one line and its section line on at most the lines counted', async () => {
+    const node = { summary: '', estimated_minutes: 5, mastery: 0, unlocked: true };
+    const tree = {
+      topic: {
+        slug: 'strudel',
+        title: 'Strudel',
+        description: null,
+        status: 'ready',
+        end_state: null,
+      },
+      milestones: [{ id: 'm1', position: 1, title: 'Rhythm basics', earned: 12, target: 100 }],
+      nodes: [{ ...node, id: 'n1', slug: 'mini', title: 'mini-notation', milestone_id: 'm1' }],
+      edges: [],
     };
-    expect(style.lineHeight + (style.marginTop ?? 0)).toBe(POINTS_LINE_HEIGHT);
+    serveApi({ 'GET /topics/strudel/tree': [json(200, tree)] });
+    useFeedStore.setState({ pointsEarned: 3 });
+    renderCard({
+      set: summarySet(),
+      active: true,
+      onKeepGoing: jest.fn(),
+      onViewTree: jest.fn(),
+      nextSetStatus: 'error',
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const value = screen.getByText('+3 points');
+    expect(value.props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+    expect(StyleSheet.flatten(value.props.style)).toMatchObject({
+      lineHeight: type.stat.lineHeight,
+    });
+    const section = screen.getByText('Rhythm basics: 12 / 100 points');
+    expect(section.props).toMatchObject({ numberOfLines: SECTION_LINES });
+    expect(StyleSheet.flatten(section.props.style)).toMatchObject({
+      lineHeight: type.caption.lineHeight,
+    });
     expect(screen.getByTestId('card-frame-body').children).toHaveLength(BODY_CHILDREN);
   });
 });

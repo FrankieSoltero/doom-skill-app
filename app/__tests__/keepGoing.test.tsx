@@ -20,6 +20,7 @@ import { cardsByType, makeSet } from '../../src/feed/testing/sets';
 import { controlledSource } from '../../src/feed/testing/sources';
 import { logError } from '../../src/log';
 import { cardTheme } from '../../src/theme';
+import { useFocusEffect as mockUseFocusEffect } from '../../src/topics/testing/focus';
 
 jest.mock('../../src/log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
@@ -28,6 +29,15 @@ jest.mock('react-native-safe-area-context', () => {
   const mock = jest.requireActual<{ default: object }>('react-native-safe-area-context/jest/mock');
   return mock.default;
 });
+// The Summary reads the topic's tree (`useTree`) through the query cache `renderWithInsets` gives
+// it, under a stand-in for Expo Router's focus; the router itself stays real. With no API here the
+// tree is not read.
+jest.mock('expo-router', () => ({
+  ...jest.requireActual<object>('expo-router'),
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
 
 const { quiz, concept } = cardsByType;
 // Set 1: a quiz (20 s) and a concept (30 s). Set 2: the same cards, as the demo sets loop.

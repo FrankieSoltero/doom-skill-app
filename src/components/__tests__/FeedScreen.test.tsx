@@ -7,6 +7,7 @@ import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { controlledSource, scriptedSource } from '../../feed/testing/sources';
 import { logError, logWarning } from '../../log';
 import { cardTheme, colors } from '../../theme';
+import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { FeedScreen } from '../FeedScreen';
 import {
   answeringCard,
@@ -27,6 +28,15 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 const { concept, quiz, exercise, checkpoint } = cardsByType;
+
+// The Summary reads the topic's tree (`useTree`) under a stand-in for Expo Router's focus; the
+// router itself stays real.
+jest.mock('expo-router', () => ({
+  ...jest.requireActual<object>('expo-router'),
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
 
 beforeEach(() => {
   jest.useFakeTimers();

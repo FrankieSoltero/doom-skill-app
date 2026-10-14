@@ -1,10 +1,11 @@
 /**
- * Pure text helpers behind the Summary card (docs/design/card-feed/README.md:143-153): its title,
- * its points line and its progress tile's value. Kept apart from `SummaryCard` so they are tested
- * without rendering. Every word and every sentence shape comes from `copy`.
+ * Pure text helpers behind the Summary card (docs/design/card-feed/README.md:143-153): its title
+ * and its points tile's two lines. Kept apart from `SummaryCard` so they are tested without
+ * rendering. Every word and every sentence shape comes from `copy`.
  */
 import { copy } from '../copy';
-import type { Summary } from '../data';
+import type { Card } from '../data';
+import type { Tree } from '../topics/useTree';
 
 /** `value` when it is a finite number above 0, else 0. */
 function orZero(value: number): number {
@@ -43,32 +44,36 @@ export function summaryTitle(cards: number, seconds: number): string {
 }
 
 /**
- * The line under the Summary title, "+3 points": the points the set earned; `null` (no line)
- * when they are not above 0.
+ * The points tile's headline, "+17 points": the points the set's attempts earned. Shown for a set
+ * that earned none too ("+0 points"); a value that is not a number above 0 reads as 0.
  */
-export function pointsLine(points: number): string | null {
-  return orZero(points) > 0 ? copy.summary.points(points) : null;
+export function pointsGained(points: number): string {
+  return copy.summary.pointsGained(orZero(points));
+}
+
+type Milestone = Tree['milestones'][number];
+
+/** The milestone `card` counts toward in `tree`: a checkpoint's by position, else its node's. */
+function milestoneOf(tree: Tree, card: Card): Milestone | undefined {
+  if (card.type === 'checkpoint') {
+    return tree.milestones.find((milestone) => milestone.position === card.milestone);
+  }
+  const node = tree.nodes.find((candidate) => candidate.title === card.node);
+  return tree.milestones.find((milestone) => milestone.id === node?.milestone_id);
 }
 
 /**
- * A topic's progress, a fraction from 0 to 1, as a whole percent, README.md:149 ("34%"). A value
- * outside 0 to 1 is limited to it; one that is not a number reads as 0.
+ * The points tile's second line, "Rhythm basics: 12 / 100 points": the section of the set's last
+ * card that has one in `tree` (a card's `node` is its node's title), with the section's earned
+ * and target points. `null` (no line) without a tree, or when no card of the set has a section.
  */
-export function progressPercent(progress: number): string {
-  return copy.percent(Math.round(Math.min(orZero(progress), 1) * 100));
-}
-
-/** Percent points in a whole: the summary's delta is in points, a topic's progress a fraction. */
-const POINTS = 100;
-
-/**
- * The progress tile's value: the topic's progress after the set, beside the set's delta. The API
- * sends it (`progressAfter`); without it (the demo sets) it is `topicProgress`, the progress when
- * the set was served, plus the delta. Written as `progressPercent` writes it, limited to 0 to 100%.
- */
-export function progressAfterSet(
-  topicProgress: number,
-  summary: Pick<Summary, 'progressAfter' | 'progressDelta'>,
-): string {
-  return progressPercent(summary.progressAfter ?? topicProgress + summary.progressDelta / POINTS);
+export function sectionLine(tree: Tree | undefined, cards: readonly Card[]): string | null {
+  if (tree === undefined) return null;
+  for (const card of [...cards].reverse()) {
+    const milestone = milestoneOf(tree, card);
+    if (milestone !== undefined) {
+      return copy.summary.sectionPoints(milestone.title, milestone.earned, milestone.target);
+    }
+  }
+  return null;
 }

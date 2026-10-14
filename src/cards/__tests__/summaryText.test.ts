@@ -1,4 +1,7 @@
-import { progressAfterSet, progressPercent, summaryTitle } from '../summaryText';
+import type { Card } from '../../data';
+import { cardsByType } from '../../feed/testing/sets';
+import type { Tree } from '../../topics/useTree';
+import { pointsGained, sectionLine, summaryTitle } from '../summaryText';
 
 describe('summaryTitle', () => {
   it.each([
@@ -50,32 +53,64 @@ describe('summaryTitle', () => {
   });
 });
 
-describe('progressPercent', () => {
+describe('pointsGained', () => {
   it.each([
-    { progress: 0.34, text: '34%' },
-    { progress: 0.345, text: '35%' },
-    { progress: 0, text: '0%' },
-    { progress: 1, text: '100%' },
-    { progress: 1.2, text: '100%' },
-    { progress: -0.1, text: '0%' },
-    { progress: Number.NaN, text: '0%' },
-  ])('writes $progress as $text', ({ progress, text }) => {
-    expect(progressPercent(progress)).toBe(text);
+    // The brief's row: a set whose attempts answered 5, 0, 2 and 10.
+    { points: 17, text: '+17 points' },
+    // A set with no points still says so.
+    { points: 0, text: '+0 points' },
+    { points: 1, text: '+1 points' },
+    { points: Number.NaN, text: '+0 points' },
+    { points: -3, text: '+0 points' },
+  ])('writes $points as $text', ({ points, text }) => {
+    expect(pointsGained(points)).toBe(text);
   });
 });
 
-describe('progressAfterSet', () => {
-  it("writes the API's progress after the set when the summary has it", () => {
-    expect(progressAfterSet(0, { progressAfter: 0.05, progressDelta: 5 })).toBe('5%');
+const treeNode = (title: string, milestoneId: string | null) => ({
+  id: title,
+  slug: title,
+  title,
+  summary: '',
+  estimated_minutes: 5,
+  milestone_id: milestoneId,
+  mastery: 0,
+  unlocked: true,
+});
+const TREE: Tree = {
+  topic: { slug: 'strudel', title: 'Strudel', description: null, status: 'ready', end_state: null },
+  milestones: [
+    { id: 'm1', position: 1, title: 'Rhythm basics', earned: 12, target: 100 },
+    { id: 'm2', position: 2, title: 'Layering', earned: 0, target: 280 },
+  ],
+  nodes: [treeNode('mini-notation', 'm1'), treeNode('stacking', 'm2'), treeNode('loose', null)],
+  edges: [],
+};
+const { concept, quiz, checkpoint } = cardsByType;
+const onNode = (card: Card, node: string): Card => ({ ...card, node }) as Card;
+
+describe('sectionLine', () => {
+  it("writes the section of the set's last card: its title, earned and target", () => {
+    expect(sectionLine(TREE, [onNode(quiz, 'stacking'), concept])).toBe(
+      'Rhythm basics: 12 / 100 points',
+    );
   });
 
-  it("adds the delta to the topic's progress when the summary has no progress after it", () => {
-    expect(progressAfterSet(0.34, { progressDelta: 3 })).toBe('37%');
-    expect(progressAfterSet(0.34, { progressDelta: -2 })).toBe('32%');
+  it("reads a checkpoint's section by its milestone's position", () => {
+    expect(sectionLine(TREE, [concept, { ...checkpoint, milestone: 2 }])).toBe(
+      'Layering: 0 / 280 points',
+    );
   });
 
-  it('limits the sum to 0 to 100%', () => {
-    expect(progressAfterSet(0.99, { progressDelta: 5 })).toBe('100%');
-    expect(progressAfterSet(0.01, { progressDelta: -5 })).toBe('0%');
+  it('falls back to the last card that has a section', () => {
+    expect(sectionLine(TREE, [concept, onNode(quiz, 'loose'), onNode(quiz, 'unknown')])).toBe(
+      'Rhythm basics: 12 / 100 points',
+    );
+  });
+
+  it('is null without a tree, or when no card has a section', () => {
+    expect(sectionLine(undefined, [concept])).toBeNull();
+    expect(sectionLine(TREE, [onNode(quiz, 'loose'), { ...checkpoint, milestone: 9 }])).toBeNull();
+    expect(sectionLine(TREE, [])).toBeNull();
   });
 });

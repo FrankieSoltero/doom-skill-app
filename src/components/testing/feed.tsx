@@ -8,6 +8,7 @@ import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { queryWrapper } from '../../api/testing/fakeApi';
 import type { renderCard } from '../../cards/registry';
 import type { Card, CardSource } from '../../data';
 import { useFeedStore } from '../../feed/store';
@@ -25,9 +26,17 @@ const METRICS = {
   insets: { top: TOP_INSET, right: 0, bottom: 34, left: 0 },
 };
 
-/** Renders `element` under a safe area with the reference device's metrics, and settles. */
+/**
+ * Renders `element` under a safe area with the reference device's metrics and a fresh query cache
+ * (the Summary reads the topic's tree through it), and settles.
+ */
 export async function renderWithInsets(element: ReactElement): Promise<void> {
-  render(<SafeAreaProvider initialMetrics={METRICS}>{element}</SafeAreaProvider>);
+  const { wrapper: Cache } = queryWrapper();
+  render(
+    <SafeAreaProvider initialMetrics={METRICS}>
+      <Cache>{element}</Cache>
+    </SafeAreaProvider>,
+  );
   await settle();
 }
 

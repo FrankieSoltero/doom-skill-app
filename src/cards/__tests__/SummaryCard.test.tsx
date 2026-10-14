@@ -1,13 +1,23 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
+import { queryWrapper } from '../../api/testing/fakeApi';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import type { FeedSet } from '../../data';
 import { useFeedStore } from '../../feed/store';
 import { cardTheme, colors, space, type } from '../../theme';
+import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { SummaryCard } from '../SummaryCard';
 import type { SummaryCardProps } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
+
+// The card reads the topic's tree (`useTree`) through the query cache, under a stand-in for Expo
+// Router's focus; with no API here the tree is not read, and the points tile has no section line.
+jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
 
 const HIDDEN = { includeHiddenElements: true };
 const accessibility = jest.mocked(AccessibilityInfo);
@@ -24,14 +34,17 @@ beforeEach(() => {
 function renderSummary(status: Status = 'idle', set: FeedSet = summarySet()) {
   const onKeepGoing = jest.fn<undefined, []>();
   const onViewTree = jest.fn<undefined, []>();
+  const { wrapper: Cache } = queryWrapper();
   const element = (next: Status) => (
-    <SummaryCard
-      set={set}
-      active
-      onKeepGoing={onKeepGoing}
-      onViewTree={onViewTree}
-      nextSetStatus={next}
-    />
+    <Cache>
+      <SummaryCard
+        set={set}
+        active
+        onKeepGoing={onKeepGoing}
+        onViewTree={onViewTree}
+        nextSetStatus={next}
+      />
+    </Cache>
   );
   const view = render(element(status));
   return {
@@ -70,24 +83,30 @@ describe('SummaryCard content', () => {
     expect(title).toHaveTextContent('Twelve cards. Eighteen minutes.');
   });
 
-  it('shows the streak on coral and the topic progress on aqua, at their final values', () => {
+  it('shows the streak on coral and the points the set earned on aqua, at their final values', () => {
+    useFeedStore.getState().addPoints(11);
     renderSummary();
 
-    const [streak, progress, ...others] = screen.getAllByTestId('stat-tile');
-    if (streak === undefined || progress === undefined) throw new Error('Two stat tiles expected');
+    const [streak, ...others] = screen.getAllByTestId('stat-tile');
+    if (streak === undefined) throw new Error('A streak tile expected');
     expect(others).toHaveLength(0);
     expect(streak).toHaveTextContent('13day streak');
     expect(viewStyleOf(streak).backgroundColor).toBe(colors.coral);
-    // The set has no progress after it from the API: 34% and the delta of 3.
-    expect(progress).toHaveTextContent('37%topic progress, +3');
-    expect(viewStyleOf(progress).backgroundColor).toBe(colors.aqua);
+    const points = screen.getByTestId('points-tile');
+    expect(points).toHaveTextContent('+11 points', { exact: true });
+    expect(viewStyleOf(points).backgroundColor).toBe(colors.aqua);
+    expect(textStyleOf(screen.getByText('+11 points'))).toMatchObject({
+      ...type.stat,
+      color: colors.ink,
+    });
   });
 
-  it('shows a negative progress delta with its minus sign', () => {
+  it("draws none of the projected summary's mastery-based topic progress", () => {
     const set = summarySet();
     renderSummary('idle', { ...set, summary: { ...set.summary, progressDelta: -2 } });
 
-    expect(screen.getByText('topic progress, -2')).toBeOnTheScreen();
+    expect(screen.queryByText(/topic progress/)).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull();
   });
 
   it('ends with tomorrow and the reminder, the node in bold', () => {

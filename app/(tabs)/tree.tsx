@@ -5,18 +5,27 @@ import { ErrorScreen } from '../../src/components/ErrorScreen';
 import { LoadingState } from '../../src/components/LoadingState';
 import { wholePercent } from '../../src/components/MasteryBar';
 import { MilestoneSection } from '../../src/components/MilestoneSection';
+import { milestoneColor } from '../../src/components/milestoneColor';
 import { TabScreen } from '../../src/components/TabScreen';
 import { copy } from '../../src/copy';
 import { useActiveTopic } from '../../src/feed/useActiveTopic';
 import { useTree, type Tree } from '../../src/topics/useTree';
 import { border, colors, space, type } from '../../src/theme';
 
-/** The overall bar's height, docs/design/card-feed/README.md:157. */
+// Values from docs/design/card-feed/README.md:157, which the theme lacks.
+/** The overall bar's height. */
 const OVERALL_HEIGHT = 10;
+/** A section's bar: as tall as a node's mastery bar (README.md:159). */
+const SECTION_HEIGHT = 6;
+
+/** A section's points: what the learner earned in it, and its target. */
+type Points = { earned: number; target: number };
 
 type Section = {
   key: string;
   milestone: { position: number; title: string };
+  /** `null` for "Other skills", which belongs to no milestone. */
+  points: Points | null;
   nodes: Tree['nodes'];
 };
 
@@ -30,6 +39,7 @@ function sectionsOf(tree: Tree): Section[] {
   const sections: Section[] = milestones.map((milestone) => ({
     key: milestone.id,
     milestone,
+    points: { earned: milestone.earned, target: milestone.target },
     nodes: tree.nodes.filter((node) => node.milestone_id === milestone.id),
   }));
   const others = tree.nodes.filter(
@@ -40,29 +50,62 @@ function sectionsOf(tree: Tree): Section[] {
     sections.push({
       key: 'other',
       milestone: { position, title: copy.tree.otherSkills },
+      points: null,
       nodes: others,
     });
   }
   return sections;
 }
 
-/** The topic's progress (README.md:157): the mean mastery of its nodes, as a lime bar and a percent. */
-function OverallBar({ tree }: { tree: Tree }) {
-  const total = tree.nodes.reduce((sum, node) => sum + node.mastery, 0);
-  const percent = wholePercent(total / tree.nodes.length);
+/**
+ * Earned over target points as a bar filled in `color` to `earned / target` and the line
+ * "12 / 100 points", read to a screen reader as a progress bar labelled by the line. A section
+ * at its target reads as complete; a target of 0 draws an empty bar.
+ */
+function PointsBar({ points, color, height }: { points: Points; color: string; height: number }) {
+  const percent = wholePercent(points.earned / points.target);
+  const line = copy.tree.sectionPoints(points.earned, points.target);
   return (
     <View
-      style={styles.overall}
+      style={styles.points}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={copy.tree.overall}
+      accessibilityLabel={line}
       accessibilityValue={{ min: 0, max: 100, now: percent }}
     >
-      <View style={styles.overallBar}>
-        <View style={{ flex: percent, backgroundColor: colors.lime }} />
-        <View style={{ flex: 100 - percent }} />
+      <View style={[styles.bar, { height }]}>
+        <View testID="points-fill" style={{ flex: percent, backgroundColor: color }} />
+        <View testID="points-rest" style={{ flex: 100 - percent }} />
       </View>
-      <Text style={styles.percent}>{copy.percent(percent)}</Text>
+      <Text style={styles.line}>{line}</Text>
+    </View>
+  );
+}
+
+/** The topic's points (README.md:157): the sum of its sections' earned over their targets. */
+function topicPoints(tree: Tree): Points {
+  return tree.milestones.reduce(
+    (sum, milestone) => ({
+      earned: sum.earned + milestone.earned,
+      target: sum.target + milestone.target,
+    }),
+    { earned: 0, target: 0 },
+  );
+}
+
+/** One section: its points over its milestone's frame; "Other skills" has no points. */
+function TreeSection({ section }: { section: Section }) {
+  const { milestone, points, nodes } = section;
+  return (
+    <View style={styles.section}>
+      {points === null ? null : (
+        <PointsBar
+          points={points}
+          color={milestoneColor(milestone.position)}
+          height={SECTION_HEIGHT}
+        />
+      )}
+      <MilestoneSection milestone={milestone} nodes={nodes} />
     </View>
   );
 }
@@ -75,9 +118,9 @@ function TreeContent({ tree }: { tree: Tree }) {
       {tree.topic.end_state === null ? null : (
         <Text style={styles.endState}>{tree.topic.end_state}</Text>
       )}
-      <OverallBar tree={tree} />
+      <PointsBar points={topicPoints(tree)} color={colors.lime} height={OVERALL_HEIGHT} />
       {sectionsOf(tree).map((section) => (
-        <MilestoneSection key={section.key} milestone={section.milestone} nodes={section.nodes} />
+        <TreeSection key={section.key} section={section} />
       ))}
     </ScrollView>
   );
@@ -113,8 +156,8 @@ function TreeBody({
 /**
  * The Tree tab (README.md:156-160), read-only: the active topic's skill tree
  * (`GET /topics/{slug}/tree`), with the kicker "SKILL TREE" over the topic's title, its end
- * state, an overall progress bar and one section per milestone, each node with its mastery bar
- * and its locked state. With no active topic it offers Explore; a tree not built yet or a failed
+ * state, the topic's points bar and one section per milestone, each with its points bar and each
+ * node with its mastery bar and its locked state. With no active topic it offers Explore; a tree not built yet or a failed
  * load shows a fixed line with Retry.
  */
 export default function TreeScreen() {
@@ -136,13 +179,13 @@ export default function TreeScreen() {
 const styles = StyleSheet.create({
   content: { gap: space[6], paddingBottom: space[8] },
   endState: { ...type.small, color: colors.ink },
-  overall: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  overallBar: {
+  points: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  bar: {
     flex: 1,
-    height: OVERALL_HEIGHT,
     flexDirection: 'row',
     borderWidth: border.strong,
     borderColor: colors.ink,
   },
-  percent: { ...type.button, color: colors.ink },
+  line: { ...type.button, color: colors.ink },
+  section: { gap: space[2] },
 });

@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { isValidElement } from 'react';
 
+import { queryWrapper } from '../../api/testing/fakeApi';
 import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
+import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { CheckpointCard } from '../CheckpointCard';
 import { ClozeCard } from '../ClozeCard';
 import { ConceptCard } from '../ConceptCard';
@@ -15,6 +17,14 @@ import { ReviewCard } from '../ReviewCard';
 import { ScenarioCard } from '../ScenarioCard';
 import { SummaryCard } from '../SummaryCard';
 import { summarySet } from '../testing/summarySets';
+
+// The Summary card reads the topic's tree through the query cache, under a stand-in for Expo
+// Router's focus.
+jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    mockUseFocusEffect(effect);
+  },
+}));
 
 const { concept, quiz, predict, cloze, scenario, numeric, exercise, review, checkpoint } =
   cardsByType;
@@ -209,9 +219,10 @@ describe('renderSummary', () => {
   it('draws the Summary card, and Keep going calls onKeepGoing', () => {
     const onKeepGoing = jest.fn<undefined, []>();
     const set = summarySet();
+    const { wrapper: Cache } = queryWrapper();
 
     render(
-      <>
+      <Cache>
         {renderSummary({
           set,
           active: true,
@@ -219,7 +230,7 @@ describe('renderSummary', () => {
           onViewTree: jest.fn(),
           nextSetStatus: 'idle',
         })}
-      </>,
+      </Cache>,
     );
     fireEvent.press(screen.getByRole('button', { name: 'Keep going' }));
 
