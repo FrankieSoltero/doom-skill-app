@@ -16,6 +16,7 @@
       "node": "Rests ~",
       "est_seconds": 30,
       "sources": [],
+      "notice": null,
       "type": "review",
       "last_seen_days": 11,
       "prompt": "What does ~ mean in mini-notation?",
@@ -57,6 +58,7 @@
           "license": "CC BY-SA 4.0"
         }
       ],
+      "notice": null,
       "type": "concept",
       "title": "Alternate with angle brackets",
       "body": "Wrap steps in **< >** and Strudel plays one of them per cycle.",
@@ -85,6 +87,7 @@
           "license": "CC BY-SA 4.0"
         }
       ],
+      "notice": null,
       "type": "quiz",
       "title": "Which pattern plays four kicks in every cycle?",
       "options": [
@@ -112,6 +115,7 @@
           "license": "CC BY-SA 4.0"
         }
       ],
+      "notice": null,
       "type": "predict",
       "title": "What plays in cycles 1 and 2?",
       "code": "note(\"c3 <e3 g3>\")",
@@ -133,6 +137,7 @@
           "license": null
         }
       ],
+      "notice": null,
       "type": "concept",
       "title": "Repeat a step with *",
       "body": "A number after a star plays that step that many times inside **one cycle**.",
@@ -155,6 +160,7 @@
           "license": null
         }
       ],
+      "notice": null,
       "type": "exercise",
       "lang": "strudel",
       "title": "Double the hi-hats to eight per cycle",

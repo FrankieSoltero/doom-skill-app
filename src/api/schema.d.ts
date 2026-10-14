@@ -981,6 +981,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -1020,6 +1021,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Snippet */
             snippet: string;
@@ -1150,6 +1152,7 @@ export interface components {
             lang: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Pass Msg */
             pass_msg: string;
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -1419,6 +1422,8 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** @enum {string} */
+        Notice: "rebuilding" | "flagged";
         /** NumericCard */
         NumericCard: {
             /** Correct */
@@ -1434,6 +1439,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
             /** Problem */
@@ -1591,6 +1597,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -1749,6 +1756,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -1786,6 +1794,7 @@ export interface components {
             last_seen_days: number;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Prompt */
             prompt: string;
             /** Ratings */
@@ -1830,6 +1839,7 @@ export interface components {
             id: string;
             /** Node */
             node: string;
+            notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
             sequence?: components["schemas"]["SequenceOut"] | null;

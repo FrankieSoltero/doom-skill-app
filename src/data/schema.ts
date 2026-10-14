@@ -35,8 +35,10 @@ export const sourceLinkSchema = z.object({
   license: text.nullable(),
 });
 const cardSources = z.array(sourceLinkSchema).max(3).optional();
-// The fields every card shares: its sources and its place in a sequence (M10 plan T).
-const cardCommon = { sources: cardSources, sequence: sequenceSchema.optional() };
+// The fields every card shares: its sources, its place in a sequence (M10 plan T) and its notice
+// (card quality loop Task 7; null when clean, absent from a checkpoint and the demo cards).
+const notice = z.enum(['rebuilding', 'flagged']).nullish();
+const cardCommon = { sources: cardSources, sequence: sequenceSchema.optional(), notice };
 
 /**
  * The exercise languages: the server's `Lang` (services/api/app/llm/resolve_model.py; kept in step
