@@ -150,6 +150,11 @@ export const copy = deepFreeze({
   cardKicker: (type: string, node: string) => `${type} · ${node}`,
   /** A card's place in its two-card sequence, after the node in its kicker: `1/2`. */
   cardKickerPart: (index: number, of: number) => `${String(index)}/${String(of)}`,
+  /** The line under a card's kicker when the card may be off (card quality loop, spec 4). */
+  card: {
+    noticeRebuilding: "This card may be off; it's being rebuilt",
+    noticeFlagged: 'This card was flagged',
+  },
   /** A card's estimated time under two minutes, README.md:52 ("~40 S" by style). */
   seconds: (n: number) => `~${String(n)} s`,
   /** A card's estimated time from two minutes up, README.md:124 ("~3 MIN" by style). */

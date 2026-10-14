@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CardNotice } from '../cards/CardNotice';
+import type { Notice } from '../cards/CardNotice';
 import { FlagButton, useFlaggable, useThanksLine } from '../cards/FlagButton';
 import { HelpButton } from '../cards/HelpButton';
 import { useFrameCard, useHasSources } from '../cards/cardSources';
@@ -27,6 +29,11 @@ type CardFrameProps = {
   kicker: string;
   /** Estimated time, shown at the right of the kicker row. Nothing is rendered when omitted. */
   meta?: string;
+  /**
+   * The line under the kicker row (src/cards/CardNotice.tsx). When omitted, the frame shows the
+   * notice of the card it holds (`useFrameCard`), so no card renderer passes it.
+   */
+  notice?: Notice | null;
   children: ReactNode;
 };
 
@@ -35,6 +42,12 @@ function useHelpCardId(): string | null {
   const card = useFrameCard();
   if (card?.id === undefined || card.type === 'checkpoint') return null;
   return currentSet() === null ? null : card.id;
+}
+
+/** The notice of the card a frame holds; null for none, a checkpoint and the demo cards. */
+function useFrameNotice(): Notice | null {
+  const card = useFrameCard();
+  return card !== null && 'notice' in card ? (card.notice ?? null) : null;
 }
 
 /**
@@ -55,8 +68,11 @@ function useHelpCardId(): string | null {
  * API has served a set (src/cards/HelpButton.tsx); a card it adds goes in after the page on
  * screen (the store's `index`: only the page on screen can be tapped), and the frame shows its
  * line for as long as the flag's. The demo cards and the Summary have none.
+ *
+ * A card the API served flagged or being rebuilt says so in one line under the kicker row (card
+ * quality loop, spec 4), from the `notice` prop or else the card the frame holds.
  */
-export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameProps) {
+export function CardFrame({ type: cardType, kicker, meta, notice, children }: CardFrameProps) {
   const theme = cardTheme[cardType];
   const kickerStyle = [styles.kicker, { color: theme.kicker }];
   const [thanked, showThanks] = useThanksLine();
@@ -65,6 +81,10 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
   const index = useFeedStore((state) => state.index);
   const flaggable = useFlaggable();
   const hasSources = useHasSources();
+  const frameNotice = useFrameNotice();
+  // Mounted only with a notice, so a clean card's body keeps the children its height budget
+  // counts (src/data/textLimits.ts and the cards' *.height tests).
+  const shownNotice = notice === undefined ? frameNotice : notice;
 
   return (
     <CardTextColorProvider color={theme.fg}>
@@ -83,6 +103,7 @@ export function CardFrame({ type: cardType, kicker, meta, children }: CardFrameP
             )}
             {flaggable ? <FlagButton onFlagged={showThanks} /> : null}
           </View>
+          {shownNotice === null ? null : <CardNotice notice={shownNotice} />}
           {children}
         </View>
         <CornerMarks tone="ink" />
