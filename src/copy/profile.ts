@@ -56,6 +56,9 @@ export const profile = {
   deleteField: 'Type delete to confirm',
   deleteFailed: 'Could not delete your account. Try again later.',
   cancel: 'Cancel',
+  /** The footer's line for the topic catalog's sources and their licences (plan C9, NOTICE). */
+  attribution:
+    'Topic names from Wikipedia and Stack Overflow (CC BY-SA 4.0), Wikidata (CC0) and the Library of Congress.',
 } as const;
 
 /** The daily reminder's notification (src/profile/reminders.ts). */

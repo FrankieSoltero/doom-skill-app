@@ -5,9 +5,10 @@
  * - `useTopics(query)` trims the query, cuts it to 80 characters (the API's limit) and asks 300 ms
  *   after the last change. A blank query is `idle` and asks nothing; while it waits or asks, it is
  *   `loading`.
- * - `useCreateTopic().create(query)` gives the topic's slug and title, and its new ingestion job's
- *   id (`null` when the topic existed, a 200); a failure rejects with its `ApiError` (a 422 when
- *   the topic is not supported, a 429 at the pending limit) and is also the hook's `error`.
+ * - `useCreateTopic().create(query, catalogKey?)` gives the topic's slug and title, and its new
+ *   ingestion job's id (`null` when the topic existed, a 200); a failure rejects with its
+ *   `ApiError` (a 422 when the topic is not supported, a 429 at the pending limit) and is also the
+ *   hook's `error`. A catalog suggestion's request carries its key (`catalog_key`).
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -34,13 +35,13 @@ type TopicsState = {
   retry: () => void;
 };
 
-/** The query as it is sent: trimmed and cut to the API's limit. */
-function cleanQuery(query: string): string {
+/** The query as it is sent: trimmed and cut to the API's limit (the suggestions use it too). */
+export function cleanQuery(query: string): string {
   return query.trim().slice(0, MAX_QUERY_LENGTH);
 }
 
 /** `value`, once it has not changed for `ms`. */
-function useDebounced(value: string, ms: number): string {
+export function useDebounced(value: string, ms: number): string {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -89,8 +90,12 @@ export type CreatedTopic = {
   jobId: string | null;
 };
 
-async function requestTopic(query: string): Promise<CreatedTopic> {
-  const { data } = await requireApi().POST('/topics', { body: { query } });
+/** A topic request: the query, and the catalog key when it came from a suggestion. */
+type TopicRequest = { query: string; catalogKey: string | undefined };
+
+async function requestTopic({ query, catalogKey }: TopicRequest): Promise<CreatedTopic> {
+  const body = catalogKey === undefined ? { query } : { query, catalog_key: catalogKey };
+  const { data } = await requireApi().POST('/topics', { body });
   if (data === undefined) throw new Error('The topic request gave no body');
   const { slug, title, status } = data.topic;
   return { slug, title, status, jobId: data.job_id };
@@ -106,7 +111,8 @@ export function useCreateTopic() {
   });
   const error = asApiError(mutation.error);
   return {
-    create: (query: string) => mutation.mutateAsync(cleanQuery(query)),
+    create: (query: string, catalogKey?: string) =>
+      mutation.mutateAsync({ query: cleanQuery(query), catalogKey }),
     status: MUTATION_STATUS[mutation.status],
     ...(error === undefined ? {} : { error }),
   };

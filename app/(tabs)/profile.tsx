@@ -164,6 +164,7 @@ function ProfileForm({ profile, update }: FormProps) {
           }}
         />
       ) : null}
+      <Text style={styles.note}>{copy.profile.attribution}</Text>
     </ScrollView>
   );
 }
@@ -174,7 +175,8 @@ function ProfileForm({ profile, update }: FormProps) {
  * timezone, offering the device's, all through `GET /me` and `PATCH /me`; then the app's source
  * link (src/profile/SourceLink.tsx, M7 open client); then Sign out, and Delete account, which
  * opens a sheet that asks the person to type `delete`
- * (src/profile/DeleteAccountSheet.tsx) before `DELETE /me`. While the profile loads a busy line
+ * (src/profile/DeleteAccountSheet.tsx) before `DELETE /me`; then the footer, the topic catalog's
+ * attribution (plan C9, apps/mobile/NOTICE). While the profile loads a busy line
  * shows; a failed load shows a fixed line with Retry.
  */
 export default function ProfileScreen() {
@@ -205,4 +207,5 @@ const styles = StyleSheet.create({
   content: { gap: space[6], paddingBottom: space[8] },
   field: { gap: space[2] },
   text: { ...type.body, color: colors.ink },
+  note: { ...type.caption, color: colors.neutral[700] },
 });

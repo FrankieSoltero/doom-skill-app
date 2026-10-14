@@ -9,6 +9,9 @@ import { levels } from './levels';
 /** A topic outside the registry whose sources a person has not approved yet (status `proposed`). */
 const WAITING_FOR_APPROVAL = 'Waiting for approval';
 
+/** The mark on a catalog suggestion whose topic is already built. */
+const BUILT = 'Built';
+
 /** The Explore tab (app/(tabs)/explore.tsx). */
 export const explore = {
   title: 'Explore',
@@ -30,6 +33,15 @@ export const explore = {
   /** Too many topics are being built for this user (a 429). */
   limit: 'You have too many topics being built. Try again later.',
   createFailed: "Couldn't create the topic. Try again.",
+  /** The mark on a catalog suggestion whose topic is built: a tap opens it. */
+  suggestBuilt: BUILT,
+  /** A catalog suggestion's group chip, by its group (`code`, `prose`, `quantitative`). */
+  group: { code: 'code', prose: 'prose', quantitative: 'quantitative' },
+  /** A catalog suggestion as a screen reader hears it: its label, group and the built mark. */
+  suggestion: (label: string, group: string, built: boolean) =>
+    built ? `${label}, ${group}, ${BUILT}` : `${label}, ${group}`,
+  /** No catalog topic and no topic matches the query; the Create button follows. */
+  notInCatalog: 'Not in the catalog yet — you can still request it',
   /** The meta line of a topic that can be opened. */
   ready: 'Ready',
   /** The meta line of a topic that is still being built. */

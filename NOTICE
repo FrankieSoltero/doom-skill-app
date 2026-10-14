@@ -33,6 +33,15 @@ Store) is made only once the exact source it was built from is published under i
 (docs/publishing.md).
 
 
+Topic catalog
+-------------
+
+Explore's topic suggestions and the Profile tab's footer name these sources of the topic names:
+- Wikipedia (article titles): CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/.
+- Stack Overflow (tag names, via the Stack Exchange API): CC BY-SA 4.0, https://stackoverflow.com/help/licensing.
+- Wikidata (labels and aliases): CC0 1.0; the Library of Congress Subject Headings: public domain.
+
+
 App bundle (92 packages)
 ------------------------
 
