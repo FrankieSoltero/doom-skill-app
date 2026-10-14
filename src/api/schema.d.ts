@@ -1401,8 +1401,12 @@ export interface components {
         /**
          * Milestone
          * @description A milestone's id, position and title; its rubric and checks come with the checkpoint.
+         *     `earned` is the user's points in its section and `target` the section's target (section
+         *     points, S12): the same numbers on `GET /topics/{slug}` and its tree.
          */
         Milestone: {
+            /** Earned */
+            earned: number;
             /**
              * Id
              * Format: uuid
@@ -1410,6 +1414,8 @@ export interface components {
             id: string;
             /** Position */
             position: number;
+            /** Target */
+            target: number;
             /** Title */
             title: string;
         };
