@@ -348,6 +348,11 @@ export const copy = deepFreeze({
   summary: {
     /** The Summary's points tile: the points the set's attempts earned (section points). */
     pointsGained: (n: number) => `+${String(n)} points`,
+    /**
+     * Beside it while some of those points are provisional, graded on the phone and waiting for
+     * the server's replies (offline-topic plan O5).
+     */
+    syncing: 'syncing',
     /** Under it, the section of the set's last card: "Rhythm basics: 12 / 100 points". */
     sectionPoints: (title: string, earned: number, target: number) =>
       `${title}: ${String(earned)} / ${String(target)} points`,

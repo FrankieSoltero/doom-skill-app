@@ -51,6 +51,14 @@ export function pointsGained(points: number): string {
   return copy.summary.pointsGained(orZero(points));
 }
 
+/**
+ * The mark beside the headline, "syncing", while `pending` provisional values wait for the
+ * server's replies (the feed store's `pendingCount`); `null` (no mark) once none waits.
+ */
+export function pointsMark(pending: number): string | null {
+  return pending > 0 ? copy.summary.syncing : null;
+}
+
 type Milestone = Tree['milestones'][number];
 
 /** The milestone `card` counts toward in `tree`: a checkpoint's by position, else its node's. */

@@ -1,7 +1,7 @@
 import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
 import type { Tree } from '../../topics/useTree';
-import { pointsGained, sectionLine, summaryTitle } from '../summaryText';
+import { pointsGained, pointsMark, sectionLine, summaryTitle } from '../summaryText';
 
 describe('summaryTitle', () => {
   it.each([
@@ -64,6 +64,14 @@ describe('pointsGained', () => {
     { points: -3, text: '+0 points' },
   ])('writes $points as $text', ({ points, text }) => {
     expect(pointsGained(points)).toBe(text);
+  });
+});
+
+describe('pointsMark', () => {
+  it('is "syncing" while a provisional value waits for its reply, else none', () => {
+    expect(pointsMark(1)).toBe('syncing');
+    expect(pointsMark(3)).toBe('syncing');
+    expect(pointsMark(0)).toBeNull();
   });
 });
 

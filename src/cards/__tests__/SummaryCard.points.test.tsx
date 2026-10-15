@@ -142,6 +142,24 @@ describe('SummaryCard points tile', () => {
     expect(within(tile()).getByText('+0 points')).toBeOnTheScreen();
   });
 
+  it('marks provisional points "syncing" on the points line, and drops the mark once settled', async () => {
+    serveApi({ [TREE_PATH]: [json(200, treeWith(12))] });
+    act(() => {
+      useFeedStore.getState().addProvisional('card-1', 5, { kind: 'quiz', correct: true });
+    });
+
+    await renderCard();
+    expect(within(tile()).getByText('+5 points')).toBeOnTheScreen();
+    expect(within(tile()).getByText('syncing')).toBeOnTheScreen();
+    expect(screen.getAllByText('syncing')).toHaveLength(1);
+
+    act(() => {
+      useFeedStore.getState().settle('card-1', 5);
+    });
+    expect(within(tile()).getByText('+5 points')).toBeOnTheScreen();
+    expect(screen.queryByText('syncing')).toBeNull();
+  });
+
   it("shows the section of the set's last card under the points, from one tree request", async () => {
     const requests = serveApi({ [TREE_PATH]: [json(200, treeWith(12))] });
 

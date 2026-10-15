@@ -235,3 +235,39 @@ describe('skipDropped: the cards the app dropped from a set, as skipped', () => 
     expect(add).not.toHaveBeenCalled();
   });
 });
+
+describe('the store adds a sent answer provisionally (offline-topic plan Task 7)', () => {
+  it('a right quiz pick: +5 pending, keyed by the card', () => {
+    store().startSet(apiSet([served(quiz, 1)]));
+
+    store().setAnswer(0, { kind: 'choice', picked: 0 });
+
+    expect(store().pointsEarned).toBe(5);
+    expect(store().pendingCount).toBe(1);
+    expect(store().settle(served(quiz, 1).id ?? '', 5)).toStrictEqual({
+      kind: 'quiz',
+      correct: true,
+    });
+  });
+
+  it('a wrong pick +1, a concept seen +2, a review rated again +0', () => {
+    store().startSet(apiSet([served(quiz, 1), served(concept, 2), served(review, 3)]));
+
+    store().setAnswer(0, { kind: 'choice', picked: 1 });
+    store().setIndex(1);
+    store().setIndex(2);
+    store().setAnswer(2, { kind: 'review', revealed: true, rating: 0 });
+
+    expect(store().pointsEarned).toBe(3);
+    expect(store().pendingCount).toBe(2);
+  });
+
+  it('nothing for an answer not sent (the demo sets) or a dropped card skipped', () => {
+    store().startSet(makeSet(0, [served(quiz, 1)]));
+    store().setAnswer(0, { kind: 'choice', picked: 0 });
+    store().skipDropped({ ...apiSet([served(quiz, 2)]), droppedIds: ['x'] });
+
+    expect(store().pointsEarned).toBe(0);
+    expect(store().pendingCount).toBe(0);
+  });
+});

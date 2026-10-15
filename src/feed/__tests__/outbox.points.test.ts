@@ -1,13 +1,15 @@
-// The points each attempt's reply carries add up in the feed store's `pointsEarned`, which the
-// Summary card shows for the set (src/feed/outbox.ts, src/feed/store.ts). Only a reply adds: a
-// dropped attempt (404, 409, 422) or one waiting for a retry adds nothing, and a reply without
-// `points` (an older server) reads as 0.
+// The points each attempt's reply carries settle in the feed store (`settle`), replacing the card's
+// provisional value, and add up in `pointsEarned`, which the Summary card shows for the set
+// (src/feed/outbox.ts, src/feed/store.ts). Only a reply adds: a dropped attempt (404, 409, 422)
+// settles at 0, one waiting for a retry stays provisional, and a reply without `points` (an older
+// server) reads as 0. A reply whose grade differs from the app's is logged as `attempt_regraded`.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError } from '../../api/errors';
 import type { FeedSet } from '../../data';
 import { json, network } from '../../data/testing/network';
-import { createOutbox, type AttemptReply } from '../outbox';
+import { logWarning } from '../../log';
+import { createOutbox, type GradedReply } from '../outbox';
 import { useFeedStore } from '../store';
 import { attempt, fakeSession, offline, settle, signedIn, USER } from '../testing/outbox';
 import { cardsByType, makeSet } from '../testing/sets';
@@ -15,13 +17,17 @@ import { cardsByType, makeSet } from '../testing/sets';
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 /** A reply that earned `points` and offers no follow-up. */
-const earned = (points: number): AttemptReply => ({ followUp: null, points });
+const earned = (points: number, correct: boolean | null = null): GradedReply => ({
+  followUp: null,
+  points,
+  correct,
+});
 
 /** An outbox whose post answers the attempts in order: a reply, or the error it rejects with. */
-function outboxAnswering(...answers: (AttemptReply | ApiError)[]) {
+function outboxAnswering(...answers: (GradedReply | ApiError)[]) {
   let made = 0;
   return createOutbox({
-    post: (): Promise<AttemptReply> => {
+    post: (): Promise<GradedReply> => {
       const answer = answers.shift() ?? offline();
       return answer instanceof ApiError ? Promise.reject(answer) : Promise.resolve(answer);
     },
@@ -40,7 +46,63 @@ async function answerCards(outbox: ReturnType<typeof outboxAnswering>, count: nu
 
 beforeEach(async () => {
   useFeedStore.setState(useFeedStore.getInitialState(), true);
+  jest.mocked(logWarning).mockClear();
   await AsyncStorage.clear();
+});
+
+const CARD_1 = attempt(1).cardId;
+const regraded = () => jest.mocked(logWarning).mock.calls.filter(([e]) => e === 'attempt_regraded');
+
+describe('a reply settles the provisional value of its card', () => {
+  it('replaces +5 with the reply of 5: settled 5, nothing pending', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(earned(5, true)), 1);
+
+    expect(useFeedStore.getState().settledPoints).toBe(5);
+    expect(useFeedStore.getState().pendingCount).toBe(0);
+    expect(regraded()).toHaveLength(0);
+  });
+
+  it('settles to the reply of 1 when the server grades a local right answer wrong, logged once', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(earned(1, false)), 1);
+
+    expect(useFeedStore.getState().pointsEarned).toBe(1);
+    expect(regraded()).toStrictEqual([['attempt_regraded', { kind: 'quiz' }]]);
+  });
+
+  it('settles a replay (a timeout, then the retry) that echoes its original 5', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+    const outbox = outboxAnswering(offline(), earned(5, true));
+
+    await answerCards(outbox, 1);
+    await outbox.flush();
+
+    expect(useFeedStore.getState().settledPoints).toBe(5);
+    expect(useFeedStore.getState().pendingCount).toBe(0);
+    expect(useFeedStore.getState().pointsEarned).toBe(5);
+  });
+
+  it('settles a refused attempt at 0, so nothing stays pending', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(new ApiError('conflict', 409)), 1);
+
+    expect(useFeedStore.getState().pointsEarned).toBe(0);
+    expect(useFeedStore.getState().pendingCount).toBe(0);
+    expect(regraded()).toHaveLength(0);
+  });
+
+  it('keeps the value provisional while the attempt waits for a retry', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(offline()), 1);
+
+    expect(useFeedStore.getState().pointsEarned).toBe(5);
+    expect(useFeedStore.getState().pendingCount).toBe(1);
+  });
 });
 
 describe('the outbox and the points earned', () => {

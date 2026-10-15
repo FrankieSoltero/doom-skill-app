@@ -16,7 +16,7 @@ import { useSummary } from '../feed/useSummary';
 import { colors, type } from '../theme';
 import { useTree } from '../topics/useTree';
 import { SummaryActions } from './SummaryActions';
-import { pointsGained, sectionLine, summaryTitle } from './summaryText';
+import { pointsGained, pointsMark, sectionLine, summaryTitle } from './summaryText';
 
 // Summary values from docs/design/card-feed/README.md:143-153 and the prototype,
 // docs/design/card-feed/reference/DoomSkill Card Feed v2.dc.html:243-265, that the theme lacks.
@@ -33,6 +33,8 @@ export const TITLE_LINES = 2;
 const TITLE_MIN_SCALE = 0.6;
 /** The points tile's inner padding left and right, as a stat tile's (prototype line 250). */
 const TILE_PADDING_X = 12;
+/** The gap between the points and their `syncing` mark. */
+const MARK_GAP = 6;
 /**
  * The most lines of the points tile's section line ("Rhythm basics: 12 / 100 points"), which the
  * card's height budget counts (`__tests__/SummaryCard.height.test.ts`); a longer title is cut.
@@ -104,21 +106,31 @@ function useSectionLine(set: FeedSet, active: boolean): string | null {
   return sectionLine(tree, set.cards);
 }
 
+type PointsTileProps = { points: string; mark: string | null; section: string | null };
+
 /**
  * The Summary's second tile, on aqua as the design's progress tile: the points the set earned
- * ("+17 points", shrunk to one line) over the section line, left out when there is none.
+ * ("+17 points", shrunk to one line), with the small `syncing` mark beside them while some are
+ * provisional, over the section line, left out when there is none.
  */
-function PointsTile({ points, section }: { points: string; section: string | null }) {
+function PointsTile({ points, mark, section }: PointsTileProps) {
   return (
     <View testID="points-tile" accessible style={styles.tile}>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={TITLE_MIN_SCALE}
-        style={styles.tileValue}
-      >
-        {points}
-      </Text>
+      <View style={styles.pointsLine}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={TITLE_MIN_SCALE}
+          style={styles.tileValue}
+        >
+          {points}
+        </Text>
+        {mark === null ? null : (
+          <Text numberOfLines={1} style={styles.tileMark}>
+            {mark}
+          </Text>
+        )}
+      </View>
       {section === null ? null : (
         <Text numberOfLines={SECTION_LINES} style={styles.tileLabel}>
           {section}
@@ -132,8 +144,9 @@ function PointsTile({ points, section }: { points: string; section: string | nul
  * The last page of every set (docs/design/card-feed/README.md:143-153, spec section 1a): on the ink
  * card, the kicker "DAY 4 COMPLETE"; the title, counting every card and minute of the session so
  * far from the store's totals; the streak tile (coral) and the points tile (aqua): the points the
- * set earned (the store's `pointsEarned`, "+0 points" too) over the section line of the set's last
- * card (`useSectionLine`); the mastery rows; tomorrow's node and reminder (left out when none is
+ * set earned (the store's `pointsEarned`, "+0 points" too; marked `syncing` while its
+ * `pendingCount` is above 0) over the section line of the set's last card (`useSectionLine`);
+ * the mastery rows; tomorrow's node and reminder (left out when none is
  * set); and the buttons. Everything is static: the title is lime, with no gradient, shine or
  * count-up, and the bars are drawn at their final values. The session adds the set to the totals
  * and raises the streak when this page is reached; this card only reads them. The mastery rows and
@@ -152,6 +165,7 @@ export function SummaryCard({
   const streak = useFeedStore((state) => state.streak);
   const recorded = useFeedStore((state) => state.recordedSummary);
   const points = pointsGained(useFeedStore((state) => state.pointsEarned));
+  const mark = pointsMark(useFeedStore((state) => state.pendingCount));
   useSummary(active);
   const section = useSectionLine(set, active);
   const { topic } = set;
@@ -170,7 +184,7 @@ export function SummaryCard({
       </Text>
       <View style={styles.tiles}>
         <StatTile value={String(streakCount(streak))} label={copy.dayStreak} fill={colors.coral} />
-        <PointsTile points={points} section={section} />
+        <PointsTile points={points} mark={mark} section={section} />
       </View>
       <MasteryList moved={summary.moved} />
       <View style={styles.fill} />
@@ -194,7 +208,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: TILE_PADDING_X,
     backgroundColor: colors.aqua,
   },
-  tileValue: { ...type.stat, color: colors.ink },
+  pointsLine: { flexDirection: 'row', alignItems: 'baseline', gap: MARK_GAP },
+  tileValue: { ...type.stat, color: colors.ink, flexShrink: 1 },
+  tileMark: { ...type.caption, color: colors.ink },
   tileLabel: { ...type.caption, color: colors.ink },
   mastery: { gap: MASTERY_GAP },
   masteryHeading: { ...type.caption, color: colors.neutral[400] },

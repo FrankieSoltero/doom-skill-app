@@ -12,8 +12,12 @@
  *   and tries again after 5 s, 30 s, then every 2 minutes, and whenever `flush()` is called (the
  *   app does on returning to the foreground). A flush already running is joined.
  * - `pending()` is the number of attempts not yet sent; `subscribe` tells when it changes.
- * - The points each reply carries are added to the feed store's `pointsEarned`, which the Summary
- *   card shows for the set.
+ * - The points each reply carries settle the card's provisional value in the feed store
+ *   (`settle`, offline-topic plan Task 7), and add to its `pointsEarned`, which the Summary card
+ *   shows for the set; a refused attempt settles at 0. A replay's reply echoes the points its
+ *   attempt first paid, and settles the same way. When the reply's `correct` differs from the
+ *   app's own grade, `attempt_regraded` is logged with the card's kind only: the server's grade
+ *   counts, and the learner is not told.
  *
  * It holds one user's attempts: the signed-in user's, under a storage key with their id, and is
  * inert (it keeps, stores and sends nothing) while no user is signed in or the session is still
@@ -47,9 +51,16 @@ import {
   type Queued,
   type QueueStorage,
 } from './outboxQueue';
+import type { LocalGrade } from './points';
 import { sendAttemptsTo, useFeedStore } from './store';
 
 export type { Attempt, AttemptReply } from './outboxQueue';
+
+/**
+ * The reply as the outbox reads it: an `AttemptReply` and the server's grade, `correct` (`null`
+ * for an answer it does not grade, a review or a concept; absent from a reply that has none).
+ */
+export type GradedReply = AttemptReply & { correct?: boolean | null };
 
 /** The session as the outbox reads it: who is signed in, if the session has been read. */
 export type SessionView = { status: 'loading' | 'signedOut' | 'signedIn'; userId: string | null };
@@ -59,7 +70,7 @@ export type OutboxDeps = {
    * Sends one attempt; resolves on a 2xx with the reply (nothing reads as no follow-up and no
    * points), rejects otherwise (an `ApiError` from the client).
    */
-  post: (attempt: Queued) => Promise<AttemptReply> | Promise<void>;
+  post: (attempt: Queued) => Promise<GradedReply> | Promise<void>;
   storage: QueueStorage;
   /** The session store (`useSession` in the app). */
   session: {
@@ -92,26 +103,42 @@ function cut(response: Attempt['response']): Attempt['response'] {
   return { code: Array.from(response.code).slice(0, MAX_CODE_CHARACTERS).join('') };
 }
 
+/** True when both grades are known and differ: the server regraded the app's answer. */
+function regraded(local: LocalGrade['correct'], server: GradedReply['correct']): boolean {
+  return local !== null && typeof server === 'boolean' && local !== server;
+}
+
+/**
+ * Settles `head`'s card in the feed store at the points `reply` carries (none: 0), and logs
+ * `attempt_regraded`, the card's kind only, when the reply's grade differs from the app's.
+ */
+function settleReply(head: Queued, reply: GradedReply | undefined): void {
+  const local = useFeedStore.getState().settle(head.cardId, reply?.points ?? 0);
+  if (local === null || !regraded(local.correct, reply?.correct)) return;
+  logWarning('attempt_regraded', { kind: local.kind });
+}
+
 /**
  * Posts `head`: true when it is done with, sent or refused for good (a 404, 409 or 422, logged
  * with its kind); false when it must wait for a retry. A sent attempt's follow-up goes to the
- * installed sink, which cannot make it unsent, and the points its reply carries to the feed
- * store's `pointsEarned`; a refused attempt earns none.
+ * installed sink, which cannot make it unsent, and its reply settles the card's points
+ * (`settleReply`); a refused attempt settles at 0.
  */
 async function sendOne(post: OutboxDeps['post'], head: Queued): Promise<boolean> {
-  let reply: AttemptReply | undefined;
+  let reply: GradedReply | undefined;
   try {
     reply = (await post(head)) ?? undefined;
   } catch (error) {
     if (error instanceof ApiError && REFUSED.has(error.status)) {
       logWarning('attempt_dropped', { kind: error.kind, status: error.status });
+      settleReply(head, undefined);
       return true;
     }
     logWarning('attempt_send_failed', { kind: kindOf(error) });
     return false;
   }
   handOverFollowUp(head, reply);
-  if (reply !== undefined) useFeedStore.getState().addPoints(reply.points);
+  settleReply(head, reply);
   return true;
 }
 
@@ -216,7 +243,7 @@ export function createOutbox(deps: OutboxDeps): Outbox {
 type Client = NonNullable<typeof api>;
 
 /** Posts `attempt` through the app's API client, in the API's snake_case body. */
-async function post(client: Client, attempt: Queued): Promise<AttemptReply> {
+async function post(client: Client, attempt: Queued): Promise<GradedReply> {
   const { data } = await client.POST('/cards/{card_id}/attempt', {
     params: { path: { card_id: attempt.cardId } },
     body: {
@@ -230,6 +257,7 @@ async function post(client: Client, attempt: Queued): Promise<AttemptReply> {
   return {
     followUp: parseFollowUp(data?.follow_up),
     points: typeof data?.points === 'number' ? data.points : 0,
+    correct: typeof data?.correct === 'boolean' ? data.correct : null,
   };
 }
 
