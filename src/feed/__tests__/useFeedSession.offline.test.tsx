@@ -80,7 +80,7 @@ describe('the sets ahead', () => {
     expect((await kept()).map(({ n }) => n)).toStrictEqual([1, 2, 3, 4]);
   });
 
-  it('are asked for once while a request is in flight, however many sets load', async () => {
+  it('are asked for once while a request is in flight; a late answer never keeps a finished set', async () => {
     const source = scriptedSource(setOf(1), setOf(2), setOf(3), setOf(4));
     let answer: (sets: FeedSet[]) => void = () => undefined;
     source.ahead.mockImplementation(
@@ -91,13 +91,20 @@ describe('the sets ahead', () => {
     );
     const { result } = await renderSession(source);
 
+    finishSet();
     await act(() => result.current.loadNextSet());
+    finishSet();
     await act(() => result.current.loadNextSet());
     expect(store().set?.setNumber).toBe(3);
     expect(source.ahead).toHaveBeenCalledTimes(1);
 
+    // The answer was asked for at set 1: sets 1 and 2 are finished, so set 3 is kept from it.
     answer([setOf(2), setOf(3), setOf(4)]);
     await flush();
+    expect(await kept()).toStrictEqual([
+      { n: 3, answered: [] },
+      { n: 4, answered: [] },
+    ]);
     await act(() => result.current.loadNextSet());
     expect(source.ahead).toHaveBeenCalledTimes(2);
     answer([]);
@@ -182,6 +189,24 @@ describe('offline', () => {
     await flush();
     expect(store().set?.setNumber).toBe(1);
     expect((await kept())[0]?.answered).toStrictEqual([idOf(1, 1), dropped].sort());
+  });
+
+  it('never serves the set on screen again once its Summary was reached past a failed page', async () => {
+    const source = scriptedSource(setOf(1), failing('offline'));
+    const { result } = await renderSession(source);
+    await flush();
+    step(result.current.goTo, 1);
+    step(store().setAnswer, 1, { kind: 'choice', picked: 0 });
+    step(result.current.markFailed, 2);
+    step(result.current.goTo, 2);
+    step(result.current.goTo, 3);
+    await flush();
+    expect(store().setCounted).toBe(true);
+
+    await act(() => result.current.loadNextSet());
+    await flush();
+
+    expect(result.current.status).toBe('offline');
   });
 
   it('serves set 2 after a restart once all of set 1 was answered', async () => {

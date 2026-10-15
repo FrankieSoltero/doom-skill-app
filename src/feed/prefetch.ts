@@ -9,10 +9,15 @@
  * - Every set is kept with the ids of its answered cards, carried forward from what was kept and
  *   from the store's answers to the set on screen (`persist.ts` keeps only what it is given).
  *   Cards dropped from a set count as answered once their skips are sent.
+ * - An `ahead` answer that settles after the server served a later set keeps that later set and
+ *   the sets after it, never the set it was asked for; one that settles after a reset of the
+ *   store (a sign-out, another topic) or for another user keeps nothing.
  * - `keepAnswers` marks each card the learner answers (a concept once left, any other card once
  *   its answer passes the gate) in the kept set.
  * - `keptSet` is what a load that failed offline (`isOfflineFailure`) serves: the first kept set
- *   whose renderable cards are not all answered, with only its unanswered cards, whatever its
+ *   whose renderable cards are not all answered (the store's set counts as answered once its
+ *   Summary was reached: a page that failed to render passes the gate unanswered), with only
+ *   its unanswered cards, whatever its
  *   `feedDate`; `null` when none is left; `undefined` when nothing can be kept (no signed-in user
  *   or no active topic), so the failure stays the error it was.
  *
@@ -83,23 +88,46 @@ async function keep(holder: Holder, served: FeedSet, ahead: FeedSet[] | null): P
   await savePersisted(holder.userId, holder.slug, entries);
 }
 
-let aheadInFlight = false;
+const keyOf = (holder: Holder) => `${holder.userId}:${holder.slug}`;
+
+/** The user and topics with an `ahead` request in flight. */
+const aheadInFlight = new Set<string>();
+
+/** The set the server served last, per user and topic. */
+const latest = new Map<string, FeedSet>();
+
+/**
+ * Keeps what an `ahead` answered for `asked` once it settles: nothing when the store was reset
+ * meanwhile (a sign-out, another topic, a refresh) or the user changed; else the set served last
+ * and the sets of `ahead` after it, or nothing when `ahead` does not hold it (a stale answer).
+ */
+async function keepAhead(holder: Holder, asked: FeedSet, ahead: FeedSet[], resets: number) {
+  const moved = useFeedStore.getState().resets !== resets;
+  if (moved || useSession.getState().userId !== holder.userId) return;
+  const now = latest.get(keyOf(holder)) ?? asked;
+  if (sameSet(now, asked)) return keep(holder, asked, ahead);
+  const at = ahead.findIndex((set) => sameSet(set, now));
+  if (at !== -1) await keep(holder, now, ahead.slice(at + 1));
+}
 
 /** Keeps the set the server served, then the sets ahead of it (see the module comment). */
 export async function keepServed(source: CardSource, served: FeedSet): Promise<void> {
   const holder = holderOf(served.topic.slug);
   if (holder === null) return;
+  const key = keyOf(holder);
+  latest.set(key, served);
   const keptNow = keep(holder, served, null);
-  if (aheadInFlight) return keptNow;
-  aheadInFlight = true;
+  if (aheadInFlight.has(key)) return keptNow;
+  aheadInFlight.add(key);
+  const resets = useFeedStore.getState().resets;
   try {
     const [, ahead] = await Promise.all([keptNow, source.ahead(holder.slug, AHEAD_SETS)]);
-    await keep(holder, served, ahead);
+    await keepAhead(holder, served, ahead, resets);
   } catch (error) {
     const kind = error instanceof FeedLoadError ? error.kind : kindOf(error);
     logWarning('feed_ahead_failed', { kind });
   } finally {
-    aheadInFlight = false;
+    aheadInFlight.delete(key);
   }
 }
 
@@ -139,6 +167,12 @@ function unanswered(
   return { ...entry.set, cards, droppedIds };
 }
 
+/** True for the store's set once its Summary was reached: it is never served again. */
+function finishedOnScreen(set: FeedSet): boolean {
+  const state = useFeedStore.getState();
+  return state.setCounted && state.set !== null && sameSet(state.set, set);
+}
+
 /** The set to serve when a load failed offline (see the module comment). */
 export async function keptSet(
   canRender: (card: Card) => boolean,
@@ -147,6 +181,7 @@ export async function keptSet(
   if (holder === null) return undefined;
   const stored = await loadPersisted(holder.userId, holder.slug);
   for (const entry of stored) {
+    if (finishedOnScreen(entry.set)) continue;
     const answered = answeredIn(entry.set, stored);
     const set = unanswered(entry, answered, canRender);
     if (set === null) continue;

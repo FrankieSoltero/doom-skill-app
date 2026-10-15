@@ -123,7 +123,14 @@ export function savePersisted(
   });
 }
 
-/** Adds `cardId` to the answered ids of set `setNumber` kept for `userId` in `slug`, if kept. */
+/** True when `set` holds the card `cardId`, shown or dropped. */
+const holds = (set: FeedSet, cardId: string) =>
+  set.cards.some(({ id }) => id === cardId) || (set.droppedIds ?? []).includes(cardId);
+
+/**
+ * Adds `cardId` to the answered ids of set `setNumber` kept for `userId` in `slug`, if kept; of
+ * two kept sets with that number, the one holding the card.
+ */
 export function markAnswered(
   userId: string,
   slug: string,
@@ -133,7 +140,9 @@ export function markAnswered(
   const key = keyOf(userId, slug);
   return serial('persist_save_failed', async () => {
     const sets = (await load(key))?.sets;
-    const entry = sets?.find(({ set }) => set.setNumber === setNumber);
+    // Two kept sets may share a number (other dates): the one that holds the card is meant.
+    const numbered = sets?.filter(({ set }) => set.setNumber === setNumber) ?? [];
+    const entry = numbered.find(({ set }) => holds(set, cardId)) ?? numbered[0];
     if (sets === undefined || entry === undefined || entry.answered.includes(cardId)) return;
     entry.answered.push(cardId);
     await write(key, sets);
