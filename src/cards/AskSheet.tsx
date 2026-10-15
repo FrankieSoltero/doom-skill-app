@@ -13,6 +13,8 @@
  *   other failure, offline included, shows the "could not send" line. The text stays for a retry.
  *   A failure is logged by its kind only, never the text.
  * - The questions show a loading line while they load; a failed load shows nothing there.
+ * - While the API cannot be reached (`useOnline`), Ask is disabled and the line under the field
+ *   says "Needs a connection" (offline-topic plan O6); nothing is sent.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -20,6 +22,7 @@ import { ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } fr
 
 import { ApiError } from '../api/errors';
 import { requireApi } from '../api/query';
+import { useOnline } from '../api/useOnline';
 import { BottomSheet } from '../components/BottomSheet';
 import { Passage } from '../components/Passage';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -129,8 +132,9 @@ function useAsk(cardId: string) {
     }
   };
 
-  const ready = text.trim().length >= MIN_LENGTH && !sending;
-  return { text, setText, ready, line, passages, send };
+  const online = useOnline();
+  const ready = online && text.trim().length >= MIN_LENGTH && !sending;
+  return { text, setText, ready, line: online ? line : copy.needsConnection, passages, send };
 }
 
 /** The sheet (module comment). */

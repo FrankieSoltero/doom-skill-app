@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
 
 import { json, serveApi } from '../../api/testing/fakeApi';
+import { useOnline } from '../../api/useOnline';
 import { KeypadSheet } from '../../components/KeypadSheet';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
 import type { Keypad } from '../../data/keypadSchema';
@@ -29,6 +30,7 @@ jest.mock('../../strudel/useStrudel', () => ({
   useStrudel: jest.fn(),
 }));
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const STACK = { label: 'stack("")', insert: 'stack("")', caret: 2 };
 const S_CALL = { label: 's("")', insert: 's("")', caret: 2 };
@@ -46,6 +48,7 @@ const withKeys = (): CheckpointCardData => ({ ...demo(), keys: KEYS });
 
 beforeEach(() => {
   useKeypad.setState(useKeypad.getInitialState(), true);
+  jest.mocked(useOnline).mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -118,6 +121,17 @@ describe('CheckpointCard keypad', () => {
 
     expect(storedAnswer()).toMatchObject({ code: ' ', status: 'idle' });
     expect(shownKeys()).toBeNull();
+  });
+
+  it('submits nothing on Submit offline, as the Submit button is disabled', () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    renderWithSheet(withKeys());
+    typeCode(CODE);
+    fireEvent(editor(), 'focus');
+
+    pressKey('Submit');
+
+    expect(storedAnswer()).toMatchObject({ code: CODE, status: 'idle' });
   });
 
   it('keeps the system keyboard on a written card, whatever it is served', () => {

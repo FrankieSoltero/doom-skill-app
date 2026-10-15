@@ -6,6 +6,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { TextInput } from 'react-native';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
+import { resetOnline } from '../../../src/api/useOnline';
 import { advance, renderScreen } from '../../../src/components/testing/screen';
 import * as log from '../../../src/log';
 import QuestionsScreen from '../questions';
@@ -76,6 +77,8 @@ const POST_ANSWER = `POST /questions/${uuid(1)}/answers`;
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
+  // A network failure leaves the app offline (src/api/useOnline.ts): put it back for the next test.
+  resetOnline();
 });
 
 beforeEach(() => {
@@ -232,7 +235,7 @@ describe('Questions: the answer composer', () => {
     expect(count(requests, INBOX)).toBe(1);
   });
 
-  it('shows the could-not-send line when the network fails', async () => {
+  it('says it needs a connection when the network fails', async () => {
     jest.spyOn(log, 'logWarning').mockImplementation(() => undefined);
     serveApi({
       [INBOX]: [json(200, ONLY_TO_ANSWER)],
@@ -242,7 +245,8 @@ describe('Questions: the answer composer', () => {
 
     await answerWith('Brackets make a sub-cycle.');
 
-    expect(screen.getByText("Couldn't send. Try again.")).toBeOnTheScreen();
+    expect(screen.getByText('Needs a connection')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Answer' })).toBeDisabled();
     expect(field()).toHaveDisplayValue('Brackets make a sub-cycle.');
   });
 });

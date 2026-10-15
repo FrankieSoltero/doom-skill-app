@@ -6,10 +6,12 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import { TextInput } from 'react-native';
 
 import { json, queryWrapper, serveApi, type Answer as Reply } from '../../api/testing/fakeApi';
+import { useOnline } from '../../api/useOnline';
 import { logWarning } from '../../log';
 import { AskSheet } from '../AskSheet';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const idOf = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const CARD_ID = idOf(1);
@@ -61,6 +63,7 @@ const onClose = jest.fn<undefined, []>();
 
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.mocked(useOnline).mockReturnValue(true);
   onClose.mockClear();
   jest.mocked(logWarning).mockClear();
 });
@@ -280,5 +283,20 @@ describe('AskSheet on a refused or failed ask', () => {
       ['ask_failed', { kind: expect.any(String) as string }],
     ]);
     expect(JSON.stringify(jest.mocked(logWarning).mock.calls)).not.toContain(ASKED);
+  });
+});
+
+describe('AskSheet offline', () => {
+  it('disables Ask with the reason, and sends nothing', async () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    const requests = await renderSheet({ [LIST]: [json(200, { questions: [] })] });
+
+    fireEvent.changeText(field(), ASKED);
+    fireEvent.press(askButton());
+    await settle();
+
+    expect(askButton()).toBeDisabled();
+    expect(screen.getByText('Needs a connection')).toBeOnTheScreen();
+    expect(requests.filter((r) => r.method === 'POST')).toHaveLength(0);
   });
 });

@@ -5,11 +5,14 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { json, queryWrapper, serveApi } from '../../api/testing/fakeApi';
+import { useOnline } from '../../api/useOnline';
 import { advance } from '../../components/testing/screen';
 import type { Answer, Question } from '../../data/qa';
 import * as log from '../../log';
 import { AnswerRow } from '../AnswerRow';
 import { INBOX_KEY } from '../useInbox';
+
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const WHEN = '2026-10-05T09:30:00Z';
@@ -75,6 +78,7 @@ const DELETE = `DELETE /answers/${A_ID}`;
 
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.mocked(useOnline).mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -294,5 +298,38 @@ describe('AnswerRow: a refused action', () => {
     expect(screen.getByText("Couldn't send. Try again.")).toBeOnTheScreen();
     expect(button('Flag')).toBeOnTheScreen();
     expect(screen.queryByText('Flagged')).toBeNull();
+  });
+});
+
+describe('AnswerRow offline', () => {
+  it('disables Accept and Helpful with the reason, and sends nothing', async () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    const requests = serveApi({ [ACCEPT]: [NO_CONTENT()], [HELPFUL]: [NO_CONTENT()] });
+    await renderRow();
+
+    for (const name of ['Accept', 'Helpful']) {
+      expect(button(name)).toBeDisabled();
+      expect(button(name)).toHaveProp('accessibilityHint', 'Needs a connection');
+      await press(name);
+    }
+
+    expect(screen.getByText('Needs a connection')).toBeOnTheScreen();
+    expect(requests).toHaveLength(0);
+  });
+
+  it('gives no reason on the learner’s own answer, which has neither control', async () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    await renderRow({ mine: true });
+
+    expect(noButton('Accept')).toBeNull();
+    expect(noButton('Helpful')).toBeNull();
+    expect(screen.queryByText('Needs a connection')).toBeNull();
+  });
+
+  it('shows no reason online', async () => {
+    await renderRow();
+
+    expect(button('Accept').props.accessibilityHint).toBeUndefined();
+    expect(screen.queryByText('Needs a connection')).toBeNull();
   });
 });

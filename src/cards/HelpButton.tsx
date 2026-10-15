@@ -3,20 +3,19 @@
  * icon, "Help with this card", beside the book icon, that opens the help sheet
  * (src/cards/HelpSheet.tsx). The frame draws it for a card with a server id that is not a
  * checkpoint or the Summary, and only once the API has served a set (H9): the demo cards and a
- * frame with no card have none.
+ * frame with no card have none. While the API cannot be reached it is disabled (`OnlineIconAction`)
+ * and opens nothing.
  */
 import { LifeBuoy } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
 
 import { useCardTextColor } from '../components/cardTextColor';
 import { copy } from '../copy';
 import { HelpSheet } from './HelpSheet';
+import { OnlineIconAction } from './OnlineIconAction';
 
 /** The icon's size: the book icon's and the flag's, so the kicker row keeps its height. */
 const ICON_SIZE = 14;
-/** Grows the touch target to at least 44 points around the small icon. */
-const HIT_SLOP = 15;
 
 type HelpButtonProps = {
   /** The server id of the card the frame holds. */
@@ -37,22 +36,15 @@ export function HelpButton({ cardId, index, onAdded }: HelpButtonProps) {
 
   return (
     <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={copy.help.action}
-        hitSlop={HIT_SLOP}
+      <OnlineIconAction
+        label={copy.help.action}
         onPress={() => {
           setOpen(true);
         }}
-        style={styles.button}
       >
         <LifeBuoy size={ICON_SIZE} color={color} />
-      </Pressable>
+      </OnlineIconAction>
       {open ? <HelpSheet cardId={cardId} index={index} onClose={close} onAdded={onAdded} /> : null}
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  button: { alignItems: 'center', justifyContent: 'center' },
-});

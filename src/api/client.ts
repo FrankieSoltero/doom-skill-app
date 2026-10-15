@@ -17,6 +17,10 @@
  *
  * So `await api.GET(...)` gives `{ data }` for a 2xx (`data` is undefined for a 204), and throws
  * otherwise. The token is never logged and never put in a URL.
+ *
+ * After each request's outcome the client reports it (`reportResult`, src/api/online.ts): `ok` true
+ * for a 2xx, else false with the `ApiError`'s kind (none for a caller's cancel). No request data
+ * goes with it (offline-topic plan: `useOnline`, src/api/useOnline.ts).
  */
 import createClient from 'openapi-fetch';
 
@@ -25,6 +29,7 @@ import { getAccessToken, signOut } from '../auth/useSession';
 import { config } from '../config';
 import { logWarning } from '../log';
 import { ApiError, errorForStatus } from './errors';
+import { reportResult } from './online';
 import type { paths } from './schema';
 
 /** Each attempt's time limit. */
@@ -160,11 +165,24 @@ async function sendWithPolicy(deps: ApiClientDeps, request: Request): Promise<Re
   return checked(again);
 }
 
+/** `response`, after telling the listeners how it ended. */
+async function reported(response: Promise<Response>): Promise<Response> {
+  try {
+    const answer = await response;
+    reportResult(true);
+    return answer;
+  } catch (error) {
+    if (error instanceof ApiError) reportResult(false, error.kind);
+    else reportResult(false);
+    throw error;
+  }
+}
+
 /** An API client over `deps`, typed by the generated `paths`. */
 export function createApiClient(deps: ApiClientDeps) {
   return createClient<paths>({
     baseUrl: deps.baseUrl,
-    fetch: (request: Request) => sendWithPolicy(deps, request),
+    fetch: (request: Request) => reported(sendWithPolicy(deps, request)),
   });
 }
 

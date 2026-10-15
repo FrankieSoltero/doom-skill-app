@@ -113,6 +113,11 @@ export const copy = deepFreeze({
    * answered (offline-topic plan O2).
    */
   connectForMore: 'Connect to get more cards',
+  /**
+   * Why an online-only control (Help, Ask, Flag, the Questions actions, the checkpoint's submit)
+   * is disabled while the API cannot be reached (offline-topic plan O6).
+   */
+  needsConnection: 'Needs a connection',
   /** The Today screen with no active topic: nothing to ask the server for. */
   noTopic: 'Pick a topic to start learning.',
   /** The button under `noTopic`, to the Explore tab. */

@@ -6,6 +6,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
 
 import { json, serveApi } from '../../api/testing/fakeApi';
+import { useOnline } from '../../api/useOnline';
 import { textStyleOf } from '../../components/testing/styles';
 import type { CheckpointCard as CheckpointCardData } from '../../data';
 import * as checkpoint from '../../feed/checkpoint';
@@ -30,6 +31,7 @@ const ungraded = (status: 'pending' | 'failed') =>
   json(200, { status, passed: null, score: null, feedback: null, criteria: null });
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const demo = setUpCheckpointCardTests();
 /** The demo card as the feed serves a milestone without checks: no rubric, no starter code. */
@@ -86,6 +88,7 @@ let grade: jest.SpyInstance;
 
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.mocked(useOnline).mockReturnValue(true);
   grade = jest.spyOn(checkpoint, 'gradeCheckpoint');
 });
 
@@ -317,5 +320,34 @@ describe("a written CheckpointCard's task (Task 8)", () => {
     expect(screen.queryByTestId('checkpoint-task')).toBeNull();
     expect(screen.queryByText(TASK)).toBeNull();
     expect(screen.getAllByTestId('rubric-row')).toHaveLength(4);
+  });
+});
+
+describe('a written CheckpointCard offline', () => {
+  it('disables Submit with the reason, and posts nothing', async () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    const requests = serveSubmit([ungraded('pending')]);
+    renderCheckpointCard(served());
+
+    typeAnswer(ANSWER);
+    press('Submit for grading');
+    await wait(0);
+
+    expect(isDisabled('Submit for grading')).toBe(true);
+    expect(screen.getByText('Needs a connection')).toBeOnTheScreen();
+    expect(posts(requests)).toHaveLength(0);
+    expect(grade).not.toHaveBeenCalled();
+  });
+
+  it('keeps Finish today enabled once the answer was sent, which posts nothing', async () => {
+    serveSubmit([ungraded('pending')]);
+    const { setActive } = renderCheckpointCard(served());
+    await submitAnswer();
+
+    jest.mocked(useOnline).mockReturnValue(false);
+    setActive(true);
+
+    expect(isDisabled('Finish today')).toBe(false);
+    expect(screen.queryByText('Needs a connection')).toBeNull();
   });
 });

@@ -9,12 +9,15 @@
  * - A refused answer shows its line under the field (the day's limit, not allowed, text refused);
  *   any other failure, offline included, shows the "could not send" line. The text stays for a
  *   retry. A failure is logged by its kind only, never the text.
+ * - While the API cannot be reached (`useOnline`), Answer is disabled and the line under the field
+ *   says "Needs a connection" (offline-topic plan O6); nothing is sent.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { requireApi } from '../api/query';
+import { useOnline } from '../api/useOnline';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { copy } from '../copy';
 import { answerQuestion, qaOutcome, type Question } from '../data/qa';
@@ -67,8 +70,9 @@ function useAnswer(question: Question) {
     }
   };
 
-  const ready = text.trim().length >= MIN_LENGTH && !sending;
-  return { text, setText, ready, line, send };
+  const online = useOnline();
+  const ready = online && text.trim().length >= MIN_LENGTH && !sending;
+  return { text, setText, ready, line: online ? line : copy.needsConnection, send };
 }
 
 /** The composer (module comment). */

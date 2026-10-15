@@ -1,6 +1,7 @@
 import { api, createApiClient } from '../client';
 import type { ApiClientDeps } from '../client';
 import { ApiError, errorForStatus } from '../errors';
+import { onResult } from '../online';
 
 // The API client (src/api/client.ts). The network is a mock: no request leaves the test.
 
@@ -306,6 +307,38 @@ describe('error values', () => {
     [504, 'unavailable'],
   ] as const)('name a %i %s', (status, kind) => {
     expect(errorForStatus(status)).toMatchObject({ kind, status });
+  });
+});
+
+describe('onResult', () => {
+  it('tells each listener a success, and a failure by its kind only, until it unsubscribes', async () => {
+    const setupResult = setup();
+    const listener = jest.fn();
+    const stop = onResult(listener);
+    await getTopics(setupResult);
+    setupResult.network.mockResolvedValueOnce(json(404, { detail: 'secret-body-marker' }));
+    await apiErrorOf(getTopics(setupResult));
+    setupResult.network.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await apiErrorOf(postTopic(setupResult));
+    stop();
+    await getTopics(setupResult);
+
+    expect(listener.mock.calls).toStrictEqual([[true], [false, 'notFound'], [false, 'offline']]);
+  });
+
+  it('tells a timeout once, after the time limit', async () => {
+    jest.useFakeTimers();
+    const setupResult = setup();
+    setupResult.network.mockImplementation(hangUntilAborted);
+    const listener = jest.fn();
+    const stop = onResult(listener);
+
+    const result = apiErrorOf(getTopics(setupResult));
+    await jest.advanceTimersByTimeAsync(15_000);
+    await result;
+    stop();
+
+    expect(listener.mock.calls).toStrictEqual([[false, 'timeout']]);
   });
 });
 

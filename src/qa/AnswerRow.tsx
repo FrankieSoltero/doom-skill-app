@@ -10,12 +10,15 @@
  * - **Delete**: on the learner's own answer, in two taps (decision Q13).
  *
  * Each sent action marks the inbox and the card's questions stale, so the read that follows shows
- * its result (`useQaAction`). A refused one shows its line under the row. The small controls and
+ * its result (`useQaAction`). A refused one shows its line under the row. While the API cannot be
+ * reached (`useOnline`), Accept and Helpful are disabled with the hint "Needs a connection", and the
+ * row says so under its controls (offline-topic plan O6). The small controls and
  * the lines are shared with the question's own Flag and Delete (`QuestionCard`).
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { requireApi } from '../api/query';
+import { useOnline } from '../api/useOnline';
 import { copy } from '../copy';
 import {
   acceptAnswer,
@@ -53,14 +56,21 @@ export function HiddenLine({ status }: { status: string }) {
   return <Text style={styles.quiet}>{copy.qa.hiddenPending}</Text>;
 }
 
-type QaControlProps = { label: string; onPress: () => void; disabled?: boolean };
+type QaControlProps = {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  /** Why the control is disabled, for a screen reader; none when it needs no reason. */
+  hint?: string | undefined;
+};
 
 /** A small outlined control in a question's or an answer's row of controls. */
-function QaControl({ label, onPress, disabled = false }: QaControlProps) {
+function QaControl({ label, onPress, disabled = false, hint }: QaControlProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={hint}
       accessibilityState={{ disabled }}
       disabled={disabled}
       hitSlop={HIT_SLOP}
@@ -119,6 +129,23 @@ export function FlagOrDelete({ mine, flag, remove }: FlagOrDeleteProps) {
   return <QaControl label={copy.qa.flag} onPress={flag.run} disabled={flag.busy} />;
 }
 
+type SendingControlProps = { label: string; action: QaAction; done: boolean; offline: boolean };
+
+/**
+ * Accept or Helpful: disabled once `done`, while sent or once sent, and offline, where the hint
+ * gives the reason (module comment).
+ */
+function SendingControl({ label, action, done, offline }: SendingControlProps) {
+  return (
+    <QaControl
+      label={label}
+      onPress={action.run}
+      disabled={offline || done || action.busy || action.outcome === 'ok'}
+      hint={offline ? copy.needsConnection : undefined}
+    />
+  );
+}
+
 type AnswerRowProps = { answer: Answer; question: Question };
 
 /** The answer's controls (module comment) and their lines. */
@@ -128,30 +155,31 @@ function AnswerControls({ answer, question }: AnswerRowProps) {
   const helpful = useQaAction(() => markHelpful(requireApi(), answer.id), keys);
   const flag = useQaAction(() => flagAnswer(requireApi(), answer.id, 'other'), keys);
   const remove = useTwoTapAction(() => deleteAnswer(requireApi(), answer.id), keys);
+  const offline = !useOnline();
   const acceptable =
     question.mine &&
     question.status === 'open' &&
     question.acceptedAnswerId === null &&
     !answer.mine;
+  // Accept or Helpful is shown: offline, the row gives the reason under its controls.
+  const sends = acceptable || !answer.mine;
   return (
     <>
       <View style={styles.controls}>
         {acceptable ? (
-          <QaControl
-            label={copy.qa.accept}
-            onPress={accept.run}
-            disabled={accept.busy || accept.outcome === 'ok'}
-          />
+          <SendingControl label={copy.qa.accept} action={accept} done={false} offline={offline} />
         ) : null}
         {answer.mine ? null : (
-          <QaControl
+          <SendingControl
             label={copy.qa.helpful}
-            onPress={helpful.run}
-            disabled={answer.helpfulByMe || helpful.busy || helpful.outcome === 'ok'}
+            action={helpful}
+            done={answer.helpfulByMe}
+            offline={offline}
           />
         )}
         <FlagOrDelete mine={answer.mine} flag={flag} remove={remove} />
       </View>
+      {offline && sends ? <Text style={styles.line}>{copy.needsConnection}</Text> : null}
       <OutcomeLines outcomes={[accept.outcome, helpful.outcome, flag.outcome, remove.outcome]} />
     </>
   );

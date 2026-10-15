@@ -8,11 +8,10 @@
  * Which card a frame holds comes from `FlagTarget`, which the feed screen puts around each card it
  * draws: its server id, or none for a checkpoint (whose id is a milestone's) or a card without
  * one. A frame with no target (the Summary), or the demo sets (no API: `flagCard` is null), shows
- * no action.
+ * no action. While the API cannot be reached the icon is disabled (`OnlineIconAction`) and opens nothing.
  */
 import { Flag } from 'lucide-react-native';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { useCardTextColor } from '../components/cardTextColor';
@@ -20,13 +19,12 @@ import { copy } from '../copy';
 import { flagCard, type Card, type FlagReason, type FlagSender } from '../data';
 import { logWarning } from '../log';
 import { FlagSheet } from './FlagSheet';
+import { OnlineIconAction } from './OnlineIconAction';
 
 /** How long the thank-you line shows. */
 const THANKS_MS = 3000;
 /** The icon's size: small, beside the kicker's 10-point text. */
 const ICON_SIZE = 14;
-/** Grows the touch target to at least 44 points around the small icon. */
-const HIT_SLOP = 15;
 
 const FlagTargetContext = createContext<string | null>(null);
 
@@ -88,17 +86,14 @@ export function FlagButton({ onFlagged, send = flagCard }: FlagButtonProps) {
 
   return (
     <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={copy.flag.action}
-        hitSlop={HIT_SLOP}
+      <OnlineIconAction
+        label={copy.flag.action}
         onPress={() => {
           setOpen(true);
         }}
-        style={styles.button}
       >
         <Flag size={ICON_SIZE} color={color} />
-      </Pressable>
+      </OnlineIconAction>
       <FlagSheet
         visible={open}
         onChoose={choose}
@@ -109,7 +104,3 @@ export function FlagButton({ onFlagged, send = flagCard }: FlagButtonProps) {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  button: { alignItems: 'center', justifyContent: 'center' },
-});

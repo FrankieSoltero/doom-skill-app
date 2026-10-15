@@ -6,4 +6,8 @@ describe('copy for offline study', () => {
   it("marks the Summary's provisional points", () => {
     expect(copy.summary.syncing).toBe('syncing');
   });
+
+  it('gives the reason an online-only control is disabled', () => {
+    expect(copy.needsConnection).toBe('Needs a connection');
+  });
 });

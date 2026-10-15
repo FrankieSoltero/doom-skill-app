@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
 
+import { useOnline } from '../api/useOnline';
 import { announce } from '../components/announce';
 import { CardFrame } from '../components/CardFrame';
 import { useCardTextColor } from '../components/cardTextColor';
@@ -154,6 +155,21 @@ function buttonState(
   if (grade?.passed === true) return { label: copy.finishToday, disabled: false, finishes: true };
   if (grade !== null) return { label: copy.resubmit, disabled: false, finishes: false };
   return { label: copy.submitForGrading, disabled: code.trim() === '', finishes: false };
+}
+
+/**
+ * `state` while the API cannot be reached (offline-topic plan O6): a Submit or Resubmit, which
+ * posts, is disabled; Finish today and Continue, which post nothing, stay as they are.
+ */
+function offlineState(state: ButtonState, online: boolean): ButtonState {
+  return online || state.finishes ? state : { ...state, disabled: true };
+}
+
+/** "Needs a connection" above a submit the API cannot take now, in the card's text color. */
+function OfflineLine({ shown }: { shown: boolean }) {
+  const color = useCardTextColor();
+  if (!shown) return null;
+  return <Text style={[styles.feedback, { color }]}>{copy.needsConnection}</Text>;
 }
 
 /**
@@ -323,6 +339,10 @@ type CheckpointCardProps = {
  * does what the button's Submit or Resubmit would, and nothing while it is disabled or reads
  * Finish today. A written card keeps the system keyboard.
  *
+ * While the API cannot be reached (`useOnline`, offline-topic plan O6), Submit and Resubmit, which
+ * post, are disabled (the keypad's Submit too) under the line "Needs a connection"; Finish today
+ * and Continue post nothing and stay enabled.
+ *
  * When the server's grade says the pass completed a level (M10 plan L, L17, L21), the unlock moment
  * (`LevelUnlock`) shows under the server's grade: the points, then a line about the next level.
  * It takes the room of what the grade made stale: the rubric (a code card) or the sent line (a
@@ -336,7 +356,8 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
   useDismissKeyboardWhenLeft(active);
   const level = completedLevel(server.level);
   const target = targetOf(level);
-  const button = buttonState(status, grade, code, target);
+  const online = useOnline();
+  const button = offlineState(buttonState(status, grade, code, target), online);
   // The keypad's Submit submits as the button would, and does nothing when the button would not.
   const onSubmitKey = () => {
     if (!button.disabled && !button.finishes) submit();
@@ -366,6 +387,7 @@ export function CheckpointCard({ card, index, active, onNext }: CheckpointCardPr
         <CheckpointFeedback result={server.result} localPassed={grade?.passed ?? null} />
         <CompletedLevel level={level} choicesLater={server.choicesLater} />
         <View testID="checkpoint-spacer" style={styles.spacer} />
+        <OfflineLine shown={!online && !button.finishes} />
         <PrimaryButton
           label={button.label}
           onPress={button.finishes ? finisher(target, onNext) : submit}

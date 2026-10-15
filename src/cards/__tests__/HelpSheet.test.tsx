@@ -8,14 +8,17 @@ import { TextInput } from 'react-native';
 
 import { ApiError } from '../../api/errors';
 import { json, queryWrapper, serveApi, type Answer } from '../../api/testing/fakeApi';
+import { useOnline } from '../../api/useOnline';
 import type { Card } from '../../data';
 import * as feedActions from '../../data/feedActions';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
+import { HelpButton } from '../HelpButton';
 import { HelpSheet } from '../HelpSheet';
 import { SourcesTarget } from '../cardSources';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const SET = { feedDate: '2026-10-05', setNumber: 2 };
 const mockCurrentSet = jest.fn<typeof SET | null, []>();
@@ -53,6 +56,7 @@ const onAdded = jest.fn<undefined, []>();
 
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.mocked(useOnline).mockReturnValue(true);
   mockCurrentSet.mockReturnValue(SET);
   onClose.mockClear();
   onAdded.mockClear();
@@ -331,5 +335,34 @@ describe('HelpSheet sends once and claims only a card it placed', () => {
     expectRowsEnabled(false);
     expect(onAdded).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('HelpButton', () => {
+  const renderButton = () => {
+    render(<HelpButton cardId={CARD_ID} index={1} onAdded={onAdded} />);
+    return screen.getByRole('button', { name: 'Help with this card' });
+  };
+
+  it('is disabled offline with the reason, and opens no sheet and sends nothing', () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    const requests = serveApi({});
+    const button = renderButton();
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveProp('accessibilityHint', 'Needs a connection');
+    fireEvent.press(button);
+
+    expect(screen.queryByTestId('help-sheet')).toBeNull();
+    expect(requests).toHaveLength(0);
+  });
+
+  it('opens the sheet online, with no reason', () => {
+    const button = renderButton();
+
+    expect(button.props.accessibilityHint).toBeUndefined();
+    fireEvent.press(button);
+
+    expect(screen.getByTestId('help-sheet')).toBeOnTheScreen();
   });
 });

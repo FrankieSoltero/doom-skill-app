@@ -1,12 +1,14 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { ApiError } from '../../api/errors';
+import { useOnline } from '../../api/useOnline';
 import type { Card } from '../../data';
 import { cardsByType } from '../../feed/testing/sets';
 import { logWarning } from '../../log';
 import { FlagButton, FlagTarget } from '../FlagButton';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
+jest.mock('../../api/useOnline', () => ({ useOnline: jest.fn() }));
 
 const CARD_ID = '5d1f0c2e-7a3b-4c4d-9e5f-6a7b8c9d0e1f';
 const QUIZ: Card = { ...cardsByType.quiz, id: CARD_ID };
@@ -34,6 +36,7 @@ async function choose(label: string) {
 
 beforeEach(() => {
   jest.mocked(logWarning).mockClear();
+  jest.mocked(useOnline).mockReturnValue(true);
 });
 
 describe('FlagButton', () => {
@@ -111,5 +114,28 @@ describe('FlagButton', () => {
     expect(screen.queryByTestId('flag-sheet')).toBeNull();
     expect(send).not.toHaveBeenCalled();
     expect(onFlagged).not.toHaveBeenCalled();
+  });
+
+  it('is disabled offline with the reason, and opens nothing and sends nothing', () => {
+    jest.mocked(useOnline).mockReturnValue(false);
+    const send = jest.fn<Promise<void>, [string, string]>();
+    const { onFlagged } = renderButton(QUIZ, send);
+
+    const button = screen.getByRole('button', { name: 'Flag this card' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveProp('accessibilityHint', 'Needs a connection');
+    fireEvent.press(button);
+
+    expect(screen.queryByTestId('flag-sheet')).toBeNull();
+    expect(send).not.toHaveBeenCalled();
+    expect(onFlagged).not.toHaveBeenCalled();
+  });
+
+  it('is enabled online, with no reason', () => {
+    renderButton(QUIZ);
+
+    const button = screen.getByRole('button', { name: 'Flag this card' });
+    expect(button).toBeEnabled();
+    expect(button.props.accessibilityHint).toBeUndefined();
   });
 });
