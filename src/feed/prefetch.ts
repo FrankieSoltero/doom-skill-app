@@ -12,6 +12,8 @@
  * - An `ahead` answer that settles after the server served a later set keeps that later set and
  *   the sets after it, never the set it was asked for; one that settles after a reset of the
  *   store (a sign-out, another topic) or for another user keeps nothing.
+ * - A set the server serves that is kept already starts without the cards kept as answered
+ *   (`withoutAnswered`); it is still kept whole.
  * - `keepAnswers` marks each card the learner answers (a concept once left, any other card once
  *   its answer passes the gate) in the kept set.
  * - `keptSet` is what a load that failed offline (`isOfflineFailure`) serves: the first kept set
@@ -164,7 +166,28 @@ function unanswered(
   const cards = entry.set.cards.filter(open);
   if (!cards.some(canRender)) return null;
   const droppedIds = (entry.set.droppedIds ?? []).filter((id) => !answered.has(id));
-  return { ...entry.set, cards, droppedIds };
+  const set: FeedSet = { ...entry.set, cards, droppedIds };
+  if (droppedIds.length === 0) delete set.droppedIds;
+  return set;
+}
+
+/**
+ * `served`, a set the server served, without the cards its kept entry (same date and number)
+ * marks answered: after reconnecting the server serves a set answered offline again, whole, when a
+ * follow-up made it unfinished or the outbox has not drained. Unchanged when nothing of it is
+ * kept, or when no card it can show is left (the answers are still on their way).
+ */
+export async function withoutAnswered(
+  served: FeedSet,
+  canRender: (card: Card) => boolean,
+): Promise<FeedSet> {
+  const holder = holderOf(served.topic.slug);
+  // Only a dated set is the server's (the demo sets have no date): an undated one is never kept.
+  if (holder === null || served.feedDate === undefined) return served;
+  const stored = await loadPersisted(holder.userId, holder.slug);
+  if (!stored.some((entry) => sameSet(entry.set, served))) return served;
+  const entry = { set: served, answered: [] };
+  return unanswered(entry, answeredIn(served, stored), canRender) ?? served;
 }
 
 /** True for the store's set once its Summary was reached: it is never served again. */

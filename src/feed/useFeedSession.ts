@@ -8,7 +8,7 @@ import { canAdvanceFrom, canGoTo, nextMove } from './feedGate';
 // Loaded for its effect: the app's attempt outbox installs itself as the store's sink for answered
 // cards, so it is in place before the session draws any card.
 import './outbox';
-import { isOfflineFailure, keepAnswers, keepServed, keptSet } from './prefetch';
+import { isOfflineFailure, keepAnswers, keepServed, keptSet, withoutAnswered } from './prefetch';
 import { useFeedStore } from './store';
 
 /**
@@ -77,7 +77,8 @@ async function answerSinceReset(
 
 /**
  * A function that asks `source` for a set, one request at a time: a call while one is in flight
- * does nothing. A set the server served is kept with the sets ahead of it (`keepServed`); a load
+ * does nothing. A set the server served starts without the cards kept as answered
+ * (`withoutAnswered`) and is kept whole with the sets ahead of it (`keepServed`); a load
  * that fails offline serves the first kept set not fully answered instead, and asks for nothing
  * ahead (`keptSet`; prefetch.ts). A set that arrives is passed to `onSet` (which starts it in the global store)
  * even after the component unmounted: the source has already moved past it, so dropping it would
@@ -119,7 +120,7 @@ function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: F
     try {
       const answer = await answerSinceReset(source, () => alive.current);
       if (answer === undefined) return;
-      serve(answer, handlers);
+      serve(answer === null ? null : await withoutAnswered(answer, canRender), handlers);
       if (answer !== null) void keepServed(source, answer);
     } catch (error) {
       await fallBack(error, handlers);

@@ -1,6 +1,7 @@
 // The kept sets (src/feed/prefetch.ts) when an `ahead` answer settles late: after a later set was
-// served, after a sign-out, and beside another topic's request; and an answer marked in one of two
-// kept sets that share a number. Storage is the library's in-memory Jest mock.
+// served, after a sign-out, and beside another topic's request; an answer marked in one of two
+// kept sets that share a number; and a kept set the server serves again after reconnecting.
+// Storage is the library's in-memory Jest mock.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { signOut, useSession } from '../../auth/useSession';
@@ -9,6 +10,7 @@ import { loadPersisted, markAnswered, savePersisted } from '../persist';
 import { keepServed } from '../prefetch';
 import { useFeedStore } from '../store';
 import { cardsByType, makeSet } from '../testing/sets';
+import { flush, renderSession } from '../testing/session';
 import { scriptedSource } from '../testing/sources';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -22,6 +24,9 @@ function setOf(n: number, { slug = 'strudel', date = '2026-10-01' } = {}): FeedS
   const base = makeSet(0, [{ ...cardsByType.quiz, id }]);
   return { ...base, topic: { ...base.topic, slug }, setNumber: n, feedDate: date };
 }
+
+/** The id of the one card of `set`. */
+const idOf = (set: FeedSet) => set.cards[0]?.id ?? '';
 
 const numbers = async (slug = 'strudel') =>
   (await loadPersisted(USER, slug)).map(({ set }) => set.setNumber);
@@ -101,5 +106,48 @@ describe('an answer in one of two kept sets that share a number', () => {
 
     const kept = await loadPersisted(USER, 'strudel');
     expect(kept.map(({ answered }) => answered)).toStrictEqual([[], [cardId]]);
+  });
+});
+
+describe('a set the server serves again after reconnecting', () => {
+  const set1 = setOf(1);
+  const answeredAll = () => savePersisted(USER, 'strudel', [{ set: set1, answered: [idOf(set1)] }]);
+  const followUp = { ...cardsByType.predict, id: '00000000-0000-4000-8000-000000000999' };
+  const shownIds = () => (useFeedStore.getState().set?.cards ?? []).map(({ id }) => id);
+
+  it('starts without the cards answered offline: only the follow-up the server added', async () => {
+    await answeredAll();
+    await renderSession(scriptedSource({ ...set1, cards: [...set1.cards, followUp] }));
+    await flush();
+
+    expect(shownIds()).toStrictEqual([followUp.id]);
+    // The kept copy stays whole, the follow-up with it.
+    const kept = await loadPersisted(USER, 'strudel');
+    expect(kept[0]?.set.cards.map(({ id }) => id)).toStrictEqual([idOf(set1), followUp.id]);
+  });
+
+  it('starts it unchanged when every card of it was answered (the outbox has not drained)', async () => {
+    await answeredAll();
+    await renderSession(scriptedSource(set1));
+    await flush();
+
+    expect(shownIds()).toStrictEqual([idOf(set1)]);
+  });
+
+  it('starts an undated set (the demo) unchanged, whatever is kept', async () => {
+    const { feedDate: _date, ...undated } = set1;
+    await savePersisted(USER, 'strudel', [{ set: undated, answered: [idOf(set1)] }]);
+    await renderSession(scriptedSource({ ...undated, cards: [...set1.cards, followUp] }));
+    await flush();
+
+    expect(shownIds()).toStrictEqual([idOf(set1), followUp.id]);
+  });
+
+  it('starts a set with no kept entry unchanged', async () => {
+    await savePersisted(USER, 'strudel', [{ set: setOf(2), answered: [idOf(setOf(2))] }]);
+    await renderSession(scriptedSource(set1));
+    await flush();
+
+    expect(shownIds()).toStrictEqual([idOf(set1)]);
   });
 });

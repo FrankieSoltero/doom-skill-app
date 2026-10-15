@@ -191,7 +191,10 @@ export async function resetPlacement(api: ApiClient, slug: string): Promise<Rese
  * - The first set served for a topic comes from `GET /feed/today`; every later one from
  *   `GET /feed/next`. A failed call does not move on, so Retry asks for the same set again.
  * - A 204 answers `null`: nothing to serve.
- * - A 409 from next (the set is unfinished) serves the current set again from today.
+ * - A 409 from next (a set is unfinished) serves the current set again from today. Once sets are
+ *   held ahead (`ahead`), next answers 409 whenever the highest stored set is unfinished, and
+ *   today serves the first unfinished set, which may be one answered offline whose attempts have
+ *   not all landed, or one a follow-up card made unfinished again.
  * - No active topic fails with kind `noTopic`, before any request.
  * - Any ApiError fails with its kind; the client has already applied its time limit and retries.
  * - A set with cards the app cannot show is served without them, their ids in `droppedIds`.
