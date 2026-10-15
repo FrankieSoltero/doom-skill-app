@@ -49,6 +49,8 @@ function parseFeedSet(raw: unknown): FeedSet {
 export function createFixtureSource(): CardSource {
   let nextSetNumber = 1;
   return {
+    // The demo has nothing to keep for offline use.
+    ahead: () => Promise.resolve([]),
     getNextSet() {
       // Inside `then`, so a validation throw becomes a rejected promise, and calls made together
       // read and move the position one after another.

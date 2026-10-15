@@ -179,3 +179,12 @@ describe('cardSource', () => {
     });
   });
 });
+
+describe('createFixtureSource: ahead', () => {
+  it('has no sets ahead, and does not move its position', async () => {
+    const source = createFixtureSource();
+
+    await expect(source.ahead('strudel', 3)).resolves.toStrictEqual([]);
+    await expect(source.getNextSet()).resolves.toMatchObject({ setNumber: 1 });
+  });
+});

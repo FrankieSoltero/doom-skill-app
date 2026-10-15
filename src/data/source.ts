@@ -6,6 +6,12 @@ import type { FeedSet } from './schema';
 export interface CardSource {
   /** The next set of cards, or `null` when there is nothing more to serve. */
   getNextSet(): Promise<FeedSet | null>;
+  /**
+   * Up to `sets` sets of `topic` after the current one, built whether or not it is answered, for
+   * the app to keep for offline use; `[]` when there are none. Moves no position: the next
+   * `getNextSet` is the one it would have been.
+   */
+  ahead(topic: string, sets: number): Promise<FeedSet[]>;
 }
 
 /**

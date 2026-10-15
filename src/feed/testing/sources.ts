@@ -9,6 +9,7 @@ type Outcome = FeedSet | null | Error;
 /** A card source whose `getNextSet` is a Jest mock, declared as a property so tests can read it. */
 type MockedSource = {
   getNextSet: jest.Mock<Promise<FeedSet | null>, []>;
+  ahead: jest.Mock<Promise<FeedSet[]>, [string, number]>;
 };
 
 /**
@@ -22,7 +23,10 @@ export function scriptedSource(...outcomes: Outcome[]): MockedSource {
       outcome instanceof Error ? Promise.reject(outcome) : Promise.resolve(outcome),
     );
   }
-  return { getNextSet };
+  return {
+    getNextSet,
+    ahead: jest.fn<Promise<FeedSet[]>, [string, number]>().mockResolvedValue([]),
+  };
 }
 
 type ControlledSource = MockedSource & {
@@ -47,6 +51,7 @@ export function controlledSource(): ControlledSource {
   );
   return {
     getNextSet,
+    ahead: jest.fn<Promise<FeedSet[]>, [string, number]>().mockResolvedValue([]),
     resolve: (set) => {
       settle.resolve(set);
     },

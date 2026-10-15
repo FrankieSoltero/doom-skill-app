@@ -9,7 +9,7 @@ import { logWarning } from '../../log';
 import response from '../__fixtures__/feed_response.json';
 import { createApiSource } from '../apiSource';
 import { mapFeed } from '../mapFeed';
-import { feedSetSchema } from '../schema';
+import { apiSetSchema, feedSetSchema } from '../schema';
 import { FeedLoadError } from '../source';
 import { json, network, type Answer } from '../testing/network';
 
@@ -258,6 +258,50 @@ describe('createApiSource: the current set', () => {
 
     expect(useFeedStore.getState().set?.setNumber).toBe(1);
     expect(source.getCurrentSet()?.setNumber).toBe(1);
+  });
+});
+
+describe('createApiSource: ahead', () => {
+  const AHEAD = '/feed/ahead?topic=c&sets=3';
+
+  it('asks for the sets ahead of a topic and parses each with the set schema', async () => {
+    const { source, requests } = sourceOver([
+      json(200, [
+        { ...response, set_number: 2 },
+        { ...response, set_number: 3 },
+      ]),
+    ]);
+
+    const sets = await source.ahead('c', 3);
+
+    expect(requests).toStrictEqual([AHEAD]);
+    expect(sets).toStrictEqual([
+      apiSetSchema.parse(mapFeed({ ...response, set_number: 2 })),
+      apiSetSchema.parse(mapFeed({ ...response, set_number: 3 })),
+    ]);
+    expect(source.getCurrentSet()).toBeNull();
+  });
+
+  it('answers an empty list when nothing more is built', async () => {
+    const { source } = sourceOver([json(200, [])]);
+
+    expect(await source.ahead('c', 3)).toStrictEqual([]);
+  });
+
+  it('fails with kind schema for a set without a date, naming its path', async () => {
+    const { feed_date: _dropped, ...undated } = response;
+    const { source } = sourceOver([json(200, [response, undated])]);
+
+    const error = await loadErrorOf(source.ahead('c', 3));
+
+    expect(error.kind).toBe('schema');
+    expect(error.message).toBe('Sets ahead failed validation at 1.feedDate');
+  });
+
+  it("fails with the API error's kind", async () => {
+    const { source } = sourceOver([failed(404)]);
+
+    expect((await loadErrorOf(source.ahead('c', 3))).kind).toBe('notFound');
   });
 });
 

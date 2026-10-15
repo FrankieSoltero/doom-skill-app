@@ -6,7 +6,7 @@
 // feed session records it as skipped and the server can finish the set. The recorded summary of a stored set (`GET /feed/summary`) is read the
 // same way (`fetchSummary`). A learner's flag on a card is sent from here too (`sendFlag`), and so
 // are the placement quiz's three calls (`fetchPlacement`, `sendPlacement`, `resetPlacement`).
-import type { z, ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import type { createApiClient } from '../api/client';
 import { ApiError } from '../api/errors';
@@ -57,6 +57,8 @@ function loadErrorFrom(error: unknown): FeedLoadError {
 type Refusal = { event: string; label: string };
 
 const SET_REFUSED: Refusal = { event: 'feed_invalid', label: 'Card set' };
+const AHEAD_REFUSED: Refusal = { event: 'feed_invalid', label: 'Sets ahead' };
+const aheadSchema = z.array(apiSetSchema);
 const SUMMARY_REFUSED: Refusal = { event: 'summary_invalid', label: 'Summary' };
 
 /**
@@ -193,6 +195,9 @@ export async function resetPlacement(api: ApiClient, slug: string): Promise<Rese
  * - No active topic fails with kind `noTopic`, before any request.
  * - Any ApiError fails with its kind; the client has already applied its time limit and retries.
  * - A set with cards the app cannot show is served without them, their ids in `droppedIds`.
+ * - `ahead(topic, sets)` is `GET /feed/ahead`: up to `sets` stored sets after the current one,
+ *   each parsed as a served set is; any refused set fails it all, with kind `schema`. It moves
+ *   nothing: the current set and the next `getNextSet` stay as they were.
  * - `getCurrentSet()` gives the served set's date (the API's: the date the server stored it for,
  *   in the user's timezone) and number, for the attempts at its cards and for a card added to the
  *   running set (`POST /feed/extra`); `null` before the first set.
@@ -238,6 +243,15 @@ export function createApiSource(
       const set: ApiSet = parsed(apiSetSchema, data, SET_REFUSED);
       served = { topic, set: { feedDate: set.feedDate, setNumber: set.setNumber } };
       return set;
+    },
+    async ahead(topic, sets) {
+      const data = await api
+        .GET('/feed/ahead', { params: { query: { topic, sets } } })
+        .then((answer) => answer.data)
+        .catch((error: unknown) => {
+          throw loadErrorFrom(error);
+        });
+      return parsed(aheadSchema, data, AHEAD_REFUSED);
     },
     getCurrentSet: () => served?.set ?? null,
   };
