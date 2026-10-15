@@ -884,6 +884,8 @@ export interface components {
             milestone_count: number;
             /** Pass Threshold */
             pass_threshold: number;
+            /** Points */
+            points: number;
             /** Rubric */
             rubric: components["schemas"]["RubricRow"][];
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -927,6 +929,8 @@ export interface components {
             milestone_count: number;
             /** Pass Threshold */
             pass_threshold: number;
+            /** Points */
+            points: number;
             /** Prompt */
             prompt: string;
             /** Rubric */
@@ -1004,6 +1008,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
+            /** Points */
+            points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
@@ -1042,6 +1048,10 @@ export interface components {
             /** Node */
             node: string;
             notice: components["schemas"]["Notice"] | null;
+            /** Points */
+            points: number;
+            /** Seen Points */
+            seen_points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Snippet */
             snippet: string;
@@ -1175,6 +1185,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Pass Msg */
             pass_msg: string;
+            /** Points */
+            points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
@@ -1464,6 +1476,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
+            /** Points */
+            points: number;
             /** Problem */
             problem: string;
             sequence?: components["schemas"]["SequenceOut"] | null;
@@ -1622,6 +1636,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
+            /** Points */
+            points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
@@ -1781,6 +1797,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
+            /** Points */
+            points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Sources */
             sources: components["schemas"]["CardSource"][];
@@ -1817,6 +1835,8 @@ export interface components {
             /** Node */
             node: string;
             notice: components["schemas"]["Notice"] | null;
+            /** Points */
+            points: number;
             /** Prompt */
             prompt: string;
             /** Ratings */
@@ -1864,6 +1884,8 @@ export interface components {
             notice: components["schemas"]["Notice"] | null;
             /** Options */
             options: string[];
+            /** Points */
+            points: number;
             sequence?: components["schemas"]["SequenceOut"] | null;
             /** Situation */
             situation: string;

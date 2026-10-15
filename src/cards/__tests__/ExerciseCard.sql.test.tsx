@@ -30,6 +30,7 @@ const SQL_CARD: ExerciseCardData = {
   lang: 'sql',
   node: 'Window functions',
   estSeconds: 90,
+  points: 8,
   title: 'Rank each salary within its department',
   starterCode: 'SELECT depname, salary FROM empsalary;',
   checks: [{ kind: 'contains', value: 'PARTITION BY depname', ignoreWhitespace: true }],

@@ -15,6 +15,7 @@
       "id": "00000000-0000-4000-8000-000000000301",
       "node": "Rests ~",
       "est_seconds": 30,
+      "points": 3,
       "sources": [],
       "notice": null,
       "type": "review",
@@ -46,6 +47,7 @@
       "id": "00000000-0000-4000-8000-000000000302",
       "node": "Alternation < >",
       "est_seconds": 45,
+      "points": 0,
       "sources": [
         {
           "title": "Mini-notation",
@@ -60,6 +62,7 @@
       ],
       "notice": null,
       "type": "concept",
+      "seen_points": 2,
       "title": "Alternate with angle brackets",
       "body": "Wrap steps in **< >** and Strudel plays one of them per cycle.",
       "snippet": "note(\"<c3 e3 g3>\")",
@@ -75,6 +78,7 @@
       "id": "00000000-0000-4000-8000-000000000303",
       "node": "Alternation < >",
       "est_seconds": 40,
+      "points": 5,
       "sources": [
         {
           "title": "Mini-notation",
@@ -103,6 +107,7 @@
       "id": "00000000-0000-4000-8000-000000000304",
       "node": "Alternation < >",
       "est_seconds": 40,
+      "points": 5,
       "sources": [
         {
           "title": "Mini-notation",
@@ -130,6 +135,7 @@
       "id": "00000000-0000-4000-8000-000000000305",
       "node": "Speed * and /",
       "est_seconds": 45,
+      "points": 0,
       "sources": [
         {
           "title": "Tempo",
@@ -139,6 +145,7 @@
       ],
       "notice": null,
       "type": "concept",
+      "seen_points": 2,
       "title": "Repeat a step with *",
       "body": "A number after a star plays that step that many times inside **one cycle**.",
       "snippet": "s(\"bd*4, hh*8\")",
@@ -153,6 +160,7 @@
       "id": "00000000-0000-4000-8000-000000000306",
       "node": "Speed * and /",
       "est_seconds": 90,
+      "points": 8,
       "sources": [
         {
           "title": "Tempo",
@@ -284,6 +292,7 @@
       "id": "00000000-0000-4000-8000-000000000201",
       "type": "checkpoint",
       "est_seconds": 180,
+      "points": 50,
       "milestone": 1,
       "milestone_count": 2,
       "title": "First sounds",

@@ -32,8 +32,17 @@ const UNSERVED: ConceptCardData = {
   cycles: ['c3', 'e3', 'g3'],
 };
 const CARD: ConceptCardData = { ...UNSERVED, id: ID };
-const { type, node, estSeconds, title, body } = CARD;
-const NO_SNIPPET: ConceptCardData = { type, node, estSeconds, title, body, id: ID };
+const { type, node, estSeconds, points, seenPoints, title, body } = CARD;
+const NO_SNIPPET: ConceptCardData = {
+  type,
+  node,
+  estSeconds,
+  points,
+  seenPoints,
+  title,
+  body,
+  id: ID,
+};
 const { play, stop, reset } = strudelActions;
 
 /** Starts a set of CARD whose topic has `lang` (absent when undefined). */

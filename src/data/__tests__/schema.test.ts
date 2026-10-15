@@ -267,6 +267,7 @@ describe('cloze, scenario and numeric cards (M9 plans C and D)', () => {
     ],
     node: 'Photosynthesis',
     estSeconds: 30,
+    points: 5,
     title: 'Fill in the blank',
     options: ['chemical', 'thermal', 'nuclear'],
     correct: 2,

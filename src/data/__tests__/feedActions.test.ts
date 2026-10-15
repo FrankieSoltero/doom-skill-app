@@ -123,7 +123,14 @@ describe('the passage schemas', () => {
 });
 
 const choice = { options: ['One', 'Two'], correct: 1, explanation: 'Because **two**.' };
-const served = { id: CARD_ID, node: 'Speed', est_seconds: 30, sources: [], title: 'Pick one' };
+const served = {
+  id: CARD_ID,
+  node: 'Speed',
+  est_seconds: 30,
+  points: 5,
+  sources: [],
+  title: 'Pick one',
+};
 
 /** A card of each of the eight types the server can add, in the shape the feed serves. */
 const ADDED = [

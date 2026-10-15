@@ -38,6 +38,7 @@ const ADDED = {
   type: 'cloze',
   node: 'Speed',
   est_seconds: 30,
+  points: 5,
   sources: [],
   title: 'Pick one',
   text: 'A ___ fills the gap.',

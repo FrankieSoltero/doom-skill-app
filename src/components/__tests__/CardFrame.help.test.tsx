@@ -37,6 +37,8 @@ const ADDED = {
   type: 'concept',
   node: 'Speed',
   est_seconds: 30,
+  points: 0,
+  seen_points: 2,
   title: 'Faster',
   body: 'The pattern plays faster.',
 };

@@ -121,6 +121,8 @@ const OFFERED = {
   type: 'concept',
   node: 'Rests',
   est_seconds: 20,
+  points: 0,
+  seen_points: 2,
   title: 'A rest keeps its step',
   body: 'The **~** step is silent.',
   snippet: 's("bd ~")',

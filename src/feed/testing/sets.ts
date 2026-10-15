@@ -16,6 +16,8 @@ import type {
 
 const concept: ConceptCard = {
   type: 'concept',
+  points: 0,
+  seenPoints: 2,
   node: 'mini-notation',
   estSeconds: 30,
   title: 'Steps in a cycle',
@@ -27,6 +29,7 @@ const concept: ConceptCard = {
 
 const quiz: QuizCard = {
   type: 'quiz',
+  points: 5,
   node: 'mini-notation',
   estSeconds: 20,
   title: 'How many steps?',
@@ -37,6 +40,7 @@ const quiz: QuizCard = {
 
 const predict: PredictCard = {
   type: 'predict',
+  points: 5,
   node: 'mini-notation',
   estSeconds: 25,
   title: 'What plays?',
@@ -49,6 +53,7 @@ const predict: PredictCard = {
 // A prose topic's two choice cards (M9 plan C): a sentence with a blank, and a situation.
 const cloze: ClozeCard = {
   type: 'cloze',
+  points: 5,
   node: 'photosynthesis',
   estSeconds: 30,
   title: 'Fill in the blank',
@@ -60,6 +65,7 @@ const cloze: ClozeCard = {
 
 const scenario: ScenarioCard = {
   type: 'scenario',
+  points: 5,
   node: 'photosynthesis',
   estSeconds: 45,
   title: 'What happens next?',
@@ -72,6 +78,7 @@ const scenario: ScenarioCard = {
 // A quantitative topic's choice card (M9 plan D): a problem to work out; code computed the answer.
 const numeric: NumericCard = {
   type: 'numeric',
+  points: 5,
   node: 'unit conversion',
   estSeconds: 60,
   title: 'How fast in m/s?',
@@ -83,6 +90,7 @@ const numeric: NumericCard = {
 
 const exercise: ExerciseCard = {
   type: 'exercise',
+  points: 8,
   lang: 'strudel',
   node: 'mini-notation',
   estSeconds: 90,
@@ -95,6 +103,7 @@ const exercise: ExerciseCard = {
 
 const review: ReviewCard = {
   type: 'review',
+  points: 3,
   node: 'mini-notation',
   lastSeenDays: 2,
   estSeconds: 15,
@@ -106,6 +115,7 @@ const review: ReviewCard = {
 
 const checkpoint: CheckpointCard = {
   type: 'checkpoint',
+  points: 50,
   milestone: 1,
   milestoneCount: 3,
   estSeconds: 120,

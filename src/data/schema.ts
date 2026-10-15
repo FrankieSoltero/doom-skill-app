@@ -34,11 +34,13 @@ export const sourceLinkSchema = z.object({
   url: z.string().regex(HTTPS_URL),
   license: text.nullable(),
 });
-const cardSources = z.array(sourceLinkSchema).max(3).optional();
-// The fields every card shares: its sources, its place in a sequence (M10 plan T) and its notice
-// (card quality loop Task 7; null when clean, absent from a checkpoint and the demo cards).
+const sources = z.array(sourceLinkSchema).max(3).optional();
+// The fields every card shares: its sources, its place in a sequence (M10 plan T), its notice
+// (card quality loop Task 7; null when clean, absent from a checkpoint and the demo cards) and its
+// points, what answering it right pays (offline-topic plan Task 2: required, the server always
+// sends them; a concept's 0, which adds `seenPoints`, what seeing it pays).
 const notice = z.enum(['rebuilding', 'flagged']).nullish();
-const cardCommon = { sources: cardSources, sequence: sequenceSchema.optional(), notice };
+const cardCommon = { sources, sequence: sequenceSchema.optional(), notice, points: count };
 
 /**
  * The exercise languages: the server's `Lang` (services/api/app/llm/resolve_model.py; kept in step
@@ -97,6 +99,7 @@ const conceptCardSchema = z.object({
   id: cardId,
   ...cardCommon,
   type: z.literal('concept'),
+  seenPoints: count,
   node: text,
   estSeconds: seconds,
   title: text,
@@ -353,13 +356,11 @@ const cardSlotSchema = z.unknown().transform((item, ctx): Card | Dropped => {
   return z.NEVER;
 });
 
-type Slot = z.infer<typeof cardSlotSchema>;
-
 /**
  * The set with its dropped cards taken out of `cards`; `droppedIds` names those with an id to
  * record, and is left out when there is none.
  */
-function withoutDropped<T extends { cards: Slot[] }>({
+function withoutDropped<T extends { cards: z.infer<typeof cardSlotSchema>[] }>({
   cards: slots,
   ...set
 }: T): Omit<T, 'cards'> & { cards: Card[]; droppedIds?: string[] } {

@@ -1,9 +1,10 @@
 // A concept card of a topic without Strudel (card_gen_v3, M6 hardening Task 8) is served with
 // `cycles: []` and `snippet_comment: ""`. The mapper leaves the empty list out, so the schema reads
 // the card as one with no cycles and the card draws no tiles (ConceptCard.plain.test.tsx).
+import demo from '../__fixtures__/cards.fixture.json';
 import response from '../__fixtures__/feed_response.json';
 import { mapFeed } from '../mapFeed';
-import { apiSetSchema, feedSetSchema } from '../schema';
+import { apiSetSchema, cardSchema, feedSetSchema } from '../schema';
 
 const served = response.cards.find((card) => card.type === 'concept');
 
@@ -63,5 +64,53 @@ describe('mapFeed on a card with sources', () => {
 
     expect(set.cards.map((card) => card.sources)).toStrictEqual(sent);
     expect(sent.some((sources) => sources.length > 0)).toBe(true);
+  });
+});
+
+// Offline-topic plan Task 2 (A3): every card carries what answering it right pays, and a concept
+// card what seeing it pays; the schema requires both.
+const POINTS = { concept: 0, quiz: 5, predict: 5, exercise: 8, review: 3, checkpoint: 50 };
+
+/** Each card as `[type, points, seenPoints]`, `seenPoints` undefined when the card has none. */
+function pointsOf(cards: readonly object[]): unknown[] {
+  return cards.map((card) => [
+    'type' in card ? card.type : undefined,
+    'points' in card ? card.points : undefined,
+    'seenPoints' in card ? card.seenPoints : undefined,
+  ]);
+}
+
+describe('points on every card', () => {
+  it('gives each served card its points, and a concept card its seen points', () => {
+    const set = apiSetSchema.parse(mapFeed(response));
+
+    expect(pointsOf(set.cards)).toEqual(
+      response.cards.map((card) => [
+        card.type,
+        POINTS[card.type as keyof typeof POINTS],
+        card.type === 'concept' ? 2 : undefined,
+      ]),
+    );
+  });
+
+  it("gives every demo card its kind's points", () => {
+    const set = feedSetSchema.parse({ ...demo, setNumber: 1 });
+
+    expect(pointsOf(set.cards)).toEqual(
+      demo.cards.map((card) => [
+        card.type,
+        POINTS[card.type as keyof typeof POINTS],
+        card.type === 'concept' ? 2 : undefined,
+      ]),
+    );
+  });
+
+  it('refuses a card without points, and a concept card without seen points', () => {
+    const [concept, quiz]: Record<string, unknown>[] = demo.cards.map((card) => ({ ...card }));
+    delete quiz?.points;
+    delete concept?.seenPoints;
+
+    expect(() => cardSchema.parse(quiz)).toThrow(/points/);
+    expect(() => cardSchema.parse(concept)).toThrow(/seenPoints/);
   });
 });
