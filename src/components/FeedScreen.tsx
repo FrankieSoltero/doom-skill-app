@@ -5,6 +5,7 @@ import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardBody } from '../cards/CardText';
+import { ConnectCard } from '../cards/ConnectCard';
 import { FlagTarget } from '../cards/FlagButton';
 import { SourcesTarget } from '../cards/cardSources';
 import { canRenderCard, renderCard, renderSummary } from '../cards/registry';
@@ -274,6 +275,7 @@ function FeedBody({ session, ...actions }: ScreenActions & { session: FeedSessio
       />
     );
   }
+  if (session.status === 'offline') return <ConnectCard onRetry={session.retry} />;
   if (session.status === 'empty') return <ErrorScreen message={copy.nothingYet} />;
   if (session.set === null) return <FeedLoading />;
   return <ReadyFeed set={session.set} session={session} {...actions} />;
@@ -308,7 +310,8 @@ type FeedScreenProps = {
  * The Today feed (docs/design/card-feed/README.md:24-45): on a paper ground, while the first set
  * loads, a loading line; then the feed header over the pager, with the gating toast over the
  * pager's foot. A failed load shows an error screen with Retry; a source with nothing to give
- * shows one without; with no active topic, one with a button to Explore. Card types the registry cannot draw are left out of the set. The tab bar
+ * shows one without; with no active topic, one with a button to Explore; offline with every kept set
+ * answered, the end card (`ConnectCard`) with Retry. Card types the registry cannot draw are left out of the set. The tab bar
  * belongs to the tab layout, not to this screen.
  *
  * The root pads for the top safe-area inset in every state; the tab bar below it covers the

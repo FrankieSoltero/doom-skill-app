@@ -8,6 +8,7 @@ import { canAdvanceFrom, canGoTo, nextMove } from './feedGate';
 // Loaded for its effect: the app's attempt outbox installs itself as the store's sink for answered
 // cards, so it is in place before the session draws any card.
 import './outbox';
+import { isOfflineFailure, keepAnswers, keepServed, keptSet } from './prefetch';
 import { useFeedStore } from './store';
 
 /**
@@ -16,7 +17,8 @@ import { useFeedStore } from './store';
  */
 const TOAST_MS = 1400;
 
-type SessionStatus = 'loading' | 'ready' | 'error' | 'empty' | 'noTopic';
+/** `offline`: a load failed offline and no kept set is left to serve (the end card). */
+type SessionStatus = 'loading' | 'ready' | 'error' | 'empty' | 'noTopic' | 'offline';
 /** Where loading the next set stands: the hook's `nextSetStatus`, which the Summary shows. */
 export type NextSetStatus = 'idle' | 'loading' | 'error' | 'none';
 type CardFilter = (card: Card) => boolean;
@@ -54,6 +56,8 @@ type LoadHandlers = {
   /** A set with at least one card the screen can render, or `null` for "nothing to show". */
   loaded: (set: FeedSet | null) => void;
   failed: (error: unknown) => void;
+  /** The load failed offline and every kept set is answered. */
+  exhausted: () => void;
 };
 
 /**
@@ -73,7 +77,9 @@ async function answerSinceReset(
 
 /**
  * A function that asks `source` for a set, one request at a time: a call while one is in flight
- * does nothing. A set that arrives is passed to `onSet` (which starts it in the global store)
+ * does nothing. A set the server served is kept with the sets ahead of it (`keepServed`); a load
+ * that fails offline serves the first kept set not fully answered instead, and asks for nothing
+ * ahead (`keptSet`; prefetch.ts). A set that arrives is passed to `onSet` (which starts it in the global store)
  * even after the component unmounted: the source has already moved past it, so dropping it would
  * skip a set. Only the handlers, which update the hook's own state, are skipped after unmount; a
  * failure then is dropped unseen. A set that arrives after the store was reset is never started
@@ -90,6 +96,22 @@ function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: F
     };
   }, []);
 
+  const serve = (answer: FeedSet | null, handlers: LoadHandlers) => {
+    // Before the filter: a set with no card left to show still has its dropped cards skipped.
+    if (answer !== null) useFeedStore.getState().skipDropped(answer);
+    const set = answer === null ? null : renderablePart(answer, canRender);
+    if (set !== null) onSet(set);
+    if (alive.current) handlers.loaded(set);
+  };
+  const fallBack = async (error: unknown, handlers: LoadHandlers) => {
+    const kept = isOfflineFailure(error) ? await keptSet(canRender) : undefined;
+    if (kept === undefined) {
+      if (alive.current) handlers.failed(error);
+    } else if (kept === null) {
+      if (alive.current) handlers.exhausted();
+    } else serve(kept, handlers);
+  };
+
   return async (handlers: LoadHandlers): Promise<void> => {
     if (busy.current) return;
     busy.current = true;
@@ -97,13 +119,10 @@ function useSetRequest(source: CardSource, canRender: CardFilter, onSet: (set: F
     try {
       const answer = await answerSinceReset(source, () => alive.current);
       if (answer === undefined) return;
-      // Before the filter: a set with no card left to show still has its dropped cards skipped.
-      if (answer !== null) useFeedStore.getState().skipDropped(answer);
-      const set = answer === null ? null : renderablePart(answer, canRender);
-      if (set !== null) onSet(set);
-      if (alive.current) handlers.loaded(set);
+      serve(answer, handlers);
+      if (answer !== null) void keepServed(source, answer);
     } catch (error) {
-      if (alive.current) handlers.failed(error);
+      await fallBack(error, handlers);
     } finally {
       busy.current = false;
     }
@@ -141,6 +160,9 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
       logError('feed_load_failed', error);
       setStatus('error');
     },
+    exhausted: () => {
+      setStatus('offline');
+    },
   };
   const nextSet: LoadHandlers = {
     start: () => {
@@ -152,6 +174,10 @@ function useSetLoads(source: CardSource, canRender: CardFilter, onSet: (set: Fee
     failed: (error) => {
       logError('next_set_load_failed', error);
       setNextSetStatus('error');
+    },
+    exhausted: () => {
+      setNextSetStatus('idle');
+      setStatus('offline');
     },
   };
 
@@ -235,8 +261,12 @@ function moveTo(index: number): void {
   if (shown === set?.cards.length) store.reachSummary();
 }
 
-/** The session's status: `ready` whenever the store holds a set, else the first load's status. */
+/**
+ * The session's status: `offline` once the kept sets ran out, else `ready` whenever the store
+ * holds a set, else the first load's status.
+ */
 function sessionStatus(set: FeedSet | null, loaded: SessionStatus): SessionStatus {
+  if (loaded === 'offline') return loaded;
   return set === null ? loaded : 'ready';
 }
 
@@ -247,8 +277,9 @@ function sessionStatus(set: FeedSet | null, loaded: SessionStatus): SessionStatu
  * all see the same cards; a set with none left counts as no set.
  *
  * - `status`: `ready` whenever the store holds a set; otherwise the first set's load (`loading`,
- *   `error`, `empty`, or `noTopic` when the source has no active topic to ask for). `retry` asks
- *   the source again after an error.
+ *   `error`, `empty`, or `noTopic` when the source has no active topic to ask for). `offline`
+ *   when a load failed offline and every kept set is answered, with or without a set in the
+ *   store (the end card). `retry` asks the source again after an error or offline.
  * - `set`, `index`: the store's set and page. The last page is the Summary.
  * - `canAdvance`: the gate for moving on from the current page.
  * - `goTo(index)`: shows a page: any page back, or the next one through an open gate; anything
@@ -274,6 +305,7 @@ export function useFeedSession(source: CardSource, canRender: CardFilter = accep
   const loads = useSetLoads(source, canRender, (loaded) => {
     useFeedStore.getState().startSet(loaded);
   });
+  useEffect(keepAnswers, []);
   // Moves read the store and the failed pages when they happen, not as this render saw them: a
   // card may answer and move on in one handler, or move on from a timer.
   const nextFrom = (page: number, pageRound: number) => {

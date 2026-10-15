@@ -93,6 +93,7 @@ describe('copy for the Today screen', () => {
     expect(copy.retry).toBe('Retry');
     expect(copy.loadFailed).toBe("Couldn't load your cards.");
     expect(copy.nothingYet).toBe('Nothing to learn yet.');
+    expect(copy.connectForMore).toBe('Connect to get more cards');
     expect(copy.noTopic).toBe('Pick a topic to start learning.');
     expect(copy.exploreTopics).toBe('Explore topics');
     expect(copy.cardFailed).toBe("This card couldn't be shown.");

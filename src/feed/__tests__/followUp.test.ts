@@ -12,6 +12,7 @@ import {
   type Placed,
 } from '../followUp';
 import { useFeedStore } from '../store';
+import { offline, rig, settle } from '../testing/outbox';
 import { cardsByType, makeSet } from '../testing/sets';
 
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
@@ -236,5 +237,27 @@ describe('handOverFollowUp', () => {
       kind: 'RangeError',
     });
     expect(JSON.stringify(jest.mocked(logWarning).mock.calls)).not.toContain('secret-marker');
+  });
+});
+
+describe('a first wrong answer offline (offline-topic plan O6)', () => {
+  it('inserts no follow-up, keeps the attempt queued, and logs no drop', async () => {
+    installFollowUpSink(placeFollowUp);
+    store().startSet(apiSet(FIVE));
+    const box = rig();
+    box.answers.push(offline());
+
+    box.outbox.add({
+      cardId: idOf(1),
+      response: { choice: 1 },
+      durationMs: 1_000,
+      feedDate: '2026-10-01',
+      setNumber: 3,
+    });
+    await settle();
+
+    expect(ids()).toStrictEqual(FIVE.map(({ id }) => id));
+    expect(box.outbox.pending()).toBe(1);
+    expect(logWarning).not.toHaveBeenCalledWith('follow_up_dropped', expect.anything());
   });
 });

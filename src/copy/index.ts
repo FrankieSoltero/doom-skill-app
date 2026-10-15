@@ -108,6 +108,11 @@ export const copy = deepFreeze({
   loadFailed: "Couldn't load your cards.",
   /** The Today screen when the card source has no set to give. */
   nothingYet: 'Nothing to learn yet.',
+  /**
+   * The Today screen's end card offline: the server cannot be reached and every kept set is
+   * answered (offline-topic plan O2).
+   */
+  connectForMore: 'Connect to get more cards',
   /** The Today screen with no active topic: nothing to ask the server for. */
   noTopic: 'Pick a topic to start learning.',
   /** The button under `noTopic`, to the Explore tab. */
