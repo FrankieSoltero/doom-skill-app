@@ -17,7 +17,7 @@ import type { CardAnswer } from './answers';
 import type { Attempt } from './outbox';
 import {
   answerPoints,
-  noPoints,
+  newSetPoints,
   pointsActions,
   seenValue,
   sentValue,
@@ -105,7 +105,7 @@ const initialState: FeedState = {
   seenSent: {},
   recordedSummary: null,
   ratingsMade: 0,
-  ...noPoints,
+  ...newSetPoints(),
 };
 
 /** Where the store hands each answered card: the attempt outbox, which installs itself. */
@@ -331,7 +331,7 @@ function started(state: FeedState, set: FeedSet): Partial<FeedState> {
     shownAt: { 0: Date.now() },
     seenSent: {},
     recordedSummary: null,
-    ...noPoints,
+    ...newSetPoints(state),
   };
 }
 

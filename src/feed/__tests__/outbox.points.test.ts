@@ -3,13 +3,15 @@
 // (src/feed/outbox.ts, src/feed/store.ts). Only a reply adds: a dropped attempt (404, 409, 422)
 // settles at 0, one waiting for a retry stays provisional, and a reply without `points` (an older
 // server) reads as 0. A reply whose grade differs from the app's is logged as `attempt_regraded`.
+// A reply for a card of an earlier set leaves the current set's points alone, and an attempt the
+// outbox drops (the 200 cap, a change of user) leaves no provisional value behind.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError } from '../../api/errors';
 import type { FeedSet } from '../../data';
 import { json, network } from '../../data/testing/network';
 import { logWarning } from '../../log';
-import { createOutbox, type GradedReply } from '../outbox';
+import { createOutbox, type AttemptReply } from '../outbox';
 import { useFeedStore } from '../store';
 import { attempt, fakeSession, offline, settle, signedIn, USER } from '../testing/outbox';
 import { cardsByType, makeSet } from '../testing/sets';
@@ -17,22 +19,22 @@ import { cardsByType, makeSet } from '../testing/sets';
 jest.mock('../../log', () => ({ logWarning: jest.fn(), logError: jest.fn() }));
 
 /** A reply that earned `points` and offers no follow-up. */
-const earned = (points: number, correct: boolean | null = null): GradedReply => ({
+const earned = (points: number, correct: boolean | null = null): AttemptReply => ({
   followUp: null,
   points,
   correct,
 });
 
 /** An outbox whose post answers the attempts in order: a reply, or the error it rejects with. */
-function outboxAnswering(...answers: (GradedReply | ApiError)[]) {
+function outboxAnswering(...answers: (AttemptReply | ApiError)[]) {
   let made = 0;
   return createOutbox({
-    post: (): Promise<GradedReply> => {
+    post: (): Promise<AttemptReply> => {
       const answer = answers.shift() ?? offline();
       return answer instanceof ApiError ? Promise.reject(answer) : Promise.resolve(answer);
     },
     storage: AsyncStorage,
-    session: fakeSession(signedIn(USER)),
+    session: rig,
     schedule: () => () => undefined,
     newId: () => `id-${String((made += 1))}`,
   });
@@ -44,8 +46,23 @@ async function answerCards(outbox: ReturnType<typeof outboxAnswering>, count: nu
   await settle();
 }
 
+/** A served set holding a quiz at each of cards `numbers` (the ids `attempt(n)` names). */
+const setOf = (...numbers: number[]): FeedSet => ({
+  ...makeSet(
+    0,
+    numbers.map((n) => ({ ...cardsByType.quiz, id: attempt(n).cardId })),
+  ),
+  feedDate: '2026-10-01',
+  setNumber: 1,
+});
+
+/** The session the outboxes follow; a case may move it. */
+let rig = fakeSession(signedIn(USER));
+
 beforeEach(async () => {
   useFeedStore.setState(useFeedStore.getInitialState(), true);
+  useFeedStore.getState().startSet(setOf(1, 2, 3, 4));
+  rig = fakeSession(signedIn(USER));
   jest.mocked(logWarning).mockClear();
   await AsyncStorage.clear();
 });
@@ -93,6 +110,37 @@ describe('a reply settles the provisional value of its card', () => {
     expect(useFeedStore.getState().pointsEarned).toBe(0);
     expect(useFeedStore.getState().pendingCount).toBe(0);
     expect(regraded()).toHaveLength(0);
+  });
+
+  it('leaves the current set alone for a reply to an earlier set, and still logs a regrade', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+    useFeedStore.getState().startSet(setOf(2));
+    useFeedStore.getState().addProvisional(attempt(2).cardId, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(earned(1, false)), 1);
+
+    expect(useFeedStore.getState().pointsEarned).toBe(5);
+    expect(useFeedStore.getState().pendingCount).toBe(1);
+    expect(regraded()).toStrictEqual([['attempt_regraded', { kind: 'quiz' }]]);
+  });
+
+  it('clears the value of an attempt dropped at the 200 cap', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+
+    await answerCards(outboxAnswering(), 201);
+
+    expect(useFeedStore.getState().pointsEarned).toBe(0);
+    expect(useFeedStore.getState().pendingCount).toBe(0);
+  });
+
+  it('clears the values of the attempts dropped when the user changes', async () => {
+    useFeedStore.getState().addProvisional(CARD_1, 5, { kind: 'quiz', correct: true });
+    await answerCards(outboxAnswering(), 1);
+
+    rig.set(signedIn('user-2'));
+
+    expect(useFeedStore.getState().pointsEarned).toBe(0);
+    expect(useFeedStore.getState().pendingCount).toBe(0);
   });
 
   it('keeps the value provisional while the attempt waits for a retry', async () => {

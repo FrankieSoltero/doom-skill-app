@@ -7,6 +7,7 @@ import { act, render, screen, within } from '@testing-library/react-native';
 import { json, queryWrapper, serveApi } from '../../api/testing/fakeApi';
 import { viewStyleOf } from '../../components/testing/styles';
 import { useFeedStore } from '../../feed/store';
+import { cardsByType, makeSet } from '../../feed/testing/sets';
 import type { Tree } from '../../topics/useTree';
 import { useFocusEffect as mockUseFocusEffect } from '../../topics/testing/focus';
 import { colors } from '../../theme';
@@ -145,6 +146,7 @@ describe('SummaryCard points tile', () => {
   it('marks provisional points "syncing" on the points line, and drops the mark once settled', async () => {
     serveApi({ [TREE_PATH]: [json(200, treeWith(12))] });
     act(() => {
+      useFeedStore.getState().startSet(makeSet(0, [{ ...cardsByType.quiz, id: 'card-1' }]));
       useFeedStore.getState().addProvisional('card-1', 5, { kind: 'quiz', correct: true });
     });
 

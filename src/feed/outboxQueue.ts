@@ -25,10 +25,12 @@ export type Queued = Attempt & { clientAttemptId: string };
 
 /**
  * What the outbox reads from the API's reply to an attempt (`AttemptResult`): the optional
- * `follow_up`, the card the server added after a wrong answer, parsed; `null` when none. And the
- * `points` the attempt earned, 0 when the reply has none (an older server).
+ * `follow_up`, the card the server added after a wrong answer, parsed; `null` when none. The
+ * `points` the attempt earned, 0 when the reply has none (an older server). And the server's
+ * grade, `correct`: `null` for an answer it does not grade (a review, a concept), absent from a
+ * reply that has none.
  */
-export type AttemptReply = { followUp: Card | null; points: number };
+export type AttemptReply = { followUp: Card | null; points: number; correct?: boolean | null };
 
 /** What the queue reads and writes: async storage in the app. */
 export type QueueStorage = {
@@ -102,11 +104,14 @@ export function storedQueue(storage: QueueStorage, key: string) {
       listener();
     });
   };
-  const keepAtMost = () => {
-    while (entries.length > MAX_ATTEMPTS) {
-      entries.shift();
+  /** Drops the oldest attempts beyond 200, and returns them. */
+  const keepAtMost = (): Queued[] => {
+    const dropped = entries.slice(0, Math.max(entries.length - MAX_ATTEMPTS, 0));
+    entries = entries.slice(dropped.length);
+    dropped.forEach(() => {
       logWarning('attempt_dropped', { kind: 'full' });
-    }
+    });
+    return dropped;
   };
   const loaded = storage
     .getItem(key)
@@ -122,29 +127,31 @@ export function storedQueue(storage: QueueStorage, key: string) {
       changed();
     });
   let saving: Promise<void> = loaded;
-  const update = (next: Queued[]) => {
-    if (discarded) return;
+  const update = (next: Queued[]): Queued[] => {
+    if (discarded) return [];
     entries = next;
-    keepAtMost();
+    const dropped = keepAtMost();
     saving = saving
       .then(() => storage.setItem(key, JSON.stringify(entries)))
       .catch((error: unknown) => {
         logWarning('outbox_save_failed', { kind: kindOf(error) });
       });
     changed();
+    return dropped;
   };
 
   return {
     loaded,
     head: (): Queued | undefined => entries[0],
     size: () => entries.length,
-    push: (entry: Queued) => {
-      update([...entries, entry]);
-    },
+    /** Adds `entry` at the end; returns the attempts dropped to keep at most 200. */
+    push: (entry: Queued): Queued[] => update([...entries, entry]),
     remove: (sent: Queued) => {
       update(entries.filter((entry) => entry !== sent));
     },
-    discard: () => {
+    /** Empties the queue for good; returns the attempts it held, which will never be sent. */
+    discard: (): Queued[] => {
+      const held = discarded ? [] : entries;
       discarded = true;
       entries = [];
       saving = saving
@@ -153,6 +160,7 @@ export function storedQueue(storage: QueueStorage, key: string) {
           logWarning('outbox_remove_failed', { kind: kindOf(error) });
         });
       changed();
+      return held;
     },
     subscribe: (listener: () => void) => {
       listeners.add(listener);

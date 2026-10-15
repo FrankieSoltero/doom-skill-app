@@ -2,7 +2,7 @@
 // settled by the server's replies and part provisional, graded on the phone and waiting for the
 // outbox to send them. Pure functions over the feed store's points fields (src/feed/store.ts),
 // which hold them in memory only.
-import type { Card } from '../data';
+import type { Card, FeedSet } from '../data';
 import type { CardAnswer } from './answers';
 import type { Attempt } from './outboxQueue';
 
@@ -18,26 +18,26 @@ export type Provisional = { points: number; grade: LocalGrade | null };
 /** What a graded wrong answer pays on the server (`WRONG_POINTS`). */
 const WRONG_POINTS = 1;
 
+/**
+ * Values waiting for a reply, by card id, in the order they were made: a card may be answered
+ * more than once (an exercise checked again), and its replies come in that order.
+ */
+type Queues = Record<string, Provisional[]>;
+
 export type PointsState = {
-  /** The points the outbox's replies brought (and `addPoints`). */
+  /** The points the outbox's replies for the current set's cards brought (and `addPoints`). */
   settledPoints: number;
+  /** The current set's values waiting for a reply. */
+  provisional: Queues;
   /**
-   * The values waiting for a reply, by card id, in the order they were made: a card may be
-   * answered more than once (an exercise checked again), and its replies come in that order.
+   * The values of earlier sets' cards still waiting for a reply: no longer counted (each set
+   * counts its own), kept for the regrade check when the reply comes.
    */
-  provisional: Record<string, Provisional[]>;
+  earlier: Queues;
   /** How many values wait in `provisional`: above 0, the Summary marks the points `syncing`. */
   pendingCount: number;
   /** The settled points plus the provisional ones: what the Summary shows. */
   pointsEarned: number;
-};
-
-/** No points: the store's at `startSet` and `reset`, so each set counts its own. */
-export const noPoints: PointsState = {
-  settledPoints: 0,
-  provisional: {},
-  pendingCount: 0,
-  pointsEarned: 0,
 };
 
 /** `points` when it is a number above 0, else 0. */
@@ -45,21 +45,39 @@ function above0(points: number): number {
   return points > 0 ? points : 0;
 }
 
-/** The state with `settledPoints` and `provisional`, its count and sum worked out again. */
-function counted(settledPoints: number, provisional: PointsState['provisional']): PointsState {
+/** The state of `settledPoints`, `provisional` and `earlier`, its count and sum worked out. */
+function counted(settledPoints: number, provisional: Queues, earlier: Queues): PointsState {
   const values = Object.values(provisional).flat();
   const waiting = values.reduce((sum, value) => sum + value.points, 0);
   return {
     settledPoints,
     provisional,
+    earlier,
     pendingCount: values.length,
     pointsEarned: settledPoints + waiting,
   };
 }
 
+/** `older` with `newer`'s values after its own, card by card. */
+function joined(older: Queues, newer: Queues): Queues {
+  const all = { ...older };
+  Object.entries(newer).forEach(([cardId, values]) => {
+    all[cardId] = [...(all[cardId] ?? []), ...values];
+  });
+  return all;
+}
+
+/**
+ * The points of a new set: nothing counted, and the waiting values of `before` (the set ending),
+ * if any, kept as `earlier`. The store's at `startSet`; `reset` starts from none at all.
+ */
+export function newSetPoints(before?: PointsState): PointsState {
+  return counted(0, {}, before === undefined ? {} : joined(before.earlier, before.provisional));
+}
+
 /** `state` with `points` settled for no card: what `addPoints` adds. */
 function withSettled(state: PointsState, points: number): PointsState {
-  return counted(state.settledPoints + above0(points), state.provisional);
+  return counted(state.settledPoints + above0(points), state.provisional, state.earlier);
 }
 
 /**
@@ -69,24 +87,36 @@ function withSettled(state: PointsState, points: number): PointsState {
 function withProvisional(state: PointsState, cardId: string, value: Provisional): PointsState {
   if (!(value.points > 0)) return state;
   const queued = [...(state.provisional[cardId] ?? []), value];
-  return counted(state.settledPoints, { ...state.provisional, [cardId]: queued });
+  return counted(state.settledPoints, { ...state.provisional, [cardId]: queued }, state.earlier);
+}
+
+/** `queues` without `cardId`'s oldest value, and that value's grade (`null`: none waited). */
+function shifted(queues: Queues, cardId: string): { rest: Queues; local: LocalGrade | null } {
+  const [first, ...later] = queues[cardId] ?? [];
+  const { [cardId]: _replaced, ...others } = queues;
+  const rest = later.length > 0 ? { ...others, [cardId]: later } : others;
+  return { rest, local: first?.grade ?? null };
 }
 
 /**
- * `state` with `cardId`'s oldest provisional value replaced by the reply's `serverPoints` (not a
- * number above 0 reads as 0), and that value's grade; `null` when none waited (a reply to an
- * attempt from an earlier run), whose points are still settled.
+ * `state` after the reply for `cardId` brought `serverPoints` (not a number above 0 reads as 0),
+ * and the grade of the value it replaced. A card of the current set (`inSet`) has its oldest
+ * provisional value replaced, and the points are settled even when none waited (a reply to an
+ * attempt from an earlier run). A card of an earlier set changes nothing the set counts: only its
+ * oldest `earlier` value goes.
  */
 function settledWith(
   state: PointsState,
   cardId: string,
   serverPoints: number,
+  inSet: boolean,
 ): { next: PointsState; local: LocalGrade | null } {
-  const [first, ...rest] = state.provisional[cardId] ?? [];
-  const { [cardId]: _replaced, ...others } = state.provisional;
-  const provisional = rest.length > 0 ? { ...others, [cardId]: rest } : others;
-  const next = counted(state.settledPoints + above0(serverPoints), provisional);
-  return { next, local: first?.grade ?? null };
+  if (!inSet) {
+    const { rest, local } = shifted(state.earlier, cardId);
+    return { next: { ...state, earlier: rest }, local };
+  }
+  const { rest, local } = shifted(state.provisional, cardId);
+  return { next: counted(state.settledPoints + above0(serverPoints), rest, state.earlier), local };
 }
 
 /** The points fields after `attempt`, when one is handed to the outbox, adds `value`. */
@@ -109,7 +139,8 @@ export type PointsActions = {
   addProvisional: (cardId: string, points: number, grade?: LocalGrade) => void;
   /**
    * Replaces `cardId`'s oldest provisional value with the reply's `serverPoints` and returns the
-   * grade it was given (`null`: none waited, and the points are still settled).
+   * grade it was given (`null`: none waited, and the points are still settled). For a card not in
+   * the current set, the set's points are left alone and only the grade is returned.
    */
   settle: (cardId: string, serverPoints: number) => LocalGrade | null;
 };
@@ -117,7 +148,7 @@ export type PointsActions = {
 /** The points actions over the store's `setState` and `getState`. */
 export function pointsActions(
   setState: (update: (state: PointsState) => Partial<PointsState>) => void,
-  getState: () => PointsState,
+  getState: () => PointsState & { set: FeedSet | null },
 ): PointsActions {
   return {
     addPoints: (points) => {
@@ -127,7 +158,9 @@ export function pointsActions(
       setState((state) => withProvisional(state, cardId, { points, grade: grade ?? null }));
     },
     settle: (cardId, serverPoints) => {
-      const { next, local } = settledWith(getState(), cardId, serverPoints);
+      const state = getState();
+      const inSet = state.set?.cards.some((card) => card.id === cardId) ?? false;
+      const { next, local } = settledWith(state, cardId, serverPoints, inSet);
       setState(() => next);
       return local;
     },

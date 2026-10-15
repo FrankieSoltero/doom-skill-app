@@ -3,7 +3,7 @@
 // settled points plus the provisional ones; `pendingCount` counts the values still waiting.
 import { answerPoints } from '../points';
 import { useFeedStore } from '../store';
-import { cardsByType } from '../testing/sets';
+import { cardsByType, makeSet } from '../testing/sets';
 
 const { concept, quiz, exercise, review, checkpoint } = cardsByType;
 
@@ -12,6 +12,12 @@ const CARD = 'card-1';
 
 beforeEach(() => {
   useFeedStore.setState(useFeedStore.getInitialState(), true);
+  store().startSet(
+    makeSet(0, [
+      { ...quiz, id: CARD },
+      { ...quiz, id: 'card-2' },
+    ]),
+  );
 });
 
 describe('addProvisional and settle', () => {
@@ -57,6 +63,18 @@ describe('addProvisional and settle', () => {
 
     expect(store().settledPoints).toBe(5);
     expect(store().pointsEarned).toBe(5);
+  });
+
+  it('leaves the current set alone for a card of an earlier set, and gives its grade', () => {
+    store().startSet(makeSet(0, [{ ...quiz, id: CARD }]));
+    store().addProvisional(CARD, 5, { kind: 'quiz', correct: true });
+    store().startSet(makeSet(0, [{ ...quiz, id: 'card-2' }]));
+    store().addProvisional('card-2', 5);
+
+    expect(store().settle(CARD, 1)).toStrictEqual({ kind: 'quiz', correct: true });
+    expect(store().settle(CARD, 1)).toBeNull();
+    expect(store().pointsEarned).toBe(5);
+    expect(store().pendingCount).toBe(1);
   });
 
   it('settles two answers at one card in the order they were made', () => {
