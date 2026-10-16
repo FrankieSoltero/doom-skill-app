@@ -562,6 +562,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topics/suggest/top": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Top
+         * @description Every topic any learner may open, and the first 300 catalog rows by rank.
+         */
+        get: operations["suggest_top"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/topics/{slug}": {
         parameters: {
             query?: never;
@@ -2031,6 +2051,17 @@ export interface components {
             title: string;
             /** Tomorrow */
             tomorrow: string;
+        };
+        /**
+         * TopSuggestions
+         * @description `GET /topics/suggest/top` (Explore plan Task 2, E2): every topic any learner may open, by
+         *     title, and the first `TOP_ROWS` (300) catalog rows by rank, then label.
+         */
+        TopSuggestions: {
+            /** Rows */
+            rows: components["schemas"]["Suggestion"][];
+            /** Topics */
+            topics: components["schemas"]["TopicSummary"][];
         };
         /**
          * TopicCreated
@@ -4069,6 +4100,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    suggest_top: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopSuggestions"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Service unavailable */
