@@ -440,7 +440,18 @@ export const copy = deepFreeze({
     codeResent: 'A new code is on its way.',
     changeEmail: 'Use a different email',
   },
-  explore,
+  explore: {
+    ...explore,
+    /** The action on a result row whose topic is open: a tap opens its page. */
+    open: 'Open',
+    /** The action on a catalog row not built yet: a tap asks the server to build it. */
+    build: 'Build',
+    /** The button that asks the server to build a topic for the text, when nothing matches. */
+    createText: (text: string) => `Create ${text}`,
+    /** A result row as a screen reader hears it: its label, its group chip (if any), its action. */
+    row: (label: string, action: string, group: string | null) =>
+      group === null ? `${label}, ${action}` : `${label}, ${group}, ${action}`,
+  },
   pendingTopic,
   topic,
   tree: {

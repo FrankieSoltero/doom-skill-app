@@ -5,21 +5,19 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 
 import { ApiError } from '../../src/api/errors';
 import { LoadingState } from '../../src/components/LoadingState';
-import { OutlineButton } from '../../src/components/OutlineButton';
 import { PendingTopic } from '../../src/components/PendingTopic';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { SearchField } from '../../src/components/SearchField';
 import { TabScreen } from '../../src/components/TabScreen';
-import { TopicRow } from '../../src/components/TopicRow';
 import { copy } from '../../src/copy';
 import { MyTopics } from '../../src/topics/MyTopics';
 import { ENROLLMENTS_KEY } from '../../src/topics/useChoose';
 import { useEnrollments } from '../../src/topics/useEnrollments';
-import { useSuggest, type Suggestion } from '../../src/topics/useSuggest';
+import { useExploreResults, type ExploreRow } from '../../src/topics/useExploreResults';
 import {
+  cleanQuery,
   MAX_QUERY_LENGTH,
   useCreateTopic,
-  useTopics,
   type CreatedTopic,
 } from '../../src/topics/useTopics';
 import { border, colors, space, type } from '../../src/theme';
@@ -74,104 +72,108 @@ function Enrolled({ enrollments }: { enrollments: ReturnType<typeof useEnrollmen
 /** A topic the user asked to be built in this visit, and whether its job is done. */
 type Pending = CreatedTopic & { jobId: string; ready: boolean };
 
-type SuggestionsProps = { items: Suggestion[]; onRequest: (suggestion: Suggestion) => void };
+/** The most catalog rows the list shows; every matching open topic shows besides them. */
+export const EXPLORE_MAX_ROWS = 20;
 
-/** The catalog topics for the query, each with its group chip; a built one is marked and opens. */
-function Suggestions({ items, onRequest }: SuggestionsProps) {
-  if (items.length === 0) return null;
+/**
+ * The rows as the list shows them: the open topics, then the catalog rows cut to
+ * `EXPLORE_MAX_ROWS` in their order, built ones first. A catalog row whose topic is open in the
+ * list is left out: the open topic's row stands for it.
+ */
+function shown(rows: ExploreRow[]): ExploreRow[] {
+  const open = rows.filter((row) => row.source === 'topic');
+  const listed = new Set(open.map((row) => row.builtSlug));
+  const catalog = rows
+    .filter((row) => row.source === 'catalog' && !listed.has(row.builtSlug))
+    .slice(0, EXPLORE_MAX_ROWS);
+  const built = catalog.filter((row) => row.builtSlug !== null);
+  const unbuilt = catalog.filter((row) => row.builtSlug === null);
+  return [...open, ...built, ...unbuilt];
+}
+
+type ResultRowProps = { row: ExploreRow; onBuild: (row: ExploreRow) => void };
+
+/** One result: its label, its group chip (a catalog row's), and Open or Build. */
+function ResultRow({ row, onBuild }: ResultRowProps) {
+  const slug = row.builtSlug;
+  const action = slug === null ? copy.explore.build : copy.explore.open;
+  // An open topic carries no group of its own (useExploreResults): it shows no chip.
+  const group = row.source === 'topic' ? null : copy.explore.group[row.group];
   return (
-    <View style={styles.block}>
-      {items.map((item) => {
-        const built = item.built_slug !== null;
-        const group = copy.explore.group[item.group];
-        return (
-          <Pressable
-            key={item.key}
-            testID="suggestion-row"
-            accessibilityRole="button"
-            accessibilityLabel={copy.explore.suggestion(item.label, group, built)}
-            onPress={() => {
-              if (item.built_slug === null) onRequest(item);
-              else openTopic(item.built_slug);
-            }}
-            style={styles.suggestion}
-          >
-            <Text style={styles.label}>{item.label}</Text>
-            <Text style={styles.chip}>{group}</Text>
-            {built ? <Text style={styles.built}>{copy.explore.suggestBuilt}</Text> : null}
-          </Pressable>
-        );
-      })}
-    </View>
+    <Pressable
+      testID="explore-row"
+      accessibilityRole="button"
+      accessibilityLabel={copy.explore.row(row.label, action, group)}
+      onPress={() => {
+        if (slug === null) onBuild(row);
+        else openTopic(slug);
+      }}
+      style={styles.row}
+    >
+      <Text style={styles.label}>{row.label}</Text>
+      {group === null ? null : <Text style={styles.chip}>{group}</Text>}
+      <Text style={slug === null ? styles.chip : styles.open}>{action}</Text>
+    </Pressable>
   );
 }
 
 type ResultsProps = {
-  search: ReturnType<typeof useTopics>;
-  notInCatalog: boolean;
+  results: ReturnType<typeof useExploreResults>;
+  /** The text as it would be sent. */
+  text: string;
   creating: boolean;
+  onBuild: (row: ExploreRow) => void;
   onCreate: () => void;
 };
 
-/** The search's state under the field: a line, the Create action, or the topics found. */
-function Results({ search, notInCatalog, creating, onCreate }: ResultsProps) {
-  if (search.status === 'idle') return <Text style={styles.line}>{copy.explore.idle}</Text>;
-  if (search.status === 'loading') return <LoadingState label={copy.explore.searching} />;
-  if (search.status === 'error') {
+/**
+ * The search's state under the field: the idle line, the rows, or with no rows a busy line, a
+ * failure line, or (once the server found nothing) Create with the text.
+ */
+function Results({ results, text, creating, onBuild, onCreate }: ResultsProps) {
+  if (results.status === 'idle') return <Text style={styles.line}>{copy.explore.idle}</Text>;
+  const rows = shown(results.rows);
+  if (rows.length > 0) {
     return (
-      <View style={styles.block}>
-        <Text style={styles.line}>{copy.explore.searchFailed}</Text>
-        <OutlineButton label={copy.retry} onPress={search.retry} />
+      <View>
+        {rows.map((row) => (
+          <ResultRow key={row.key} row={row} onBuild={onBuild} />
+        ))}
       </View>
     );
   }
-  if (search.topics.length === 0) {
-    return (
-      <View style={styles.block}>
-        <Text style={styles.line}>{copy.explore.noMatch}</Text>
-        {notInCatalog ? <Text style={styles.line}>{copy.explore.notInCatalog}</Text> : null}
-        <PrimaryButton
-          label={creating ? copy.explore.creating : copy.explore.create}
-          onPress={onCreate}
-          disabled={creating}
-        />
-      </View>
-    );
-  }
+  if (results.status === 'loading') return <LoadingState label={copy.explore.searching} />;
+  if (results.status === 'error')
+    return <Text style={styles.line}>{copy.explore.searchFailed}</Text>;
   return (
-    <View>
-      {search.topics.map((topic) => (
-        <TopicRow
-          key={topic.slug}
-          topic={topic}
-          {...(topic.status === 'ready'
-            ? {
-                onPress: () => {
-                  openTopic(topic.slug);
-                },
-              }
-            : {})}
-        />
-      ))}
+    <View style={styles.block}>
+      <Text style={styles.line}>{copy.explore.noMatch}</Text>
+      <Text style={styles.line}>{copy.explore.notInCatalog}</Text>
+      <PrimaryButton
+        label={creating ? copy.explore.creating : copy.explore.createText(text)}
+        onPress={onCreate}
+        disabled={creating}
+      />
     </View>
   );
 }
 
 /**
- * The Explore tab (README.md:161-164): the search field over `GET /topics?q=`, then the search's
- * state. A query with no match offers Create (`POST /topics`): a topic that exists opens; a new
- * one shows its building card, polled until its job is done, when the card opens the topic.
- * A refused request shows one fixed line ("Not available yet", the pending limit, or a failure).
- * Only a ready topic's row opens. Before anything is typed, the learner's topics show over the
- * idle line; they are read again when the tab regains focus and on pull to refresh. Catalog
- * suggestions show over the results: a built one opens; another is requested with its key.
+ * The Explore tab (README.md:161-164; Explore plan E2, E3): the search field over one list from
+ * `useExploreResults`. An open topic, or a catalog row whose topic is built, shows Open and opens
+ * the topic's page; another catalog row shows Build and is requested with its key (`POST
+ * /topics`). Only when the server found nothing does Create offer the text itself. A request
+ * whose topic exists (a 200 with no job) opens its page; a new one shows its building card,
+ * polled until its job is done, when the card opens the topic. A refused request shows one fixed
+ * line ("Not available yet", the pending limit, or a failure). Before anything is typed, the
+ * learner's topics show over the idle line; they are read again when the tab regains focus and
+ * on pull to refresh.
  */
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const search = useTopics(query);
-  const suggest = useSuggest(query);
+  const results = useExploreResults(query);
   const request = useCreateTopic();
   const enrollments = useEnrollmentsOnFocus();
 
@@ -233,12 +235,12 @@ export default function ExploreScreen() {
             <Text style={styles.line}>{failure}</Text>
           </View>
         )}
-        {search.status === 'idle' ? <Enrolled enrollments={enrollments} /> : null}
-        <Suggestions items={suggest.suggestions} onRequest={(s) => void onCreate(s.label, s.key)} />
+        {results.status === 'idle' ? <Enrolled enrollments={enrollments} /> : null}
         <Results
-          search={search}
-          notInCatalog={suggest.status === 'ready' && suggest.suggestions.length === 0}
+          results={results}
+          text={cleanQuery(query)}
           creating={request.status === 'loading'}
+          onBuild={(row) => void onCreate(row.label, row.key)}
           onCreate={() => void onCreate(query)}
         />
       </ScrollView>
@@ -246,7 +248,7 @@ export default function ExploreScreen() {
   );
 }
 
-/** A suggestion's group chip and built mark: caption text in a hairline ink box. */
+/** A row's group chip and its action: caption text in a hairline ink box. */
 const CHIP = {
   ...type.caption,
   color: colors.ink,
@@ -260,8 +262,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, gap: space[4], paddingBottom: space[6] },
   block: { gap: space[4] },
   line: { ...type.body, color: colors.neutral[700] },
-  suggestion: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
   label: { ...type.button, color: colors.ink, flex: 1 },
   chip: CHIP,
-  built: { ...CHIP, backgroundColor: colors.lime },
+  open: { ...CHIP, backgroundColor: colors.lime },
 });

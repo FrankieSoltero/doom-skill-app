@@ -1,19 +1,17 @@
 /**
- * The topic search (`GET /topics?q=`) and the topic request (`POST /topics`) for the Explore tab,
- * through the server-state cache (src/api/query.ts). Types come from the generated schema.
+ * The topic request (`POST /topics`) for the Explore tab, through the server-state cache
+ * (src/api/query.ts), and the query helpers its results hook (`useExploreResults`) shares. Types
+ * come from the generated schema.
  *
- * - `useTopics(query)` trims the query, cuts it to 80 characters (the API's limit) and asks 300 ms
- *   after the last change. A blank query is `idle` and asks nothing; while it waits or asks, it is
- *   `loading`.
+ * - `cleanQuery(query)` trims the query and cuts it to 80 characters (the API's limit).
  * - `useCreateTopic().create(query, catalogKey?)` gives the topic's slug and title, and its new
  *   ingestion job's id (`null` when the topic existed, a 200); a failure rejects with its
  *   `ApiError` (a 422 when the topic is not supported, a 429 at the pending limit) and is also the
  *   hook's `error`. A catalog suggestion's request carries its key (`catalog_key`).
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import type { ApiError } from '../api/errors';
 import { asApiError, MUTATION_STATUS, requireApi } from '../api/query';
 import type { components } from '../api/schema';
 
@@ -22,20 +20,7 @@ export type TopicSummary = components['schemas']['TopicSummary'];
 /** The API's longest query. */
 export const MAX_QUERY_LENGTH = 80;
 
-/** How long the search waits after the last change before it asks. */
-const DEBOUNCE_MS = 300;
-
-type Status = 'idle' | 'loading' | 'ready' | 'error';
-
-type TopicsState = {
-  status: Status;
-  topics: TopicSummary[];
-  error?: ApiError;
-  /** Asks again for the current query, after an error. */
-  retry: () => void;
-};
-
-/** The query as it is sent: trimmed and cut to the API's limit (the suggestions use it too). */
+/** The query as it is sent: trimmed and cut to the API's limit. */
 export function cleanQuery(query: string): string {
   return query.trim().slice(0, MAX_QUERY_LENGTH);
 }
@@ -52,31 +37,6 @@ export function useDebounced(value: string, ms: number): string {
     };
   }, [value, ms]);
   return settled;
-}
-
-async function searchTopics(q: string, signal: AbortSignal): Promise<TopicSummary[]> {
-  const { data } = await requireApi().GET('/topics', { params: { query: { q } }, signal });
-  return data?.topics ?? [];
-}
-
-/** The topics whose title or slug contains `query` (see the module comment). */
-export function useTopics(query: string): TopicsState {
-  const wanted = cleanQuery(query);
-  const settled = useDebounced(wanted, DEBOUNCE_MS);
-  const result = useQuery({
-    queryKey: ['topics', settled],
-    queryFn: ({ signal }) => searchTopics(settled, signal),
-    enabled: settled !== '',
-  });
-
-  const retry = () => {
-    void result.refetch();
-  };
-  if (wanted === '') return { status: 'idle', topics: [], retry };
-  if (settled !== wanted || result.isPending) return { status: 'loading', topics: [], retry };
-  const error = asApiError(result.error);
-  if (error !== undefined) return { status: 'error', topics: [], error, retry };
-  return { status: 'ready', topics: result.data ?? [], retry };
 }
 
 /**

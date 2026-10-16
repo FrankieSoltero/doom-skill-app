@@ -5,12 +5,7 @@ import { router } from 'expo-router';
 import { RefreshControl } from 'react-native';
 
 import { json, serveApi } from '../../../src/api/testing/fakeApi';
-import {
-  advance,
-  pressRetry,
-  renderScreen,
-  SCREEN_TOP_INSET,
-} from '../../../src/components/testing/screen';
+import { advance, renderScreen, SCREEN_TOP_INSET } from '../../../src/components/testing/screen';
 import { viewStyleOf } from '../../../src/components/testing/styles';
 import { colors } from '../../../src/theme';
 import {
@@ -41,15 +36,7 @@ const topic = (slug: string, title: string, status: string) => ({
   parent_slug: null,
   levels: [{ slug, level: 1, status, published: true }],
 });
-/** The root `strudel` with its levels 2 and 3, as `GET /topics` lists them. */
-const level = (n: number, status: string, published: boolean) => ({
-  slug: `strudel-level-${String(n)}`,
-  level: n,
-  status,
-  published,
-});
 const STRUDEL = topic('strudel', 'Strudel', 'ready');
-const BUILDING = topic('sql', 'SQL window functions', 'ingesting');
 const RUST = topic('rust-ownership', 'Rust ownership', 'pending');
 const PROPOSED = topic('c-templates', 'C++ templates', 'proposed');
 const job = (status: string) =>
@@ -67,6 +54,12 @@ const OLDER = enrollment('strudel', 1, '2026-10-01T09:00:00Z');
 const NEWER = enrollment('sql', 2, '2026-10-08T09:00:00Z');
 const enrolled = (...list: Enrollment[]) => json(200, { enrollments: list });
 const IDLE = 'Search for a topic to learn.';
+/** The preloaded slice with `topics` open, and the server's suggestions: none, by default. */
+const slice = (...topics: object[]) => json(200, { topics, rows: [] });
+const NO_MATCH = {
+  'GET /topics/suggest/top': [slice()],
+  'GET /topics/suggest': [json(200, { suggestions: [] })],
+};
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -113,77 +106,17 @@ describe('Explore: idle and loading', () => {
   });
 });
 
-describe('Explore: results', () => {
-  it('lists the topics found; a ready one opens its detail, one being built does not', async () => {
-    const requests = await renderExplore({
-      'GET /topics': [json(200, { topics: [STRUDEL, BUILDING, PROPOSED] })],
-    });
-    await search('s');
-
-    expect(requests.filter((r) => r.path === '/topics')).toMatchObject([{ query: '?q=s' }]);
-    expect(screen.getByText('SQL window functions')).toBeOnTheScreen();
-    expect(screen.getByText('Being built')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Open SQL window functions' })).toBeNull();
-    expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Open C++ templates' })).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: 'Open Strudel, Ready' }));
-
-    expect(router.push).toHaveBeenCalledWith({
-      pathname: '/topic/[slug]',
-      params: { slug: 'strudel' },
-    });
-  });
-
-  it.each([
-    { levels: [level(2, 'ready', true), level(3, 'ready', true)], range: 'Levels 1–3' },
-    { levels: [level(2, 'ready', true), level(3, 'ingesting', false)], range: 'Levels 1–2' },
-  ])(
-    'tags a root with published levels "$range"; an unpublished one does not count',
-    async (row) => {
-      const root = { ...STRUDEL, levels: [...STRUDEL.levels, ...row.levels] };
-      await renderExplore({ 'GET /topics': [json(200, { topics: [root] })] });
-      await search('s');
-
-      expect(screen.getByText(row.range)).toBeOnTheScreen();
-      const name = `Open Strudel, ${row.range}, Ready`;
-      expect(screen.getByRole('button', { name })).toBeOnTheScreen();
-    },
-  );
-
-  it('shows no range on a root without published levels', async () => {
-    const waiting = { ...STRUDEL, levels: [...STRUDEL.levels, level(2, 'ready', false)] };
-    await renderExplore({ 'GET /topics': [json(200, { topics: [waiting] })] });
-    await search('s');
-
-    expect(screen.getByText('Strudel')).toBeOnTheScreen();
-    expect(screen.queryByText(/^Levels? 1/)).toBeNull();
-  });
-
-  it('shows a failed search with Retry, which asks again', async () => {
-    const requests = await renderExplore({
-      'GET /topics': [json(500, {}), json(200, { topics: [STRUDEL] })],
-    });
-    await search('strudel');
-    expect(screen.getByText("Couldn't search topics.")).toBeOnTheScreen();
-
-    await pressRetry();
-
-    expect(requests.filter((r) => r.path === '/topics')).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Open Strudel, Ready' })).toBeOnTheScreen();
-  });
-});
-
 describe('Explore: creating a topic', () => {
   it('offers Create for no match; a new topic shows its card, which opens once built', async () => {
     const requests = await renderExplore({
-      'GET /topics': [json(200, { topics: [] }), json(200, { topics: [RUST] })],
+      ...NO_MATCH,
       'POST /topics': [json(202, { topic: RUST, job_id: 'job-1' })],
       'GET /jobs/job-1': [job('running'), job('done')],
     });
     await search('  Rust ownership ');
     expect(screen.getByText('No topic matches that yet.')).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Create this topic' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create Rust ownership' }));
     await advance(0);
     expect(requests.find((r) => r.method === 'POST')?.body).toStrictEqual({
       query: 'Rust ownership',
@@ -203,13 +136,13 @@ describe('Explore: creating a topic', () => {
 
   it('says a proposed topic waits for approval once its sources are proposed', async () => {
     await renderExplore({
-      'GET /topics': [json(200, { topics: [] }), json(200, { topics: [PROPOSED] })],
+      ...NO_MATCH,
       'POST /topics': [json(202, { topic: PROPOSED, job_id: 'job-1' })],
       'GET /jobs/job-1': [job('done')],
     });
     await search('C++ templates');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Create this topic' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create C++ templates' }));
     await advance(0);
     await advance(3000);
 
@@ -219,11 +152,11 @@ describe('Explore: creating a topic', () => {
 
   it('opens a topic that already exists', async () => {
     await renderExplore({
-      'GET /topics': [json(200, { topics: [] })],
+      ...NO_MATCH,
       'POST /topics': [json(200, { topic: STRUDEL, job_id: null })],
     });
     await search('strudel.cc');
-    fireEvent.press(screen.getByRole('button', { name: 'Create this topic' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create strudel.cc' }));
     await advance(0);
 
     expect(router.push).toHaveBeenCalledWith({
@@ -238,11 +171,11 @@ describe('Explore: creating a topic', () => {
     { status: 500, line: "Couldn't create the topic. Try again." },
   ])('shows one fixed line for a $status', async ({ status, line }) => {
     await renderExplore({
-      'GET /topics': [json(200, { topics: [] })],
+      ...NO_MATCH,
       'POST /topics': [json(status, { detail: 'server text' })],
     });
     await search('cobol');
-    fireEvent.press(screen.getByRole('button', { name: 'Create this topic' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create cobol' }));
     await advance(0);
 
     expect(screen.getByText(line)).toBeOnTheScreen();
@@ -301,11 +234,12 @@ describe('Explore: my topics', () => {
   it('hides the list while a search is typed; cleared, shows it again from the cache', async () => {
     const requests = await renderExplore({
       'GET /me/enrollments': [enrolled(OLDER, NEWER)],
-      'GET /topics': [json(200, { topics: [STRUDEL] })],
+      'GET /topics/suggest/top': [slice(STRUDEL)],
+      'GET /topics/suggest': [json(200, { suggestions: [] })],
     });
     await search('str');
     expect(screen.queryByTestId('explore-my-topics')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open Strudel, Ready' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Strudel, Open' })).toBeOnTheScreen();
 
     await search('');
     expect(screen.getByTestId('explore-my-topics')).toBeOnTheScreen();
