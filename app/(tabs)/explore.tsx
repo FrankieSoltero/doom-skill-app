@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +11,7 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { SearchField } from '../../src/components/SearchField';
 import { TabScreen } from '../../src/components/TabScreen';
 import { copy } from '../../src/copy';
+import { BranchesSheet } from '../../src/topics/BranchesSheet';
 import { MyTopics } from '../../src/topics/MyTopics';
 import { ENROLLMENTS_KEY } from '../../src/topics/useChoose';
 import { useEnrollments } from '../../src/topics/useEnrollments';
@@ -72,6 +74,37 @@ function Enrolled({ enrollments }: { enrollments: ReturnType<typeof useEnrollmen
 /** A topic the user asked to be built in this visit, and whether its job is done. */
 type Pending = CreatedTopic & { jobId: string; ready: boolean };
 
+/** The building card of a requested topic: it opens the topic once its job is done. */
+function PendingCard({ pending, onReady }: { pending: Pending; onReady: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={copy.explore.openTopic(pending.title)}
+      accessibilityState={{ disabled: !pending.ready }}
+      disabled={!pending.ready}
+      onPress={() => {
+        openTopic(pending.slug);
+      }}
+    >
+      <PendingTopic
+        jobId={pending.jobId}
+        title={pending.title}
+        proposed={pending.status === 'proposed'}
+        onReady={onReady}
+      />
+    </Pressable>
+  );
+}
+
+/** A refused request's one fixed line, announced when it appears. */
+function FailureLine({ line }: { line: string }) {
+  return (
+    <View accessibilityLiveRegion="polite">
+      <Text style={styles.line}>{line}</Text>
+    </View>
+  );
+}
+
 /** The most catalog rows the list shows; every matching open topic shows besides them. */
 export const EXPLORE_MAX_ROWS = 20;
 
@@ -91,28 +124,57 @@ function shown(rows: ExploreRow[]): ExploreRow[] {
   return [...open, ...built, ...unbuilt];
 }
 
-type ResultRowProps = { row: ExploreRow; onBuild: (row: ExploreRow) => void };
+/** The size and stroke of a row's chevron, as the search field's icon. */
+const CHEVRON_SIZE = 18;
+const CHEVRON_STROKE = 1.5;
 
-/** One result: its label, its group chip (a catalog row's), and Open or Build. */
-function ResultRow({ row, onBuild }: ResultRowProps) {
+type ResultRowProps = {
+  row: ExploreRow;
+  /** The row's own action: open it if built, else build it. */
+  onAct: (row: ExploreRow) => void;
+  /** Given, a row with branches shows their count and a chevron, and its tap calls this. */
+  onBranches?: (row: ExploreRow) => void;
+};
+
+/**
+ * One result: its label, its group chip (a catalog row's), and Open or Build; or, for a row with
+ * branches in the list (`onBranches`), their count and a chevron, its tap opening them.
+ */
+function ResultRow({ row, onAct, onBranches }: ResultRowProps) {
   const slug = row.builtSlug;
+  const branching = onBranches !== undefined && row.branches > 0;
   const action = slug === null ? copy.explore.build : copy.explore.open;
+  const count = copy.explore.branches(row.branches);
   // An open topic carries no group of its own (useExploreResults): it shows no chip.
   const group = row.source === 'topic' ? null : copy.explore.group[row.group];
   return (
     <Pressable
       testID="explore-row"
       accessibilityRole="button"
-      accessibilityLabel={copy.explore.row(row.label, action, group)}
+      accessibilityLabel={copy.explore.row(row.label, branching ? count : action, group)}
       onPress={() => {
-        if (slug === null) onBuild(row);
-        else openTopic(slug);
+        if (branching) onBranches(row);
+        else onAct(row);
       }}
       style={styles.row}
     >
       <Text style={styles.label}>{row.label}</Text>
       {group === null ? null : <Text style={styles.chip}>{group}</Text>}
-      <Text style={slug === null ? styles.chip : styles.open}>{action}</Text>
+      {branching ? (
+        <>
+          <Text style={styles.count}>{count}</Text>
+          <ChevronRight
+            testID="explore-row-chevron"
+            size={CHEVRON_SIZE}
+            strokeWidth={CHEVRON_STROKE}
+            color={colors.ink}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+        </>
+      ) : (
+        <Text style={slug === null ? styles.chip : styles.open}>{action}</Text>
+      )}
     </Pressable>
   );
 }
@@ -122,7 +184,8 @@ type ResultsProps = {
   /** The text as it would be sent. */
   text: string;
   creating: boolean;
-  onBuild: (row: ExploreRow) => void;
+  onAct: (row: ExploreRow) => void;
+  onBranches: (row: ExploreRow) => void;
   onCreate: () => void;
 };
 
@@ -130,14 +193,14 @@ type ResultsProps = {
  * The search's state under the field: the idle line, the rows, or with no rows a busy line, a
  * failure line, or (once the server found nothing) Create with the text.
  */
-function Results({ results, text, creating, onBuild, onCreate }: ResultsProps) {
+function Results({ results, text, creating, onAct, onBranches, onCreate }: ResultsProps) {
   if (results.status === 'idle') return <Text style={styles.line}>{copy.explore.idle}</Text>;
   const rows = shown(results.rows);
   if (rows.length > 0) {
     return (
       <View>
         {rows.map((row) => (
-          <ResultRow key={row.key} row={row} onBuild={onBuild} />
+          <ResultRow key={row.key} row={row} onAct={onAct} onBranches={onBranches} />
         ))}
       </View>
     );
@@ -165,7 +228,9 @@ function Results({ results, text, creating, onBuild, onCreate }: ResultsProps) {
  * /topics`). Only when the server found nothing does Create offer the text itself. A request
  * whose topic exists (a 200 with no job) opens its page; a new one shows its building card,
  * polled until its job is done, when the card opens the topic. A refused request shows one fixed
- * line ("Not available yet", the pending limit, or a failure). Before anything is typed, the
+ * line ("Not available yet", the pending limit, or a failure). A catalog row with branches shows
+ * their count and opens them in a sheet (src/topics/BranchesSheet.tsx), whose Learn all and
+ * branches each do that row's own action, closing the sheet. Before anything is typed, the
  * learner's topics show over the idle line; they are read again when the tab regains focus and
  * on pull to refresh.
  */
@@ -173,6 +238,7 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [openBranches, setOpenBranches] = useState<ExploreRow | null>(null);
   const results = useExploreResults(query);
   const request = useCreateTopic();
   const enrollments = useEnrollmentsOnFocus();
@@ -189,6 +255,12 @@ export default function ExploreScreen() {
     } catch (error) {
       setFailure(createFailure(error));
     }
+  };
+
+  /** A row's own action: open its topic if built, else request it with its catalog key. */
+  const act = (row: ExploreRow) => {
+    if (row.builtSlug === null) void onCreate(row.label, row.key);
+    else openTopic(row.builtSlug);
   };
 
   return (
@@ -211,39 +283,37 @@ export default function ExploreScreen() {
         }
       >
         {pending === null ? null : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.explore.openTopic(pending.title)}
-            accessibilityState={{ disabled: !pending.ready }}
-            disabled={!pending.ready}
-            onPress={() => {
-              openTopic(pending.slug);
+          <PendingCard
+            pending={pending}
+            onReady={() => {
+              setPending({ ...pending, ready: true });
             }}
-          >
-            <PendingTopic
-              jobId={pending.jobId}
-              title={pending.title}
-              proposed={pending.status === 'proposed'}
-              onReady={() => {
-                setPending({ ...pending, ready: true });
-              }}
-            />
-          </Pressable>
+          />
         )}
-        {failure === null ? null : (
-          <View accessibilityLiveRegion="polite">
-            <Text style={styles.line}>{failure}</Text>
-          </View>
-        )}
+        {failure === null ? null : <FailureLine line={failure} />}
         {results.status === 'idle' ? <Enrolled enrollments={enrollments} /> : null}
         <Results
           results={results}
           text={cleanQuery(query)}
           creating={request.status === 'loading'}
-          onBuild={(row) => void onCreate(row.label, row.key)}
+          onAct={act}
+          onBranches={setOpenBranches}
           onCreate={() => void onCreate(query)}
         />
       </ScrollView>
+      {openBranches === null ? null : (
+        <BranchesSheet
+          subject={openBranches}
+          Row={ResultRow}
+          onPick={(row) => {
+            setOpenBranches(null);
+            act(row);
+          }}
+          onClose={() => {
+            setOpenBranches(null);
+          }}
+        />
+      )}
     </TabScreen>
   );
 }
@@ -266,4 +336,5 @@ const styles = StyleSheet.create({
   label: { ...type.button, color: colors.ink, flex: 1 },
   chip: CHIP,
   open: { ...CHIP, backgroundColor: colors.lime },
+  count: { ...type.caption, color: colors.neutral[700] },
 });
