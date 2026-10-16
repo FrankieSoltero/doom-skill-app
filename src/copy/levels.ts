@@ -1,5 +1,5 @@
 /**
- * UI strings of a topic's levels: the level badge, Explore's range, the topic screen's levels row,
+ * UI strings of a topic's levels: the level badge, the topic screen's levels row,
  * the unlock moment under a passed checkpoint, and the Q&A byline. Part of `copy`
  * (src/copy/index.ts), which freezes them; read them through `copy`, not from here.
  */
@@ -8,8 +8,6 @@
 export const levels = {
   /** A level's badge. */
   badge: (n: number) => `Level ${String(n)}`,
-  /** Explore's line for a root with `n` levels. */
-  range: (n: number) => (n > 1 ? `Levels 1–${String(n)}` : 'Level 1'),
   /** The unlock moment's heading: the level finished and the points it paid. */
   completed: (n: number, p: number) => `Level ${String(n)} complete · +${String(p)} points`,
   /** The button to the next level when the learner is enrolled in it (`next` = `enrolled`). */

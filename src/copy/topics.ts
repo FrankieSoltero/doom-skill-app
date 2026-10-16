@@ -15,9 +15,6 @@ const WAITING_FOR_REVIEW = 'Waiting for a review';
 /** A build that failed for a reason the learner cannot act on (any reason but `invalid_output`). */
 const BUILD_FAILED = 'Build failed — try again later';
 
-/** The mark on a catalog suggestion whose topic is already built. */
-const BUILT = 'Built';
-
 /** The Explore tab (app/(tabs)/explore.tsx). */
 export const explore = {
   title: 'Explore',
@@ -30,8 +27,6 @@ export const explore = {
   searching: 'Searching…',
   /** No topic matches the query; the Create button follows. */
   noMatch: 'No topic matches that yet.',
-  /** The button that asks the server to build a topic for the query. */
-  create: 'Create this topic',
   creating: 'Creating…',
   searchFailed: "Couldn't search topics.",
   /** The server does not support the query's topic (a 422). */
@@ -39,22 +34,10 @@ export const explore = {
   /** Too many topics are being built for this user (a 429). */
   limit: 'You have too many topics being built. Try again later.',
   createFailed: "Couldn't create the topic. Try again.",
-  /** The mark on a catalog suggestion whose topic is built: a tap opens it. */
-  suggestBuilt: BUILT,
   /** A catalog suggestion's group chip, by its group (`code`, `prose`, `quantitative`). */
   group: { code: 'code', prose: 'prose', quantitative: 'quantitative' },
-  /** A catalog suggestion as a screen reader hears it: its label, group and the built mark. */
-  suggestion: (label: string, group: string, built: boolean) =>
-    built ? `${label}, ${group}, ${BUILT}` : `${label}, ${group}`,
   /** No catalog topic and no topic matches the query; the Create button follows. */
   notInCatalog: 'Not in the catalog yet — you can still request it',
-  /** The meta line of a topic that can be opened. */
-  ready: 'Ready',
-  /** The meta line of a topic that is still being built. */
-  building: 'Being built',
-  /** The meta line of a proposed topic. */
-  proposed: WAITING_FOR_APPROVAL,
-  failed: 'Failed to build',
   /** Spoken label of a topic row that opens the topic. */
   openTopic: (title: string) => `Open ${title}`,
   /** The heading over the learner's enrollments, shown before anything is typed. */

@@ -1,5 +1,5 @@
 // The level strings (src/copy/levels.ts, M10 plan L Task 13; decisions L16, L17), read through
-// `copy`: the badge, Explore's range, the unlock moment's lines by `next`, the locked hint and the
+// `copy`: the badge, the unlock moment's lines by `next`, the locked hint and the
 // Q&A byline. `TopicDetail` and `CheckpointGrade` are read through the generated types, so their
 // level fields need no parse here; the author's level is parsed in qa.test.ts. Then the choice of a
 // level-2 project (src/data/levels.ts), through the real API client over a fake network.
@@ -18,11 +18,8 @@ describe('copy.levels', () => {
     expect(Object.isFrozen(copy.levels)).toBe(true);
   });
 
-  it('names a level and the range of a family', () => {
+  it('names a level', () => {
     expect(copy.levels.badge(2)).toBe('Level 2');
-    expect(copy.levels.range(3)).toBe('Levels 1–3');
-    expect(copy.levels.range(2)).toBe('Levels 1–2');
-    expect(copy.levels.range(1)).toBe('Level 1');
   });
 
   it('writes the unlock moment by what comes next', () => {
