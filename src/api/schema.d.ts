@@ -149,6 +149,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/{key}/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Branches
+         * @description The catalog row's branches, disciplines first (module docstring).
+         */
+        get: operations["catalog_branches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/checkpoints/{submission_id}": {
         parameters: {
             query?: never;
@@ -2012,9 +2032,11 @@ export interface components {
         /**
          * Suggestion
          * @description A catalog topic for what the user typed; `built_slug` is the topic made from it, if any
-         *     learner may open it.
+         *     learner may open it; `branches` the number of its branches (`GET /catalog/{key}/branches`).
          */
         Suggestion: {
+            /** Branches */
+            branches: number;
             /** Built Slug */
             built_slug: string | null;
             group: components["schemas"]["Group"];
@@ -2715,6 +2737,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CardSourceOut"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    catalog_branches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"][];
                 };
             };
             /** @description Not authenticated */
