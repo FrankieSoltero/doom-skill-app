@@ -4,17 +4,20 @@
  * (src/api/query.ts). Types come from the generated schema, as for the other topic hooks.
  *
  * - On mount it loads `GET /topics/suggest/top` (every open topic and the top catalog rows),
- *   cached for `TOP_STALE_MS`.
+ *   cached for `TOP_STALE_MS` (fresh that long, and kept that long after the screen leaves).
  * - For a non-empty text (cleaned as the search cleans it) it matches the slice at once: a label
- *   or title that starts with the text, then one with a word that does; case-insensitive, never
- *   "contains". `GET /topics/suggest` asks `SUGGEST_DEBOUNCE_MS` after the last change.
+ *   or title that starts with the text, then one where the text starts at a word's start (it may
+ *   run on across words: "market d" matches "Stock market data"); case-insensitive, never
+ *   "contains". `GET /topics/suggest` asks `SUGGEST_DEBOUNCE_MS` after the last change, and the
+ *   request for an earlier text is cancelled.
  * - The rows, without repeats by key: the matching open topics (prefix first, then by title),
  *   then the server's rows in its order, then the slice's other matches (prefix first, then by
- *   rank). Until the server answers the text, `loading`; then `ready`; a failed suggestion is
+ *   rank). Until the server answers the text, `loading`, with the last answer's rows that still
+ *   match the text (they may narrow, never contradict); then `ready`; a failed suggestion is
  *   `error` with the slice's matches. A slice that fails or waits leaves the server's rows alone.
  * - A blank text is `idle` with no rows and asks no suggestions.
  */
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { requireApi } from '../api/query';
 import type { components } from '../api/schema';
@@ -47,14 +50,18 @@ const IDLE: ExploreResults = { status: 'idle', rows: [] };
 /** Under `topics`, so a created topic (which invalidates `topics`) reloads the slice. */
 const TOP_KEY = ['topics', 'suggest', 'top'] as const;
 
+/** A word: a run of letters, digits, `+` and `#` (so "C++" and "C#" stay one word). */
+const WORD = /[\p{L}\p{N}+#]+/gu;
+
 /**
- * How `label` matches the lower-cased `text`: 0 for a prefix, 1 for a word prefix, `null` for
- * no match. Words split on anything but letters, digits, `+` and `#` (so "C++" stays a word).
+ * How `label` matches the lower-cased `text`: 0 for a prefix, 1 when the text starts at a later
+ * word's start (running on across words if it goes on), `null` for no match.
  */
 function matchTier(label: string, text: string): 0 | 1 | null {
   const lower = label.toLowerCase();
   if (lower.startsWith(text)) return 0;
-  return lower.split(/[^\p{L}\p{N}+#]+/u).some((word) => word.startsWith(text)) ? 1 : null;
+  const starts = Array.from(lower.matchAll(WORD), (word) => word.index);
+  return starts.some((start) => lower.startsWith(text, start)) ? 1 : null;
 }
 
 /** The items whose label matches `text`, prefix matches first, each tier in `order`. */
@@ -133,19 +140,25 @@ export function useExploreResults(text: string): ExploreResults {
     queryKey: TOP_KEY,
     queryFn: ({ signal }) => loadTop(signal),
     staleTime: TOP_STALE_MS,
+    gcTime: TOP_STALE_MS,
   });
   const server = useQuery({
     // The text sits in an object: a bare `'top'` would share the slice's key.
     queryKey: ['topics', 'suggest', { q: settled }],
     queryFn: ({ signal }) => suggestTopics(settled, signal),
     enabled: settled !== '',
+    placeholderData: keepPreviousData,
   });
 
   if (wanted === '') return IDLE;
-  const slice = sliceMatches(top.data, wanted.toLowerCase());
+  const lower = wanted.toLowerCase();
+  const slice = sliceMatches(top.data, lower);
   const current = settled === wanted;
-  const landed = current && server.isSuccess ? server.data.map(fromSuggestion) : [];
-  const rows = merged(slice.open, landed, slice.rows);
+  const landed = current && server.isSuccess && !server.isPlaceholderData;
+  // An earlier text's answer: only its rows that still match the text.
+  const previous = (server.data ?? []).filter((row) => matchTier(row.label, lower) !== null);
+  const serverRows = (landed ? server.data : previous).map(fromSuggestion);
+  const rows = merged(slice.open, serverRows, slice.rows);
   if (current && server.isError) return { status: 'error', rows };
-  return { status: current && server.isSuccess ? 'ready' : 'loading', rows };
+  return { status: landed ? 'ready' : 'loading', rows };
 }

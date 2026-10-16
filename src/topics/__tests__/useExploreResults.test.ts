@@ -29,6 +29,9 @@ const CHEMISTRY = row('wikidata:Q2329', 'Chemistry', 700);
 const DANCE = row('wikidata:Q11639', 'Dance', 600);
 const STOCKS = row('wikidata:Q177', 'Stock market', 500, 'quantitative');
 const CLOJURE = row('wikidata:Q51798', 'Clojure', 100, 'code');
+const CLOUD = row('wikidata:Q483639', 'Cloud computing', 90);
+const STOCK_DATA = row('wikidata:Q2', 'Stock market data', 400, 'quantitative');
+const NODE = row('wikidata:Q3', 'Learn Node.js', 300, 'code');
 
 const topic = (slug: string, title: string) => ({
   slug,
@@ -71,6 +74,14 @@ function renderResults(routes: Record<string, Answer[]>, initial: string) {
 }
 
 const labels = (rows: ExploreRow[]) => rows.map((r) => r.label);
+const fromRow = (r: typeof C): ExploreRow => ({
+  key: r.key,
+  label: r.label,
+  group: r.group as ExploreRow['group'],
+  kind: r.kind,
+  builtSlug: r.built_slug,
+  source: 'catalog',
+});
 
 describe('useExploreResults: the slice, matched as the learner types', () => {
   it('is idle for a blank text, asks no suggestions, and still preloads the slice', async () => {
@@ -116,6 +127,71 @@ describe('useExploreResults: the slice, matched as the learner types', () => {
     hook.rerender({ text });
 
     expect(labels(hook.result.current.rows)).toStrictEqual(want);
+  });
+
+  it.each([
+    { text: 'market d', want: ['Stock market data'] },
+    { text: 'node.j', want: ['Learn Node.js'] },
+    { text: 'arket d', want: [] },
+    { text: 'ode.js', want: [] },
+  ])('matches "$text" from a word start across words; never inside a word', async (wanted) => {
+    const hook = renderResults({ [TOP]: [slice([], [STOCK_DATA, NODE])], [SUGGEST]: [never] }, '');
+    await advance(0);
+    hook.rerender({ text: wanted.text });
+
+    expect(labels(hook.result.current.rows)).toStrictEqual(wanted.want);
+  });
+});
+
+describe('useExploreResults: while the learner types', () => {
+  it('asks once, after the last change: `c` then `c+` sends only `c+`', async () => {
+    const hook = renderResults({ [TOP]: [slice([], [])], [SUGGEST]: [suggested(CPP)] }, '');
+    hook.rerender({ text: 'c' });
+    await advance(SUGGEST_DEBOUNCE_MS - 50);
+    hook.rerender({ text: 'c+' });
+    await advance(SUGGEST_DEBOUNCE_MS);
+
+    expect(
+      hook.requests.filter((r) => r.path === '/topics/suggest').map((r) => r.query),
+    ).toStrictEqual(['?q=c%2B']);
+    expect(hook.result.current).toMatchObject({ status: 'ready', rows: [{ label: 'C++' }] });
+  });
+
+  it('cancels the request for the previous text when the text changes', async () => {
+    const hook = renderResults({ [TOP]: [slice([], [])], [SUGGEST]: [never, suggested(CPP)] }, 'c');
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(hook.client.getQueryState(['topics', 'suggest', { q: 'c' }])?.fetchStatus).toBe(
+      'fetching',
+    );
+    hook.rerender({ text: 'c+' });
+    await advance(SUGGEST_DEBOUNCE_MS);
+
+    expect(hook.client.getQueryState(['topics', 'suggest', { q: 'c' }])?.fetchStatus).toBe('idle');
+    expect(hook.result.current).toMatchObject({ status: 'ready', rows: [{ label: 'C++' }] });
+  });
+
+  it('keeps the last server rows that still match while the next text loads', async () => {
+    let answerCl: (response: Response) => void = () => undefined;
+    const cl = new Promise<Response>((resolve) => {
+      answerCl = resolve;
+    });
+    const hook = renderResults(
+      { [TOP]: [slice([], [])], [SUGGEST]: [suggested(CPP, CLOJURE), cl] },
+      'c',
+    );
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(labels(hook.result.current.rows)).toStrictEqual(['C++', 'Clojure']);
+
+    hook.rerender({ text: 'cl' });
+    expect(hook.result.current).toStrictEqual({ status: 'loading', rows: [fromRow(CLOJURE)] });
+    await advance(SUGGEST_DEBOUNCE_MS);
+    expect(hook.requests.map((r) => r.query)).toContain('?q=cl');
+    expect(hook.result.current).toStrictEqual({ status: 'loading', rows: [fromRow(CLOJURE)] });
+    answerCl(suggested(CLOUD, CLOJURE));
+    await advance(0);
+
+    expect(hook.result.current.status).toBe('ready');
+    expect(labels(hook.result.current.rows)).toStrictEqual(['Cloud computing', 'Clojure']);
   });
 });
 
@@ -219,6 +295,17 @@ describe('useExploreResults: the cached slice', () => {
     second.unmount();
 
     expect(first.requests).toHaveLength(2);
+  });
+
+  it('drops the slice from the cache an hour after the last screen leaves', async () => {
+    const first = renderResults({ [TOP]: [slice([], [C])] }, '');
+    await advance(0);
+    first.unmount();
+    await advance(TOP_STALE_MS - MINUTE);
+    expect(first.client.getQueryData(['topics', 'suggest', 'top'])).toBeDefined();
+    await advance(2 * MINUTE);
+
+    expect(first.client.getQueryData(['topics', 'suggest', 'top'])).toBeUndefined();
   });
 
   it('does not mistake the text "top" for the slice', async () => {
