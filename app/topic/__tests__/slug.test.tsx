@@ -128,10 +128,13 @@ describe('Topic detail: states', () => {
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
   });
 
-  it('says a proposed topic is waiting for approval, with no Start button', async () => {
-    await renderTopic({ 'GET /topics/strudel': [json(200, { ...BUILDING, status: 'proposed' })] });
+  it.each([
+    ['proposed', 'Waiting for a review'],
+    ['failed', 'Build failed — try again later'],
+  ])('says a %s topic\'s state as "%s", with no Start button', async (status, line) => {
+    await renderTopic({ 'GET /topics/strudel': [json(200, { ...BUILDING, status })] });
 
-    expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
+    expect(screen.getByText(line)).toBeOnTheScreen();
     expect(screen.queryByText('This topic is still being built. Check back soon.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
   });

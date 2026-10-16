@@ -17,3 +17,29 @@ describe('copy for the Explore list', () => {
     expect(copy.explore.row('Strudel', 'Open', null)).toBe('Strudel, Open');
   });
 });
+
+describe('copy for a pending build', () => {
+  it('says the place in the queue', () => {
+    expect(copy.pendingTopic.queuedAhead(2)).toBe('Queued — 2 ahead');
+    expect(copy.pendingTopic.queued).toBe('Queued');
+  });
+
+  it('names each stage', () => {
+    expect(copy.pendingTopic.stage).toStrictEqual({
+      resolving: 'Resolving sources',
+      ingesting: 'Reading sources',
+      synthesizing: 'Building the tree',
+      generating: 'Writing cards',
+      waiting: 'Waiting for a review',
+    });
+  });
+
+  it('says why a build failed, and the topic page says the same', () => {
+    expect(copy.pendingTopic.failed).toStrictEqual({
+      invalidOutput: "Couldn't make sense of that text — try a suggestion",
+      other: 'Build failed — try again later',
+    });
+    expect(copy.topic.proposed).toBe(copy.pendingTopic.stage.waiting);
+    expect(copy.topic.failed).toBe(copy.pendingTopic.failed.other);
+  });
+});

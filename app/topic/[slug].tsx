@@ -27,6 +27,16 @@ const NUMBER_SIZE = 26;
 const ICON_SIZE = 22;
 const ICON_STROKE = 1.5;
 
+/**
+ * Why a topic that is not ready cannot start. The page has the topic's status and no job, so a
+ * failed build reads the line for no known reason, and a proposed topic waits for a review.
+ */
+function notReadyLine(status: TopicDetail['status']): string {
+  if (status === 'proposed') return copy.topic.proposed;
+  if (status === 'failed') return copy.topic.failed;
+  return copy.topic.notReady;
+}
+
 /** The line for a failed enrollment: never the server's text. */
 function enrollFailure(error: unknown): string {
   return error instanceof ApiError && error.kind === 'conflict'
@@ -166,9 +176,7 @@ function TopicContent({ topic }: { topic: TopicDetail }) {
       {ready ? (
         <StartButton slug={topic.slug} />
       ) : (
-        <Text style={styles.body}>
-          {topic.status === 'proposed' ? copy.topic.proposed : copy.topic.notReady}
-        </Text>
+        <Text style={styles.body}>{notReadyLine(topic.status)}</Text>
       )}
     </ScrollView>
   );

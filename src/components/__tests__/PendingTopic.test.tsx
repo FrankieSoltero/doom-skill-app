@@ -14,8 +14,15 @@ jest.mock('expo-router', () => ({
 }));
 
 const JOB_ID = 'job-1';
-const job = (status: string) =>
-  json(200, { id: JOB_ID, kind: 'ingest_topic', progress: {}, reason: 'internal', status });
+const job = (status: string, more: Record<string, unknown> = {}) =>
+  json(200, {
+    id: JOB_ID,
+    kind: 'ingest_topic',
+    progress: {},
+    reason: 'internal',
+    status,
+    ...more,
+  });
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -26,10 +33,13 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-async function renderPending(answers: Response[], onReady = jest.fn()) {
+async function renderPending(answers: Response[], onReady = jest.fn(), proposed = false) {
   serveApi({ [`GET /jobs/${JOB_ID}`]: answers });
   const { wrapper } = queryWrapper();
-  render(<PendingTopic jobId={JOB_ID} title="Rust ownership" onReady={onReady} />, { wrapper });
+  render(
+    <PendingTopic jobId={JOB_ID} title="Rust ownership" onReady={onReady} proposed={proposed} />,
+    { wrapper },
+  );
   await act(async () => {
     await jest.advanceTimersByTimeAsync(0);
   });
@@ -74,12 +84,7 @@ describe('PendingTopic', () => {
   });
 
   it('says a proposed topic waits for approval once its job is done', async () => {
-    serveApi({ [`GET /jobs/${JOB_ID}`]: [job('done')] });
-    const { wrapper } = queryWrapper();
-    render(<PendingTopic jobId={JOB_ID} title="C++" onReady={jest.fn()} proposed />, { wrapper });
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(0);
-    });
+    await renderPending([job('done')], jest.fn(), true);
 
     expect(screen.getByText('Waiting for approval')).toBeOnTheScreen();
     expect(screen.queryByText('Ready. Tap to open.')).toBeNull();
@@ -92,5 +97,68 @@ describe('PendingTopic', () => {
     });
 
     expect(screen.getByText('Still building. Check back later.')).toBeOnTheScreen();
+  });
+});
+
+// A server that reports the job's stage (Explore plan Task 6): the line follows the stage.
+describe('PendingTopic: the stage', () => {
+  it.each([
+    ['queued', 2, 'Queued — 2 ahead'],
+    ['queued', 1, 'Queued — 1 ahead'],
+    ['queued', 0, 'Queued'],
+    ['resolving', 0, 'Resolving sources'],
+    ['ingesting', 0, 'Reading sources'],
+    ['synthesizing', 0, 'Building the tree'],
+    ['generating', 0, 'Writing cards'],
+  ])('says %s (%i ahead) as "%s"', async (stage, ahead, line) => {
+    await renderPending([job(stage === 'queued' ? 'queued' : 'running', { stage, ahead })]);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+  });
+
+  it('says a job waiting for a review so, on a proposed card', async () => {
+    await renderPending([job('done', { stage: 'waiting', ahead: 0 })], jest.fn(), true);
+
+    expect(screen.getByText('Waiting for a review')).toBeOnTheScreen();
+    expect(screen.queryByText('Waiting for approval')).toBeNull();
+  });
+
+  it.each([
+    ['invalid_output', "Couldn't make sense of that text — try a suggestion"],
+    ['handler_error', 'Build failed — try again later'],
+    [null, 'Build failed — try again later'],
+  ])('says a failed build (reason %s) as "%s", never the reason', async (reason, line) => {
+    const onReady = await renderPending([job('failed', { stage: 'failed', ahead: 0, reason })]);
+
+    expect(screen.getByText(line)).toBeOnTheScreen();
+    expect(screen.queryByText("Couldn't build this topic.")).toBeNull();
+    expect(onReady).not.toHaveBeenCalled();
+  });
+
+  it('says a done build is ready and calls onReady, even on a card first proposed', async () => {
+    const onReady = await renderPending(
+      [job('done', { stage: 'done', ahead: 0 })],
+      jest.fn(),
+      true,
+    );
+
+    expect(screen.getByText('Ready. Tap to open.')).toBeOnTheScreen();
+    expect(onReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows a done job whose topic is still being built, and is ready only when it is', async () => {
+    const onReady = await renderPending([
+      job('done', { stage: 'ingesting', ahead: 0 }),
+      job('done', { stage: 'done', ahead: 0 }),
+    ]);
+    expect(screen.getByText('Reading sources')).toBeOnTheScreen();
+    expect(onReady).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByText('Ready. Tap to open.')).toBeOnTheScreen();
+    expect(onReady).toHaveBeenCalledTimes(1);
   });
 });

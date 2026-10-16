@@ -115,3 +115,59 @@ describe('useJob', () => {
     expect(requests.length).toBeGreaterThan(1);
   });
 });
+
+// A server that reports the queue and the stage (Explore plan Task 6). An older server's answer
+// carries neither, and the view then has neither (the cases above).
+describe('useJob: the queue and the stage', () => {
+  const staged = (status: string, stage: string, ahead = 0, reason: string | null = null) =>
+    json(200, { id: JOB_ID, kind: 'resolve_topic', progress: {}, reason, status, stage, ahead });
+
+  it('gives how many jobs are ahead and the stage', async () => {
+    serveJob(staged('queued', 'queued', 2));
+    const { result } = renderJob(JOB_ID);
+    await advance(0);
+
+    expect(result.current).toStrictEqual({ status: 'queued', stage: 'queued', ahead: 2 });
+  });
+
+  it('gives a failed stage with its reason', async () => {
+    serveJob(staged('failed', 'failed', 0, 'invalid_output'));
+    const { result } = renderJob(JOB_ID);
+    await advance(0);
+
+    expect(result.current).toStrictEqual({
+      status: 'failed',
+      stage: 'failed',
+      ahead: 0,
+      reason: 'invalid_output',
+    });
+  });
+
+  it("keeps asking while a done job's topic is still being built, and stops once it is", async () => {
+    const requests = serveJob(
+      staged('done', 'ingesting'),
+      staged('done', 'synthesizing'),
+      staged('done', 'done'),
+    );
+    const { result } = renderJob(JOB_ID);
+    await advance(0);
+    expect(result.current.stage).toBe('ingesting');
+
+    await advance(3000);
+    expect(result.current.stage).toBe('synthesizing');
+    await advance(3000);
+    expect(result.current.stage).toBe('done');
+    await advance(30_000);
+
+    expect(requests).toHaveLength(3);
+  });
+
+  it.each(['waiting', 'failed'])('stops on a done job whose stage is %s', async (stage) => {
+    const requests = serveJob(staged('done', stage));
+    const { result } = renderJob(JOB_ID);
+    await advance(30_000);
+
+    expect(result.current.stage).toBe(stage);
+    expect(requests).toHaveLength(1);
+  });
+});
