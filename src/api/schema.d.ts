@@ -1341,9 +1341,13 @@ export interface components {
         };
         /**
          * Job
-         * @description `GET /jobs/{id}`: a job's kind, status, progress and the reason it failed or was retried.
+         * @description `GET /jobs/{id}`: a job's kind, status, progress and the reason it failed or was retried;
+         *     `ahead`, the queued jobs before a queued one (else 0), and `stage`, what the app shows
+         *     (`app.services.job_stage`, Explore plan Task 3).
          */
         Job: {
+            /** Ahead */
+            ahead: number;
             /**
              * Id
              * Format: uuid
@@ -1357,8 +1361,11 @@ export interface components {
             };
             /** Reason */
             reason: string | null;
+            stage: components["schemas"]["JobStage"];
             status: components["schemas"]["JobState"];
         };
+        /** @enum {string} */
+        JobStage: "queued" | "resolving" | "ingesting" | "synthesizing" | "generating" | "waiting" | "done" | "failed";
         /** @enum {string} */
         JobState: "queued" | "running" | "done" | "failed";
         /**
