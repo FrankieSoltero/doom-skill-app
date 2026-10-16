@@ -22,6 +22,7 @@ const row = (key: string, label: string, rank: number, group = 'prose') => ({
   kind: 'subject',
   rank,
   built_slug: null,
+  branches: 0,
 });
 const C = row('wikidata:Q15777', 'C', 900, 'code');
 const CPP = row('wikidata:Q2407', 'C++', 800, 'code');
@@ -32,6 +33,7 @@ const CLOJURE = row('wikidata:Q51798', 'Clojure', 100, 'code');
 const CLOUD = row('wikidata:Q483639', 'Cloud computing', 90);
 const STOCK_DATA = row('wikidata:Q2', 'Stock market data', 400, 'quantitative');
 const NODE = row('wikidata:Q3', 'Learn Node.js', 300, 'code');
+const MATHS = { ...row('wikidata:Q395', 'Mathematics', 950), branches: 9 };
 
 const topic = (slug: string, title: string) => ({
   slug,
@@ -81,6 +83,7 @@ const fromRow = (r: typeof C): ExploreRow => ({
   kind: r.kind,
   builtSlug: r.built_slug,
   source: 'catalog',
+  branches: r.branches,
 });
 
 describe('useExploreResults: the slice, matched as the learner types', () => {
@@ -112,6 +115,7 @@ describe('useExploreResults: the slice, matched as the learner types', () => {
       kind: 'subject',
       builtSlug: null,
       source: 'catalog',
+      branches: 0,
     });
   });
 
@@ -240,6 +244,7 @@ describe('useExploreResults: the server’s rows', () => {
       kind: null,
       builtSlug: 'strudel',
       source: 'topic',
+      branches: 0,
     });
     expect(labels(hook.result.current.rows)).toStrictEqual(['Strudel', 'Stock market']);
   });
@@ -269,6 +274,23 @@ describe('useExploreResults: the server’s rows', () => {
 
     expect(hook.result.current.status).toBe('error');
     expect(labels(hook.result.current.rows)).toStrictEqual(['C']);
+  });
+});
+
+describe('useExploreResults: a row’s branches', () => {
+  it('carries a suggestion’s branches; an open topic has none', async () => {
+    const hook = renderResults(
+      { [TOP]: [slice([topic('maths-club', 'Maths club')], [])], [SUGGEST]: [suggested(MATHS)] },
+      '',
+    );
+    await advance(0);
+    hook.rerender({ text: 'math' });
+    await advance(SUGGEST_DEBOUNCE_MS);
+
+    expect(hook.result.current.rows.map((r) => [r.label, r.branches])).toStrictEqual([
+      ['Maths club', 0],
+      ['Mathematics', 9],
+    ]);
   });
 });
 

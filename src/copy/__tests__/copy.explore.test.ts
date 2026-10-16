@@ -18,6 +18,23 @@ describe('copy for the Explore list', () => {
   });
 });
 
+describe('copy for a subject’s branches', () => {
+  it('counts a row’s branches', () => {
+    expect(copy.explore.branches(9)).toBe('9 branches');
+  });
+
+  it('names the sheet’s primary action after the subject', () => {
+    expect(copy.explore.learnAll('Mathematics')).toBe('Learn all of Mathematics');
+  });
+
+  it('names the sheet’s heading, its close action and its states', () => {
+    expect(copy.explore.branchesHeading).toBe('Branches');
+    expect(copy.explore.branchesClose).toBe('Close');
+    expect(copy.explore.branchesLoading).toBe('Loading branches…');
+    expect(copy.explore.branchesFailed).toBe("Couldn't load branches");
+  });
+});
+
 describe('copy for a pending build', () => {
   it('says the place in the queue', () => {
     expect(copy.pendingTopic.queuedAhead(2)).toBe('Queued — 2 ahead');

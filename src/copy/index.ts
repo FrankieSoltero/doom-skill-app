@@ -451,6 +451,15 @@ export const copy = deepFreeze({
     /** A result row as a screen reader hears it: its label, its group chip (if any), its action. */
     row: (label: string, action: string, group: string | null) =>
       group === null ? `${label}, ${action}` : `${label}, ${group}, ${action}`,
+    /** A catalog row's count of branches, beside its chevron (shown only when it has some). */
+    branches: (n: number) => `${String(n)} branches`,
+    /** The branches sheet's primary action: the subject's own row action. */
+    learnAll: (title: string) => `Learn all of ${title}`,
+    /** The branches sheet's heading over the subject's branches. */
+    branchesHeading: 'Branches',
+    branchesClose: 'Close',
+    branchesLoading: 'Loading branches…',
+    branchesFailed: "Couldn't load branches",
   },
   pendingTopic,
   topic,

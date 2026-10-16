@@ -33,7 +33,11 @@ export const TOP_STALE_MS = 3_600_000;
 /** How long the server's suggestions wait after the last change before they ask. */
 export const SUGGEST_DEBOUNCE_MS = 150;
 
-/** One row of the list: an open topic (`source 'topic'`) or a catalog row. */
+/**
+ * One row of the list: an open topic (`source 'topic'`) or a catalog row. `branches` is the
+ * number of the catalog row's branches (`GET /catalog/{key}/branches`, src/topics/useBranches.ts);
+ * an open topic has none.
+ */
 export type ExploreRow = {
   key: string;
   label: string;
@@ -41,6 +45,7 @@ export type ExploreRow = {
   kind: string | null;
   builtSlug: string | null;
   source: 'topic' | 'catalog';
+  branches: number;
 };
 
 type ExploreResults = { rows: ExploreRow[]; status: 'idle' | 'loading' | 'ready' | 'error' };
@@ -88,10 +93,12 @@ function fromTopic(topic: TopicSummary): ExploreRow {
     kind: null,
     builtSlug: topic.slug,
     source: 'topic',
+    branches: 0,
   };
 }
 
-function fromSuggestion(row: Suggestion): ExploreRow {
+/** A catalog row from the server (a suggestion, a slice row or a branch) as a list row. */
+export function fromSuggestion(row: Suggestion): ExploreRow {
   return {
     key: row.key,
     label: row.label,
@@ -99,6 +106,7 @@ function fromSuggestion(row: Suggestion): ExploreRow {
     kind: row.kind,
     builtSlug: row.built_slug,
     source: 'catalog',
+    branches: row.branches,
   };
 }
 
