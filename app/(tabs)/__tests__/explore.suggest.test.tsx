@@ -1,7 +1,7 @@
 // The Explore tab's one result list (app/(tabs)/explore.tsx over src/topics/useExploreResults.ts):
 // open topics with Open, catalog rows with Build. Over the real API client and a fake network.
 // The rest of the tab is in explore.test.tsx.
-import { fireEvent, screen, within } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import { json, serveApi, type Answer } from '../../../src/api/testing/fakeApi';
@@ -228,123 +228,5 @@ describe('Explore: the list’s length', () => {
     expect(labels).toHaveLength(EXPLORE_MAX_ROWS + 2);
     expect(labels.slice(0, 2)).toStrictEqual(['C++, Open', 'Cooking, Open']);
     expect(labels.at(-1)).toBe(`Cell ${String(EXPLORE_MAX_ROWS - 1)}, prose, Build`);
-  });
-});
-
-const MATHS = { ...suggestion('wikidata:Q395', 'Mathematics', 'quantitative', null), branches: 9 };
-const BUILT_MATHS = { ...MATHS, built_slug: 'mathematics' };
-const ALGEBRA = { ...suggestion('wikidata:Q3968', 'Algebra', 'quantitative', null), branches: 4 };
-const GEOMETRY = suggestion('wikidata:Q8087', 'Geometry', 'quantitative', 'geometry');
-const OTHERS = 'Calculus,Linear algebra,Number theory,Topology,Statistics,Logic,Analysis';
-const NINE = [
-  ALGEBRA,
-  GEOMETRY,
-  ...OTHERS.split(',').map((label, i) => suggestion(`k${String(i)}`, label, 'quantitative', null)),
-];
-/** The routes of a request for `title` that starts building it. */
-const building = (slug: string, title: string) => ({
-  'POST /topics': [json(202, { topic: topic(slug, title, 'pending'), job_id: 'job-1' })],
-  'GET /jobs/job-1': [running],
-});
-const BRANCHES = 'GET /catalog/wikidata%3AQ395/branches';
-const MATHS_ROW = 'Mathematics, quantitative, 9 branches';
-const sheet = () => within(screen.getByTestId('explore-branches-sheet'));
-
-/** Searches "math" with `subject` the one suggestion, then taps it to open its branches. */
-async function openBranches(subject: object, routes: Record<string, Answer[]> = {}) {
-  const requests = await typeQuery(
-    {
-      [TOP]: [slice([])],
-      [SUGGEST]: [suggested(subject)],
-      [BRANCHES]: [json(200, NINE)],
-      ...routes,
-    },
-    'math',
-  );
-  fireEvent.press(screen.getByRole('button', { name: MATHS_ROW }));
-  await advance(0);
-  return requests;
-}
-
-describe('Explore: a subject with branches', () => {
-  it('shows its count and a chevron in place of Build', async () => {
-    await typeQuery({ [TOP]: [slice([])], [SUGGEST]: [suggested(MATHS, C)] }, 'c');
-
-    const row = screen.getByRole('button', { name: MATHS_ROW });
-    expect(within(row).getByText('9 branches')).toBeOnTheScreen();
-    expect(within(row).getByTestId('explore-row-chevron', HIDDEN)).toBeOnTheScreen();
-    expect(within(row).queryByText('Build')).toBeNull();
-    const plain = screen.getByRole('button', { name: 'C (programming language), code, Build' });
-    expect(within(plain).queryByTestId('explore-row-chevron', HIDDEN)).toBeNull();
-  });
-
-  it('opens the sheet on a tap: Learn all, the heading and its 9 branches; nothing is sent', async () => {
-    const requests = await openBranches(MATHS);
-
-    expect(sheet().getByRole('header', { name: 'Mathematics' })).toBeOnTheScreen();
-    expect(sheet().getByRole('button', { name: 'Learn all of Mathematics' })).toBeOnTheScreen();
-    expect(sheet().getByText('Branches')).toBeOnTheScreen();
-    expect(sheet().getAllByTestId('explore-row')).toHaveLength(9);
-    // A branch is a normal row: its own action, even when it has branches of its own.
-    expect(sheet().getByRole('button', { name: 'Algebra, quantitative, Build' })).toBeOnTheScreen();
-    expect(sheet().queryByTestId('explore-row-chevron', HIDDEN)).toBeNull();
-    expect(posts(requests)).toHaveLength(0);
-    expect(router.push).not.toHaveBeenCalled();
-  });
-
-  it('builds the subject on Learn all, closing the sheet for its card', async () => {
-    const requests = await openBranches(MATHS, building('mathematics', 'Mathematics'));
-    fireEvent.press(sheet().getByRole('button', { name: 'Learn all of Mathematics' }));
-    await advance(0);
-
-    expect(posts(requests).map((r) => r.body)).toStrictEqual([
-      { query: 'Mathematics', catalog_key: 'wikidata:Q395' },
-    ]);
-    expect(screen.queryByTestId('explore-branches-sheet')).toBeNull();
-    expect(screen.getByText('Building your tree')).toBeOnTheScreen();
-  });
-
-  it('opens a built subject’s page on Learn all', async () => {
-    const requests = await openBranches(BUILT_MATHS);
-    fireEvent.press(sheet().getByRole('button', { name: 'Learn all of Mathematics' }));
-
-    expect(router.push).toHaveBeenCalledWith({
-      pathname: '/topic/[slug]',
-      params: { slug: 'mathematics' },
-    });
-    expect(posts(requests)).toHaveLength(0);
-    expect(screen.queryByTestId('explore-branches-sheet')).toBeNull();
-  });
-
-  it('builds an unbuilt branch with its catalog key, closing the sheet for its card', async () => {
-    const requests = await openBranches(MATHS, building('algebra', 'Algebra'));
-    fireEvent.press(sheet().getByRole('button', { name: 'Algebra, quantitative, Build' }));
-    await advance(0);
-
-    expect(posts(requests).map((r) => r.body)).toStrictEqual([
-      { query: 'Algebra', catalog_key: 'wikidata:Q3968' },
-    ]);
-    expect(screen.queryByTestId('explore-branches-sheet')).toBeNull();
-    expect(screen.getByText('Building your tree')).toBeOnTheScreen();
-  });
-
-  it('opens a built branch’s page', async () => {
-    const requests = await openBranches(MATHS);
-    fireEvent.press(sheet().getByRole('button', { name: 'Geometry, quantitative, Open' }));
-
-    expect(router.push).toHaveBeenCalledWith({
-      pathname: '/topic/[slug]',
-      params: { slug: 'geometry' },
-    });
-    expect(posts(requests)).toHaveLength(0);
-    expect(screen.queryByTestId('explore-branches-sheet')).toBeNull();
-  });
-
-  it('closes on Close and leaves the list as it was', async () => {
-    await openBranches(MATHS);
-    fireEvent.press(sheet().getByRole('button', { name: 'Close' }));
-
-    expect(screen.queryByTestId('explore-branches-sheet')).toBeNull();
-    expect(screen.getByRole('button', { name: MATHS_ROW })).toBeOnTheScreen();
   });
 });

@@ -2,14 +2,15 @@
  * A catalog subject's branches (catalog learnable-topics plan, L6; the spec's L6 mock): the sheet
  * the Explore tab opens when a row with branches is tapped. Under the subject's title, "Learn all
  * of …" picks the subject itself; under the Branches heading, each branch from
- * `useBranches(subject.key)` is drawn by the caller's `Row` (the Explore list's own row) and picks
+ * `useBranches` (the subject's `branchesKey`, else its `key`) is drawn by the caller's `Row` (the Explore list's own row) and picks
  * itself on its tap. The caller does a picked row's own action (open it if built, else build it)
  * and closes the sheet.
  *
  * - While the branches load, one line says so; a failed read says it could not load them. Learn
  *   all stays usable either way.
  * - A subject whose branches came back empty shows no line: Learn all is still its action.
- * - The branches scroll inside the sheet past half the screen's height.
+ * - The branches scroll inside the sheet past half the screen's height; a tap on one acts even
+ *   while a keyboard is up.
  */
 import type { ComponentType } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions } from 'react-native';
@@ -41,7 +42,7 @@ function statusLine(status: ReturnType<typeof useBranches>['status']): string | 
 
 /** The branches sheet (module comment). */
 export function BranchesSheet({ subject, Row, onPick, onClose }: BranchesSheetProps) {
-  const branches = useBranches(subject.key);
+  const branches = useBranches(subject.branchesKey ?? subject.key);
   const { height } = useWindowDimensions();
   const line = statusLine(branches.status);
   return (
@@ -61,7 +62,7 @@ export function BranchesSheet({ subject, Row, onPick, onClose }: BranchesSheetPr
         {copy.explore.branchesHeading}
       </Text>
       {line === null ? null : <Text style={styles.line}>{line}</Text>}
-      <ScrollView style={{ maxHeight: height / 2 }}>
+      <ScrollView style={{ maxHeight: height / 2 }} keyboardShouldPersistTaps="handled">
         {branches.rows.map((row) => (
           <Row key={row.key} row={row} onAct={onPick} />
         ))}

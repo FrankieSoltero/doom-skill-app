@@ -21,6 +21,8 @@ describe('copy for the Explore list', () => {
 describe('copy for a subject’s branches', () => {
   it('counts a row’s branches', () => {
     expect(copy.explore.branches(9)).toBe('9 branches');
+    expect(copy.explore.branches(2)).toBe('2 branches');
+    expect(copy.explore.branches(1)).toBe('1 branch');
   });
 
   it('names the sheet’s primary action after the subject', () => {

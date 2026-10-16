@@ -36,7 +36,9 @@ export const SUGGEST_DEBOUNCE_MS = 150;
 /**
  * One row of the list: an open topic (`source 'topic'`) or a catalog row. `branches` is the
  * number of the catalog row's branches (`GET /catalog/{key}/branches`, src/topics/useBranches.ts);
- * an open topic has none.
+ * an open topic has none of its own. When the Explore list shows an open topic in place of its
+ * catalog row (app/(tabs)/explore.tsx), it takes that row's `branches`, and `branchesKey` names
+ * the catalog row they are read from.
  */
 export type ExploreRow = {
   key: string;
@@ -46,6 +48,7 @@ export type ExploreRow = {
   builtSlug: string | null;
   source: 'topic' | 'catalog';
   branches: number;
+  branchesKey?: string;
 };
 
 type ExploreResults = { rows: ExploreRow[]; status: 'idle' | 'loading' | 'ready' | 'error' };

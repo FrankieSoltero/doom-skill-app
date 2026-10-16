@@ -4,7 +4,7 @@
 // the real API client and a fake network; the Explore tab's wiring is in
 // app/(tabs)/__tests__/explore.suggest.test.tsx.
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Pressable, Text } from 'react-native';
+import { Pressable, ScrollView, Text } from 'react-native';
 
 import { json, queryWrapper, serveApi, type Answer } from '../../api/testing/fakeApi';
 import { BranchesSheet } from '../BranchesSheet';
@@ -90,6 +90,11 @@ describe('BranchesSheet', () => {
       'Geometry',
     ]);
     expect(sheet().getByRole('button', { name: 'Close' })).toBeOnTheScreen();
+    // A branch's first tap acts even while the search field's keyboard is up.
+    const list = screen.UNSAFE_getByType(ScrollView).props as {
+      keyboardShouldPersistTaps?: string;
+    };
+    expect(list.keyboardShouldPersistTaps).toBe('handled');
   });
 
   it('picks the subject itself on Learn all', async () => {

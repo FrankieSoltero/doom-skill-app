@@ -2,7 +2,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Keyboard,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { ApiError } from '../../src/api/errors';
 import { LoadingState } from '../../src/components/LoadingState';
@@ -109,12 +117,25 @@ function FailureLine({ line }: { line: string }) {
 export const EXPLORE_MAX_ROWS = 20;
 
 /**
+ * The open topic `row` with the branches of the catalog row built as it, if that row has any: the
+ * count to show, and the catalog key to read them from (`branchesKey`).
+ */
+function withBranches(row: ExploreRow, rows: ExploreRow[]): ExploreRow {
+  const subject = rows.find(
+    (other) =>
+      other.source === 'catalog' && other.builtSlug === row.builtSlug && other.branches > 0,
+  );
+  if (subject === undefined) return row;
+  return { ...row, branches: subject.branches, branchesKey: subject.key };
+}
+
+/**
  * The rows as the list shows them: the open topics, then the catalog rows cut to
  * `EXPLORE_MAX_ROWS` in their order, built ones first. A catalog row whose topic is open in the
- * list is left out: the open topic's row stands for it.
+ * list is left out: the open topic's row stands for it, and takes its branches (`withBranches`).
  */
 function shown(rows: ExploreRow[]): ExploreRow[] {
-  const open = rows.filter((row) => row.source === 'topic');
+  const open = rows.filter((row) => row.source === 'topic').map((row) => withBranches(row, rows));
   const listed = new Set(open.map((row) => row.builtSlug));
   const catalog = rows
     .filter((row) => row.source === 'catalog' && !listed.has(row.builtSlug))
@@ -153,8 +174,11 @@ function ResultRow({ row, onAct, onBranches }: ResultRowProps) {
       accessibilityRole="button"
       accessibilityLabel={copy.explore.row(row.label, branching ? count : action, group)}
       onPress={() => {
-        if (branching) onBranches(row);
-        else onAct(row);
+        if (branching) {
+          // The search field keeps its keyboard over the sheet's modal: put it away first.
+          Keyboard.dismiss();
+          onBranches(row);
+        } else onAct(row);
       }}
       style={styles.row}
     >
