@@ -20,7 +20,8 @@
  *   catalog rows.
  * - Pages: those rows are page 0. When the list's last answer says `has_more`, `loadMore()` asks
  *   for the next page at `offset` = the catalog rows the list has loaded (the open topics never
- *   count) and appends it; a call while the list loads is ignored. A new text starts every list
+ *   count) and appends it; a call while the list loads is ignored, and `loadingMore` holds then
+ *   (the next page on its way, or the list's own answer refetching). A new text starts every list
  *   again at its first page.
  */
 import {
@@ -78,7 +79,7 @@ type ExploreResults = {
   rows: ExploreRow[];
   /** Whether the list's last answer says the server has a next page. */
   hasMore: boolean;
-  /** Whether the next page is on its way. */
+  /** Whether the next page is on its way or the list's own answer refetches (a tap would wait). */
   loadingMore: boolean;
   /** Asks for the next page and appends it; ignored while the list loads or has no more. */
   loadMore: () => void;
@@ -243,7 +244,8 @@ function paged(status: ExploreResults['status'], pages: ExploreRow[][], list: Pa
     pages: kept,
     rows: kept.flat(),
     hasMore: own && list.hasNextPage,
-    loadingMore: list.isFetchingNextPage,
+    // Whenever a tap would do nothing: the next page on its way, or the list's answer refetching.
+    loadingMore: list.isFetchingNextPage || (own && list.isFetching),
     loadMore: () => {
       // `cancelRefetch: false`: a second call before the first page lands does nothing either.
       if (!own || !list.hasNextPage || list.isFetching) return;
