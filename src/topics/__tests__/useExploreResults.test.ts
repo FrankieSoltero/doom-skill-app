@@ -23,6 +23,9 @@ const row = (key: string, label: string, rank: number, group = 'prose') => ({
   rank,
   built_slug: null,
   branches: 0,
+  tier: 1,
+  depth: 3,
+  parent: 'Physics',
 });
 const C = row('wikidata:Q15777', 'C', 900, 'code');
 const CPP = row('wikidata:Q2407', 'C++', 800, 'code');
@@ -76,25 +79,17 @@ function renderResults(routes: Record<string, Answer[]>, initial: string) {
 }
 
 const labels = (rows: ExploreRow[]) => rows.map((r) => r.label);
-const fromRow = (r: typeof C): ExploreRow => ({
-  key: r.key,
-  label: r.label,
-  group: r.group as ExploreRow['group'],
-  kind: r.kind,
-  builtSlug: r.built_slug,
-  source: 'catalog',
-  branches: r.branches,
-});
 
 describe('useExploreResults: the slice, matched as the learner types', () => {
-  it('is idle for a blank text, asks no suggestions, and still preloads the slice', async () => {
+  it('is idle for a blank text, asks no suggestions, and lists the preloaded slice', async () => {
     const { result, requests } = renderResults(
       { [TOP]: [slice([COOKING], [C])], [SUGGEST]: [suggested(C)] },
       '  ',
     );
     await advance(1000);
 
-    expect(result.current).toStrictEqual({ status: 'idle', rows: [] });
+    expect(result.current.status).toBe('idle');
+    expect(labels(result.current.rows)).toStrictEqual(['Cooking', 'C']);
     expect(requests.map((r) => r.path)).toStrictEqual(['/topics/suggest/top']);
   });
 
@@ -116,6 +111,9 @@ describe('useExploreResults: the slice, matched as the learner types', () => {
       builtSlug: null,
       source: 'catalog',
       branches: 0,
+      tier: 1,
+      depth: 3,
+      parent: 'Physics',
     });
   });
 
@@ -187,10 +185,10 @@ describe('useExploreResults: while the learner types', () => {
     expect(labels(hook.result.current.rows)).toStrictEqual(['C++', 'Clojure']);
 
     hook.rerender({ text: 'cl' });
-    expect(hook.result.current).toStrictEqual({ status: 'loading', rows: [fromRow(CLOJURE)] });
+    expect(hook.result.current).toMatchObject({ status: 'loading', rows: [{ label: 'Clojure' }] });
     await advance(SUGGEST_DEBOUNCE_MS);
     expect(hook.requests.map((r) => r.query)).toContain('?q=cl');
-    expect(hook.result.current).toStrictEqual({ status: 'loading', rows: [fromRow(CLOJURE)] });
+    expect(hook.result.current).toMatchObject({ status: 'loading', rows: [{ label: 'Clojure' }] });
     answerCl(suggested(CLOUD, CLOJURE));
     await advance(0);
 
@@ -245,6 +243,9 @@ describe('useExploreResults: the server’s rows', () => {
       builtSlug: 'strudel',
       source: 'topic',
       branches: 0,
+      tier: 2,
+      depth: 4,
+      parent: null,
     });
     expect(labels(hook.result.current.rows)).toStrictEqual(['Strudel', 'Stock market']);
   });
@@ -256,7 +257,7 @@ describe('useExploreResults: the server’s rows', () => {
     const hook = renderResults({ [TOP]: [answer], [SUGGEST]: [suggested(CPP, CLOJURE)] }, '');
     await advance(0);
     hook.rerender({ text: 'c' });
-    expect(hook.result.current).toStrictEqual({ status: 'loading', rows: [] });
+    expect(hook.result.current).toMatchObject({ status: 'loading', rows: [] });
     await advance(SUGGEST_DEBOUNCE_MS);
 
     expect(hook.result.current.status).toBe('ready');

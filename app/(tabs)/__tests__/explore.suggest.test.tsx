@@ -28,6 +28,9 @@ const suggestion = (key: string, label: string, group: string, built_slug: strin
   rank: 100,
   built_slug,
   branches: 0,
+  tier: 1,
+  depth: 3,
+  parent: 'Computer Science',
 });
 const C = suggestion('wikidata:Q15777', 'C (programming language)', 'code', null);
 const CPP = suggestion('wikidata:Q2407', 'C++', 'code', 'cpp');

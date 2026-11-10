@@ -460,6 +460,8 @@ export const copy = deepFreeze({
     branchesClose: 'Close',
     branchesLoading: 'Loading branches…',
     branchesFailed: "Couldn't load branches",
+    /** The button under the list's last row when the server has a next page: a tap adds it. */
+    showMore: 'Show more',
   },
   pendingTopic,
   topic,

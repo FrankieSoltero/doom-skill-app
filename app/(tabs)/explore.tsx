@@ -113,8 +113,8 @@ function FailureLine({ line }: { line: string }) {
   );
 }
 
-/** The most catalog rows the list shows; every matching open topic shows besides them. */
-export const EXPLORE_MAX_ROWS = 20;
+/** The most catalog rows the list's page 0 shows (src/topics/useExploreResults.ts cuts it). */
+export { EXPLORE_MAX_ROWS } from '../../src/topics/useExploreResults';
 
 /**
  * The open topic `row` with the branches of the catalog row built as it, if that row has any: the
@@ -130,19 +130,21 @@ function withBranches(row: ExploreRow, rows: ExploreRow[]): ExploreRow {
 }
 
 /**
- * The rows as the list shows them: the open topics, then the catalog rows cut to
- * `EXPLORE_MAX_ROWS` in their order, built ones first. A catalog row whose topic is open in the
- * list is left out: the open topic's row stands for it, and takes its branches (`withBranches`).
+ * The rows as the list shows them: the open topics, then each page's catalog rows in their order,
+ * built ones first within the page (a page Show more adds goes under the rows already shown). A
+ * catalog row whose topic is open in the list is left out: the open topic's row stands for it,
+ * and takes its branches (`withBranches`).
  */
-function shown(rows: ExploreRow[]): ExploreRow[] {
+function shown(pages: ExploreRow[][]): ExploreRow[] {
+  const rows = pages.flat();
   const open = rows.filter((row) => row.source === 'topic').map((row) => withBranches(row, rows));
   const listed = new Set(open.map((row) => row.builtSlug));
-  const catalog = rows
-    .filter((row) => row.source === 'catalog' && !listed.has(row.builtSlug))
-    .slice(0, EXPLORE_MAX_ROWS);
-  const built = catalog.filter((row) => row.builtSlug !== null);
-  const unbuilt = catalog.filter((row) => row.builtSlug === null);
-  return [...open, ...built, ...unbuilt];
+  const catalog = pages.flatMap((page) => {
+    const own = page.filter((row) => row.source === 'catalog' && !listed.has(row.builtSlug));
+    const built = own.filter((row) => row.builtSlug !== null);
+    return [...built, ...own.filter((row) => row.builtSlug === null)];
+  });
+  return [...open, ...catalog];
 }
 
 /** The size and stroke of a row's chevron, as the search field's icon. */
@@ -214,19 +216,28 @@ type ResultsProps = {
 };
 
 /**
- * The search's state under the field: the idle line, the rows, or with no rows a busy line, a
- * failure line, or (once the server found nothing) Create with the text.
+ * The search's state under the field: the rows, with Show more under the last one while the list
+ * has a next page and none is on its way; before anything is typed, the idle line over the
+ * preloaded rows; or with no rows a busy line, a failure line, or (once the server found nothing)
+ * Create with the text.
  */
 function Results({ results, text, creating, onAct, onBranches, onCreate }: ResultsProps) {
-  if (results.status === 'idle') return <Text style={styles.line}>{copy.explore.idle}</Text>;
-  const rows = shown(results.rows);
-  if (rows.length > 0) {
+  const rows = shown(results.pages);
+  const more = results.hasMore && !results.loadingMore;
+  const idle = results.status === 'idle';
+  if (idle || rows.length > 0) {
     return (
-      <View>
-        {rows.map((row) => (
-          <ResultRow key={row.key} row={row} onAct={onAct} onBranches={onBranches} />
-        ))}
-      </View>
+      <>
+        {idle ? <Text style={styles.line}>{copy.explore.idle}</Text> : null}
+        <View style={styles.block}>
+          <View>
+            {rows.map((row) => (
+              <ResultRow key={row.key} row={row} onAct={onAct} onBranches={onBranches} />
+            ))}
+          </View>
+          {more ? <PrimaryButton label={copy.explore.showMore} onPress={results.loadMore} /> : null}
+        </View>
+      </>
     );
   }
   if (results.status === 'loading') return <LoadingState label={copy.explore.searching} />;
@@ -255,8 +266,9 @@ function Results({ results, text, creating, onAct, onBranches, onCreate }: Resul
  * line ("Not available yet", the pending limit, or a failure). A catalog row with branches shows
  * their count and opens them in a sheet (src/topics/BranchesSheet.tsx), whose Learn all and
  * branches each do that row's own action, closing the sheet. Before anything is typed, the
- * learner's topics show over the idle line; they are read again when the tab regains focus and
- * on pull to refresh.
+ * learner's topics show over the idle line, and the preloaded rows under it; the topics are read
+ * again when the tab regains focus and on pull to refresh. A list whose server has a next page
+ * shows Show more under its last row, which adds that page (curriculum catalog plan, C7).
  */
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');

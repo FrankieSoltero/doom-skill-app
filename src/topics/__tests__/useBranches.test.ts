@@ -10,6 +10,8 @@ const MATHS = 'wikidata:Q395';
 const ROUTE = 'GET /catalog/wikidata%3AQ395/branches';
 const MINUTE = 60_000;
 
+/** Where the fixtures sit in the curriculum: subjects under Mathematics. */
+const PLACE = { tier: 1, depth: 3, parent: 'Mathematics' };
 const branch = (key: string, label: string, built_slug: string | null, branches: number) => ({
   key,
   label,
@@ -18,6 +20,7 @@ const branch = (key: string, label: string, built_slug: string | null, branches:
   rank: 500,
   built_slug,
   branches,
+  ...PLACE,
 });
 const ALGEBRA = branch('wikidata:Q3968', 'Algebra', null, 4);
 const GEOMETRY = branch('wikidata:Q8087', 'Geometry', 'geometry', 0);
@@ -62,6 +65,7 @@ describe('useBranches', () => {
           builtSlug: null,
           source: 'catalog',
           branches: 4,
+          ...PLACE,
         },
         {
           key: 'wikidata:Q8087',
@@ -71,6 +75,7 @@ describe('useBranches', () => {
           builtSlug: 'geometry',
           source: 'catalog',
           branches: 0,
+          ...PLACE,
         },
       ],
     });

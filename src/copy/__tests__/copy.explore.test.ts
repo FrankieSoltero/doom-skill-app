@@ -16,6 +16,10 @@ describe('copy for the Explore list', () => {
     expect(copy.explore.row('C++', 'Build', 'code')).toBe('C++, code, Build');
     expect(copy.explore.row('Strudel', 'Open', null)).toBe('Strudel, Open');
   });
+
+  it('names the button that adds the next page', () => {
+    expect(copy.explore.showMore).toBe('Show more');
+  });
 });
 
 describe('copy for a subject’s branches', () => {

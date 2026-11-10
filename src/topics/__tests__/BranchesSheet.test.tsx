@@ -19,6 +19,9 @@ const SUBJECT: ExploreRow = {
   builtSlug: null,
   source: 'catalog',
   branches: 2,
+  tier: 1,
+  depth: 1,
+  parent: null,
 };
 const branch = (key: string, label: string, built_slug: string | null) => ({
   key,

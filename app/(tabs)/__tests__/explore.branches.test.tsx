@@ -32,6 +32,9 @@ const catalogRow = (key: string, label: string, built_slug: string | null, branc
   rank: 500,
   built_slug,
   branches,
+  tier: 1,
+  depth: 2,
+  parent: 'Mathematics',
 });
 const MATHS = catalogRow('wikidata:Q395', 'Mathematics', null, 9);
 const BUILT_MATHS = { ...MATHS, built_slug: 'mathematics' };
