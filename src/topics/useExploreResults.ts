@@ -125,7 +125,7 @@ function merged(...lists: ExploreRow[][]): ExploreRow[] {
 
 async function loadTop(signal: AbortSignal): Promise<TopSuggestions> {
   const { data } = await requireApi().GET('/topics/suggest/top', { signal });
-  return data ?? { topics: [], rows: [] };
+  return data ?? { topics: [], rows: [], has_more: false };
 }
 
 async function suggestTopics(q: string, signal: AbortSignal): Promise<Suggestion[]> {

@@ -158,7 +158,7 @@ export interface paths {
         };
         /**
          * Read Branches
-         * @description The catalog row's branches, disciplines first (module docstring).
+         * @description The catalog row's branches, by tier, depth, courses, then label (module docstring).
          */
         get: operations["catalog_branches"];
         put?: never;
@@ -571,7 +571,7 @@ export interface paths {
         };
         /**
          * Suggest Topics
-         * @description At most 8 catalog topics for `q` (trimmed, 1 to 80 characters), best first.
+         * @description A page of catalog topics for `q` (trimmed, 1 to 80 characters), best first.
          */
         get: operations["suggest_topics"];
         put?: never;
@@ -591,7 +591,7 @@ export interface paths {
         };
         /**
          * Suggest Top
-         * @description Every topic any learner may open, and the first 300 catalog rows by rank.
+         * @description A page of the catalog rows, and on page 0 every topic any learner may open.
          */
         get: operations["suggest_top"];
         put?: never;
@@ -2032,13 +2032,17 @@ export interface components {
         /**
          * Suggestion
          * @description A catalog topic for what the user typed; `built_slug` is the topic made from it, if any
-         *     learner may open it; `branches` the number of its branches (`GET /catalog/{key}/branches`).
+         *     learner may open it; `branches` the number of its branches (`GET /catalog/{key}/branches`);
+         *     `tier`, `depth` and `parent`, the label of the row it sits under (null for an area), as
+         *     curriculum catalog plan Task 7 (C7) gives them.
          */
         Suggestion: {
             /** Branches */
             branches: number;
             /** Built Slug */
             built_slug: string | null;
+            /** Depth */
+            depth: number;
             group: components["schemas"]["Group"];
             /** Key */
             key: string;
@@ -2046,14 +2050,21 @@ export interface components {
             kind: string;
             /** Label */
             label: string;
+            /** Parent */
+            parent: string | null;
             /** Rank */
             rank: number;
+            /** Tier */
+            tier: number;
         };
         /**
          * SuggestionList
-         * @description `GET /topics/suggest`: at most 8 catalog topics, best first.
+         * @description `GET /topics/suggest`: a page of at most 20 catalog topics, best first, and whether more
+         *     follow (`has_more`, the next page's `offset` being this one's plus 20).
          */
         SuggestionList: {
+            /** Has More */
+            has_more: boolean;
             /** Suggestions */
             suggestions: components["schemas"]["Suggestion"][];
         };
@@ -2083,10 +2094,14 @@ export interface components {
         };
         /**
          * TopSuggestions
-         * @description `GET /topics/suggest/top` (Explore plan Task 2, E2): every topic any learner may open, by
-         *     title, and the first `TOP_ROWS` (300) catalog rows by rank, then label.
+         * @description `GET /topics/suggest/top` (Explore plan Task 2, E2; curriculum catalog plan Task 7, C7): on
+         *     the first page, every topic any learner may open, by title (none on a later page; they never
+         *     count toward a page), and a page of at most 20 catalog rows by tier, depth, courses, then
+         *     label; `has_more` when a catalog row follows them.
          */
         TopSuggestions: {
+            /** Has More */
+            has_more: boolean;
             /** Rows */
             rows: components["schemas"]["Suggestion"][];
             /** Topics */
@@ -4155,6 +4170,7 @@ export interface operations {
         parameters: {
             query: {
                 q: components["schemas"]["QueryText"];
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -4202,7 +4218,9 @@ export interface operations {
     };
     suggest_top: {
         parameters: {
-            query?: never;
+            query?: {
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4225,6 +4243,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service unavailable */
