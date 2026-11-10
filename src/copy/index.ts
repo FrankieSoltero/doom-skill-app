@@ -462,6 +462,11 @@ export const copy = deepFreeze({
     branchesFailed: "Couldn't load branches",
     /** The button under the list's last row when the server has a next page: a tap adds it. */
     showMore: 'Show more',
+    /** A catalog row's line under its label: its kind, and the row above it when it has one. */
+    kindLine: (kind: string, parent: string | null) =>
+      parent === null ? kind : `${kind} · ${parent}`,
+    /** The line under the Explore list that credits the catalog's source (spec C9). */
+    attribution: 'Subject list derived from MIT OpenCourseWare course metadata (CC BY-NC-SA 4.0)',
   },
   pendingTopic,
   topic,

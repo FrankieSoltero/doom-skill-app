@@ -20,6 +20,17 @@ describe('copy for the Explore list', () => {
   it('names the button that adds the next page', () => {
     expect(copy.explore.showMore).toBe('Show more');
   });
+
+  it('places a catalog row by its kind and the row above it', () => {
+    expect(copy.explore.kindLine('subject', 'Physics')).toBe('subject · Physics');
+    expect(copy.explore.kindLine('area', null)).toBe('area');
+  });
+
+  it('credits the catalog’s source', () => {
+    expect(copy.explore.attribution).toBe(
+      'Subject list derived from MIT OpenCourseWare course metadata (CC BY-NC-SA 4.0)',
+    );
+  });
 });
 
 describe('copy for a subject’s branches', () => {

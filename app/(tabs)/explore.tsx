@@ -1,16 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
 import { useCallback, useRef, useState } from 'react';
-import {
-  Keyboard,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '../../src/api/errors';
 import { LoadingState } from '../../src/components/LoadingState';
@@ -21,6 +12,7 @@ import { TabScreen } from '../../src/components/TabScreen';
 import { copy } from '../../src/copy';
 import { BranchesSheet } from '../../src/topics/BranchesSheet';
 import { MyTopics } from '../../src/topics/MyTopics';
+import { ResultRow } from '../../src/topics/ResultRow';
 import { ENROLLMENTS_KEY } from '../../src/topics/useChoose';
 import { useEnrollments } from '../../src/topics/useEnrollments';
 import { useExploreResults, type ExploreRow } from '../../src/topics/useExploreResults';
@@ -30,7 +22,7 @@ import {
   useCreateTopic,
   type CreatedTopic,
 } from '../../src/topics/useTopics';
-import { border, colors, space, type } from '../../src/theme';
+import { colors, space, type } from '../../src/theme';
 
 /** Opens a topic's detail screen. */
 function openTopic(slug: string): void {
@@ -147,61 +139,12 @@ function shown(pages: ExploreRow[][]): ExploreRow[] {
   return [...open, ...catalog];
 }
 
-/** The size and stroke of a row's chevron, as the search field's icon. */
-const CHEVRON_SIZE = 18;
-const CHEVRON_STROKE = 1.5;
-
-type ResultRowProps = {
-  row: ExploreRow;
-  /** The row's own action: open it if built, else build it. */
-  onAct: (row: ExploreRow) => void;
-  /** Given, a row with branches shows their count and a chevron, and its tap calls this. */
-  onBranches?: (row: ExploreRow) => void;
-};
-
-/**
- * One result: its label, its group chip (a catalog row's), and Open or Build; or, for a row with
- * branches in the list (`onBranches`), their count and a chevron, its tap opening them.
- */
-function ResultRow({ row, onAct, onBranches }: ResultRowProps) {
-  const slug = row.builtSlug;
-  const branching = onBranches !== undefined && row.branches > 0;
-  const action = slug === null ? copy.explore.build : copy.explore.open;
-  const count = copy.explore.branches(row.branches);
-  // An open topic carries no group of its own (useExploreResults): it shows no chip.
-  const group = row.source === 'topic' ? null : copy.explore.group[row.group];
+/** The line under the list that credits the catalog's source (curriculum catalog plan, C9). */
+function Credit() {
   return (
-    <Pressable
-      testID="explore-row"
-      accessibilityRole="button"
-      accessibilityLabel={copy.explore.row(row.label, branching ? count : action, group)}
-      onPress={() => {
-        if (branching) {
-          // The search field keeps its keyboard over the sheet's modal: put it away first.
-          Keyboard.dismiss();
-          onBranches(row);
-        } else onAct(row);
-      }}
-      style={styles.row}
-    >
-      <Text style={styles.label}>{row.label}</Text>
-      {group === null ? null : <Text style={styles.chip}>{group}</Text>}
-      {branching ? (
-        <>
-          <Text style={styles.count}>{count}</Text>
-          <ChevronRight
-            testID="explore-row-chevron"
-            size={CHEVRON_SIZE}
-            strokeWidth={CHEVRON_STROKE}
-            color={colors.ink}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          />
-        </>
-      ) : (
-        <Text style={slug === null ? styles.chip : styles.open}>{action}</Text>
-      )}
-    </Pressable>
+    <Text accessibilityRole="text" style={styles.credit}>
+      {copy.explore.attribution}
+    </Text>
   );
 }
 
@@ -268,7 +211,8 @@ function Results({ results, text, creating, onAct, onBranches, onCreate }: Resul
  * branches each do that row's own action, closing the sheet. Before anything is typed, the
  * learner's topics show over the idle line, and the preloaded rows under it; the topics are read
  * again when the tab regains focus and on pull to refresh. A list whose server has a next page
- * shows Show more under its last row, which adds that page (curriculum catalog plan, C7).
+ * shows Show more under its last row, which adds that page (curriculum catalog plan, C7). Under
+ * the list, whatever it shows, one line credits the catalog's source (C9).
  */
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');
@@ -336,6 +280,7 @@ export default function ExploreScreen() {
           onBranches={setOpenBranches}
           onCreate={() => void onCreate(query)}
         />
+        <Credit />
       </ScrollView>
       {openBranches === null ? null : (
         <BranchesSheet
@@ -354,23 +299,9 @@ export default function ExploreScreen() {
   );
 }
 
-/** A row's group chip and its action: caption text in a hairline ink box. */
-const CHIP = {
-  ...type.caption,
-  color: colors.ink,
-  borderColor: colors.ink,
-  borderWidth: border.hairline,
-  paddingHorizontal: space[2],
-  paddingVertical: space[1],
-};
-
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, gap: space[4], paddingBottom: space[6] },
   block: { gap: space[4] },
   line: { ...type.body, color: colors.neutral[700] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
-  label: { ...type.button, color: colors.ink, flex: 1 },
-  chip: CHIP,
-  open: { ...CHIP, backgroundColor: colors.lime },
-  count: { ...type.caption, color: colors.neutral[700] },
+  credit: { ...type.caption, color: colors.neutral[700] },
 });
