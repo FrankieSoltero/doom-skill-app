@@ -111,7 +111,7 @@ export const ANSWER_PER_LINE = 43;
 
 /**
  * The review card is one question with a short answer (review questions, spec Q3). The answer: at
- * most 60 characters as drawn (and 8 words, which the backend checks), 2 lines at
+ * most 60 characters as drawn (no word limit: the backend checks characters only), 2 lines at
  * `ANSWER_PER_LINE`.
  */
 const REVIEW_ANSWER = 60;
