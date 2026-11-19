@@ -5,10 +5,12 @@
 // height under the code (an informational row).
 //
 // M10 plan T Task 1 adds the card's budget: `CARD_TEXT_LIMITS.review` (src/data/textLimits.ts)
-// limits the prompt to 2 title lines, the answer to `ANSWER_LINES` lines and the snippet to
-// `review.snippetLines` code lines, and a revealed card at those limits, in a Strudel set with the
-// rating hint showing (the learner's first ratings) and each notice in turn under its code, fits
-// the 543.5-point frame; one more answer line or one more code line does not. Before it, a
+// limits the prompt, the answer and the snippet's `review.snippetLines` code lines, and a revealed
+// card at those limits, in a Strudel set with the rating hint showing (the learner's first
+// ratings) and each notice in turn under its code, fits the 543.5-point frame; one more prompt
+// line, answer line or code line does not. The review questions (Task 2) made the prompt a
+// question of 54 characters and the answer 60: the test works their lines out from the two limits
+// as `charsIn` counts them (3 title lines and 2 answer lines), not from fixed counts. Before it, a
 // read-only estimate on the local database (2026-10-02) found 44 of the 70 active code-style review
 // cards taller than the frame with no audio, up to about 846 (prompts to 138 characters, answers
 // to 310, snippets to 10 lines).
@@ -19,7 +21,13 @@ import { createElement, Fragment } from 'react';
 import { textStyleOf, viewStyleOf } from '../../components/testing/styles';
 import { copy } from '../../copy';
 import type { FeedSet, ReviewCard as ReviewCardData } from '../../data';
-import { CARD_TEXT_LIMITS, lineCount } from '../../data/textLimits';
+import {
+  ANSWER_PER_LINE,
+  CARD_TEXT_LIMITS,
+  CHARS_PER_LINE,
+  charsIn,
+  lineCount,
+} from '../../data/textLimits';
 import { useFeedStore } from '../../feed/store';
 import { cardsByType, makeSet } from '../../feed/testing/sets';
 import { useStrudel } from '../../strudel/useStrudel';
@@ -34,9 +42,12 @@ jest.mock('../../strudel/useStrudel', () => ({
   useStrudel: jest.fn(),
 }));
 
-/** The lines `CARD_TEXT_LIMITS.review` was derived from: a prompt of 2, an answer of 4. */
-const TITLE_LINES = 2;
-const ANSWER_LINES = 4;
+/** The fewest lines of `perLine` characters that hold `chars` characters, as `charsIn` counts. */
+function linesFor(chars: number, perLine: number): number {
+  let lines = 1;
+  while (charsIn(lines, perLine) < chars) lines += 1;
+  return lines;
+}
 /** The revealed card body's children: kicker row, prompt, answer and code, spacer, rating row. */
 const BODY_CHILDREN = 5;
 /** The card body's content box on the 390x844 reference device (SummaryCard.height.test.ts). */
@@ -54,6 +65,9 @@ const fill = (length: number) => 'x'.repeat(length);
 const snippetOf = (lines: number) =>
   Array.from({ length: lines }, () => 's("bd ~ sd ~")').join('\n');
 const { prompt, answer, snippetLines } = CARD_TEXT_LIMITS.review;
+/** The lines of the prompt (the concept title's style) and of the answer at their limits. */
+const TITLE_LINES = linesFor(prompt, CHARS_PER_LINE.titleL);
+const ANSWER_LINES = linesFor(answer, ANSWER_PER_LINE);
 /** A review card at its limits, with `lines` lines of code. */
 const maximal = (lines: number): ReviewCardData => ({
   ...cardsByType.review,
@@ -106,13 +120,19 @@ function ratingRowHeight(): number {
 }
 
 /**
- * The drawn card's content height with `answerLines` lines of answer, `codeLines` lines of code
- * and `under` (a notice, or none) under the code, read from the drawn styles.
+ * The drawn card's content height with `answerLines` lines of answer, `codeLines` lines of code,
+ * `under` (a notice, or none) under the code and `titleLines` lines of prompt, read from the drawn
+ * styles.
  */
-function reviewHeight(answerLines: number, codeLines: number, under: Under): number {
+function reviewHeight(
+  answerLines: number,
+  codeLines: number,
+  under: Under,
+  titleLines = TITLE_LINES,
+): number {
   const icon = Number(screen.UNSAFE_getByType(BookOpen).props.size);
   const kicker = Math.max(type.kicker.fontSize * NATURAL_LINE, icon);
-  const title = TITLE_LINES * Number(textStyleOf(screen.getByRole('header')).lineHeight);
+  const title = titleLines * Number(textStyleOf(screen.getByRole('header')).lineHeight);
   const card = screen.getByTestId('review-answer');
   const answerLine = Number(boldTextStyle('review-answer-text').lineHeight);
   const code = playableRowHeight(codeLines);
@@ -169,15 +189,16 @@ describe('the revealed review card that plays', () => {
 });
 
 describe('the review card height budget', () => {
-  it('limits the prompt to 2 title lines, the answer to 4 lines and the code to 3', () => {
-    expect(CARD_TEXT_LIMITS.review).toStrictEqual({ prompt: 38, answer: 154, snippetLines: 3 });
+  it('limits the prompt to 3 title lines, the answer to 2 lines and the code to 3', () => {
+    expect(CARD_TEXT_LIMITS.review).toStrictEqual({ prompt: 54, answer: 60, snippetLines: 3 });
+    expect([TITLE_LINES, ANSWER_LINES]).toStrictEqual([3, 2]);
   });
 
   it.each([
-    { under: 'none', height: 458.4 },
-    { under: 'unavailable', height: 516 },
-    { under: 'error', height: 538 },
-    { under: 'needs network', height: 494 },
+    { under: 'none', height: 444.4 },
+    { under: 'unavailable', height: 502 },
+    { under: 'error', height: 524 },
+    { under: 'needs network', height: 480 },
   ] as const)('at its limits with $under under the code: $height points, inside 543.5', (row) => {
     const codeLines = renderMaximal(snippetLines);
     if (row.under !== 'none') setAudio(NOTICE_AUDIO[row.under]);
@@ -190,24 +211,36 @@ describe('the review card height budget', () => {
     expect(sum).toBeLessThanOrEqual(CONTENT_BOX);
   });
 
-  it('one more answer line, with the error notice, is over the frame: 564 points', () => {
+  it('a prompt one character longer takes a fourth line, over the frame: 562 points', () => {
+    const codeLines = renderMaximal(snippetLines);
+    setAudio(NOTICE_AUDIO.error);
+
+    const titleLines = linesFor(prompt + 1, CHARS_PER_LINE.titleL);
+    const sum = reviewHeight(ANSWER_LINES, codeLines, 'error', titleLines);
+
+    expect(titleLines).toBe(TITLE_LINES + 1);
+    expect(sum).toBeCloseTo(562, 5);
+    expect(sum).toBeGreaterThan(CONTENT_BOX);
+  });
+
+  it('one more answer line, with the error notice, is over the frame: 550 points', () => {
     const codeLines = renderMaximal(snippetLines);
     setAudio(NOTICE_AUDIO.error);
 
     const sum = reviewHeight(ANSWER_LINES + 1, codeLines, 'error');
 
-    expect(sum).toBeCloseTo(564, 5);
+    expect(sum).toBeCloseTo(550, 5);
     expect(sum).toBeGreaterThan(CONTENT_BOX);
   });
 
-  it('one more code line, with the error notice, is over the frame: 560 points', () => {
+  it('one more code line, with the error notice, is over the frame: 546 points', () => {
     const codeLines = renderMaximal(snippetLines + 1);
     setAudio(NOTICE_AUDIO.error);
 
     const sum = reviewHeight(ANSWER_LINES, codeLines, 'error');
 
     expect(codeLines).toBe(snippetLines + 1);
-    expect(sum).toBeCloseTo(560, 5);
+    expect(sum).toBeCloseTo(546, 5);
     expect(sum).toBeGreaterThan(CONTENT_BOX);
   });
 });

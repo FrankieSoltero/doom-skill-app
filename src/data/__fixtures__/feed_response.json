@@ -21,7 +21,7 @@
       "type": "review",
       "last_seen_days": 11,
       "prompt": "What does ~ mean in mini-notation?",
-      "answer": "A **rest**. It keeps a step silent while holding its place in the cycle.",
+      "answer": "A **rest**, a silent step in the cycle.",
       "snippet": "s(\"bd ~ sd ~\")",
       "snippet_style": "code",
       "ratings": [

@@ -13,7 +13,7 @@
  * included: 0.357 em a character for titles, 0.417 em for body text. Menlo, the code font, is
  * monospaced at 0.602 em.
  */
-const CHARS_PER_LINE = {
+export const CHARS_PER_LINE = {
   /** Quiz and predict title: Barlow Condensed 32, 11.43 points a character, across 309. */
   titleM: 27,
   /** Concept title: Barlow Condensed 38, 13.57 points a character, across 309. */
@@ -58,7 +58,7 @@ const CHARS_PER_LINE = {
 const WRAP_LOSS = 6;
 
 /** The characters `lines` lines hold at `perLine`, less the wrap loss of each line but the last. */
-function charsIn(lines: number, perLine: number): number {
+export function charsIn(lines: number, perLine: number): number {
   return lines * perLine - (lines - 1) * WRAP_LOSS;
 }
 
@@ -107,18 +107,26 @@ const EXERCISE_TITLE_LINES = 2;
 /**
  * The review card's answer: Barlow 17, 7.09 points a character, across 309.
  */
-const ANSWER_PER_LINE = 43;
+export const ANSWER_PER_LINE = 43;
 
 /**
- * The review answer's lines. A revealed review card in a Strudel set, at its tallest (the rating
- * hint showing, the error notice under the code), is the kicker row (14), the prompt in 2 lines at
- * 38 (76), the answer at 26 a line, the 10-point gap, the code block (28 of padding and 22 a line),
- * the 13.6 gap and the notice (66), the rating row (106: caption, buttons, hint) and four 13.6 gaps
- * between the body's parts: 368, with 26 an answer line and 22 a code line. 4 answer lines and 3
- * code lines make 538; one more answer line makes 564, one more code line 560
+ * The review card is one question with a short answer (review questions, spec Q3). The answer: at
+ * most 60 characters as drawn (and 8 words, which the backend checks), 2 lines at
+ * `ANSWER_PER_LINE`.
+ */
+const REVIEW_ANSWER = 60;
+
+/**
+ * The review prompt's lines in the concept title's style: 3, 54 characters (the owner's choice on
+ * 2026-11-19; the spec's 72 would take 5). A revealed review card in a Strudel set, at its tallest
+ * (the rating hint showing, the error notice under the code), is the kicker row (14), the prompt
+ * at 38 a line, the answer at 26 a line, the 10-point gap, the code block (28 of padding and 22 a
+ * line), the 13.6 gap and the notice (66), the rating row (106: caption, buttons, hint) and four
+ * 13.6 gaps between the body's parts. 3 prompt lines, 2 answer lines and 3 code lines make 524; a
+ * fourth prompt line makes 562, a third answer line 550, a fourth code line 546
  * (`cards/__tests__/ReviewCard.height.test.ts`).
  */
-const ANSWER_LINES = 4;
+const REVIEW_PROMPT_LINES = 3;
 
 /**
  * The most lines each code field may hold (M10 plan T, decision T1): its line breaks plus one
@@ -132,7 +140,7 @@ const CODE_LINES = {
    * line 22. 3 lines make 542.6; 4 make 564.6 (`cards/__tests__/ConceptCard.height.test.ts`).
    */
   concept: 3,
-  /** A review card's snippet: 3, with `ANSWER_LINES` (above). */
+  /** A review card's snippet: 3, with `REVIEW_PROMPT_LINES` (above). */
   review: 3,
   /**
    * A predict card's code, answered, with no audio notice: the kicker row (14), the title (66),
@@ -149,10 +157,11 @@ const CODE_LINES = {
  * each at most 52 points tall, which holds 2 lines of code at 22 inside its 1.5-point borders.
  * Predict: the quiz's title and explanation, options of 2 lines of a grid cell in the code font
  * (the quiz's 48 characters take 4 lines there), and `CODE_LINES.predict`. Concept: title 2 lines,
- * body 6, a quoted snippet a passage. Review: the prompt in 2 lines of the concept title's style,
- * the answer in `ANSWER_LINES`. Cloze, scenario and numeric: a choice card with grid options whose
- * text, situation or problem is a passage. Checkpoint: 4 rubric rows of 1 line each. Exercise: the
- * title in `EXERCISE_TITLE_LINES`, and 4 beat grid rows, in the starter code and in the solution.
+ * body 6, a quoted snippet a passage. Review: the prompt in `REVIEW_PROMPT_LINES` lines of the
+ * concept title's style, the answer `REVIEW_ANSWER`. Cloze, scenario and numeric: a choice card
+ * with grid options whose text, situation or problem is a passage. Checkpoint: 4 rubric rows of
+ * 1 line each. Exercise: the title in `EXERCISE_TITLE_LINES`, and 4 beat grid rows, in the starter
+ * code and in the solution.
  */
 export const CARD_TEXT_LIMITS = {
   quiz: { ...CHOICE_LIMITS, options: 4, option: charsIn(2, CHARS_PER_LINE.option) },
@@ -168,8 +177,8 @@ export const CARD_TEXT_LIMITS = {
     snippetLines: CODE_LINES.concept,
   },
   review: {
-    prompt: charsIn(2, CHARS_PER_LINE.titleL),
-    answer: charsIn(ANSWER_LINES, ANSWER_PER_LINE),
+    prompt: charsIn(REVIEW_PROMPT_LINES, CHARS_PER_LINE.titleL),
+    answer: REVIEW_ANSWER,
     snippetLines: CODE_LINES.review,
   },
   cloze: { ...PROSE_CHOICE_LIMITS, text: PASSAGE },
