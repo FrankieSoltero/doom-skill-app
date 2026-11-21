@@ -22,7 +22,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f2f2f3"
+        "backgroundColor": "#1b1035"
       }
     },
     "plugins": ["expo-router", "expo-status-bar", "expo-secure-store", "expo-notifications"],
